@@ -39,3 +39,21 @@ credentials.json
 token.json
 backend/app/credentials.json
 backend/app/token.json
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments (any location, not just backend/)
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variable file variants (.env already covered above)
+.env.*
+!.env.example
