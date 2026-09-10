@@ -138,7 +138,7 @@ venv\Scripts\activate
 # macOS/Linux
 source venv/bin/activate
 
-pip install -r app/requirements.txt
+pip install -r requirements.txt
 ```
 
 #### Configure Environment Variables
@@ -478,7 +478,7 @@ GET   /users/peer-comparison         # Get comparison stats
 1. **Create Web Service** on Render
 2. **Connect GitHub repository**
 3. **Configure:**
-   - Build Command: `pip install -r backend/app/requirements.txt`
+   - Build Command: `pip install -r requirements.txt`
    - Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 4. **Add Environment Variables** (all from `.env`)
 5. **Deploy!**

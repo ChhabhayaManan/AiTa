@@ -1,0 +1,22 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # local Postgres runs on the host, not in this compose file —
+      # host.docker.internal lets the backend container reach it.
+      # If DATABASE_URL in backend/.env points elsewhere (e.g. Neon), remove this override.
+      - DATABASE_URL=postgresql://postgres@host.docker.internal:5432/aita_db
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
