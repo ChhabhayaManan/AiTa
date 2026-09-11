@@ -137,6 +137,32 @@ def test_display_statement_passes_through_empty():
     assert display_statement("") == ""
 
 
+def test_a_program_that_prints_nothing_says_so():
+    # The uninitialised-loop-counter case: it compiles, runs, and prints nothing.
+    # "Wrong answer on test 1" would send the student hunting a logic bug.
+    split = split_actual("", CASES)
+    assert split.produced_nothing is True
+    assert verdict_for("ok", split) == "No output"
+
+
+def test_partial_output_is_still_a_wrong_answer():
+    split = split_actual("5\n6\n", CASES)
+    assert split.produced_nothing is False
+    assert verdict_for("ok", split) == "Wrong answer on test 3"
+
+
+def test_a_wrong_first_line_is_not_reported_as_no_output():
+    split = split_actual("99\n6\n-10\n", CASES)
+    assert split.produced_nothing is False
+    assert verdict_for("ok", split) == "Wrong answer on test 1"
+
+
+def test_crashes_keep_their_own_verdict():
+    # all_failed also leaves every actual_stdout empty, but the status wins.
+    assert verdict_for("timeout", all_failed(CASES)) == "Time limit exceeded"
+    assert verdict_for("runtime_error", all_failed(CASES)) == "Runtime error"
+
+
 def test_extra_output_is_not_accepted():
     split = split_actual("5\n6\n-10\nextra\n", CASES)
     assert verdict_for("ok", split) == "Wrong answer (extra output)"

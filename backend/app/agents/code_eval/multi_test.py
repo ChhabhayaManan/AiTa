@@ -54,6 +54,16 @@ class SplitReport(BaseModel):
     def first_failing(self) -> SubCaseResult | None:
         return next((r for r in self.results if not r.passed), None)
 
+    @property
+    def produced_nothing(self) -> bool:
+        """The program ran but printed nothing at all.
+
+        Worth separating from a wrong answer: "Wrong answer on test 1" sends a
+        student hunting a logic bug in the first case, when the real story is that
+        their program never printed anything - usually a loop that never ran.
+        """
+        return bool(self.results) and all(not r.actual_stdout for r in self.results)
+
 
 def _kind(case) -> str:
     """`kind` arrives as a TestCaseKind enum from the ORM and as a plain string from
@@ -155,4 +165,6 @@ def verdict_for(status: str, split: SplitReport | None) -> str:
     failing = split.first_failing
     if failing is None:
         return "Accepted" if not split.extra_output else "Wrong answer (extra output)"
+    if split.produced_nothing:
+        return "No output"
     return f"Wrong answer on test {failing.ordinal}"

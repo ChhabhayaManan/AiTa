@@ -172,7 +172,15 @@ export default function TestResults({ result }) {
 
         <CaseStrip cases={cases} />
 
-        {(missing_output || extra_output) && (
+        {verdict === 'No output' ? (
+          <div className="mt-4 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+            <p className="text-orange-300/80 text-xs leading-relaxed">
+              Your program compiled and ran, but printed nothing at all — so every case
+              is counted wrong. This is usually a loop that never runs. The first line of
+              input is the number of test cases: make sure you read it before looping.
+            </p>
+          </div>
+        ) : (missing_output || extra_output) && (
           <div className="mt-4 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
             <p className="text-orange-300/80 text-xs leading-relaxed">
               Your program printed {missing_output ? 'fewer' : 'more'} lines than expected.
