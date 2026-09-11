@@ -83,5 +83,6 @@ def explain(state: EvalState, *, runnable=None) -> EvalState:
 
     state.explanation = explanation
     state.tokens_used += usage.tokens
+    state.model_used = usage.model
     state.log(f"Explanation generated ({usage.tokens} tokens).")
     return state

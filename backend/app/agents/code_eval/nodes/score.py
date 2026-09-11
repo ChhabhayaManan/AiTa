@@ -99,6 +99,6 @@ def score(state: EvalState) -> EvalState:
         suggested_resources=getattr(explanation, "suggested_resources", []) or [],
         agent_steps=list(state.steps),
         tokens_used=state.tokens_used,
-        model_used=None,
+        model_used=state.model_used,
     )
     return state

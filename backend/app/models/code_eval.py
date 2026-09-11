@@ -96,8 +96,10 @@ class CodeEvaluation(Base):
     # Issue shape: {id, line, severity, category, message, suggestion}
 
     # ── Complexity analysis ────────────────────────────────────────────────────
-    time_complexity     = Column(String(30), nullable=True)   # "O(n)", "O(n log n)"
-    space_complexity    = Column(String(30), nullable=True)
+    # Models write prose here ("O(n) per test case, where n is..."), not just a
+    # band, and a 30-char column turned that into a 500 after a full evaluation.
+    time_complexity     = Column(String(120), nullable=True)
+    space_complexity    = Column(String(120), nullable=True)
     cyclomatic_complexity = Column(Integer, nullable=True)    # # of independent paths
     lines_of_code       = Column(Integer, nullable=True)
     comment_ratio       = Column(Float, nullable=True)        # 0.0 – 1.0

@@ -49,6 +49,7 @@ class EvalState(BaseModel):
 
     explanation: Any = None
     tokens_used: int = 0
+    model_used: Optional[str] = None
 
     steps: list[str] = []
     report: Optional[EvalReport] = None
