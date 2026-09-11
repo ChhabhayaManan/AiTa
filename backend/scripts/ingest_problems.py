@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import LLMUnavailable
 from app.models.problem import Difficulty, ProblemSource
 from app.services.problems.repository import get_or_create_problem, has_test_cases
+from app.services.test_generation.curated_tests import curated_tests
 from app.services.test_generation.generate_tests import generate_tests
 
 DATA = pathlib.Path(__file__).resolve().parents[1] / "app" / "data" / "problems.json"
@@ -19,6 +20,7 @@ class IngestReport(BaseModel):
     created: int = 0
     skipped: int = 0
     generated: int = 0
+    curated: int = 0
     unverified: list[str] = []
     stopped_early: bool = False
 
@@ -45,6 +47,21 @@ def ingest(db: Session, rows: list[dict], *, generator=None, provider=None,
 
         if has_test_cases(db, problem.id):
             report.skipped += 1
+            continue
+
+        # Problems that ship their own reference and cases never touch the LLM,
+        # so the bank can be rebuilt from scratch with the daily quota exhausted.
+        shipped = row.get("tests")
+        if shipped and row.get("reference"):
+            suite = curated_tests(db, problem, row["reference"], shipped,
+                                  provider=provider)
+            if suite.unverified_reason:
+                report.unverified.append(row["external_id"])
+                print(f"  {row['external_id']}: UNVERIFIED ({suite.unverified_reason})")
+            else:
+                report.curated += 1
+                print(f"  {row['external_id']}: {suite.agreed} curated cases "
+                      f"({suite.dropped} dropped)")
             continue
 
         try:
@@ -87,7 +104,8 @@ def main() -> None:
         db.close()
 
     print(f"\nseen={report.seen} created={report.created} skipped={report.skipped} "
-          f"generated={report.generated} unverified={len(report.unverified)}")
+          f"curated={report.curated} generated={report.generated} "
+          f"unverified={len(report.unverified)}")
     if report.unverified:
         print("unverified:", ", ".join(report.unverified))
     if report.stopped_early:
