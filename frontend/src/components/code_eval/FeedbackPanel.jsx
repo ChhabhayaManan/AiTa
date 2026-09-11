@@ -1,25 +1,9 @@
 import { useState } from 'react'
 import {
-  Sparkles, Copy, CheckCheck, Lightbulb, Target,
+  Sparkles, Lightbulb, Target,
   BookOpen, ThumbsUp, AlertTriangle, ExternalLink,
   ChevronDown, ChevronUp, Clock, Box
 } from 'lucide-react'
-
-function CopyButton({ text }) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  return (
-    <button onClick={copy}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 text-white/30 hover:text-white/70 hover:bg-surface-600 rounded-lg transition-all text-xs">
-      {copied ? <CheckCheck size={13} className="text-green-400" /> : <Copy size={13} />}
-      {copied ? 'Copied' : 'Copy'}
-    </button>
-  )
-}
 
 function Section({ icon: Icon, title, color = 'text-white/50', children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -101,7 +85,7 @@ export default function FeedbackPanel({ evaluation }) {
   if (!evaluation) return null
 
   const {
-    summary, detailed_feedback, corrected_code,
+    summary, detailed_feedback,
     key_improvements, learning_points, best_practices_used,
     anti_patterns, suggested_resources,
     complexity, tokens_used, latency_ms,
@@ -182,23 +166,6 @@ export default function FeedbackPanel({ evaluation }) {
         <Section icon={Sparkles} title="Detailed Feedback" color="text-brand-400" defaultOpen={false}>
           <MarkdownText text={detailed_feedback} />
         </Section>
-      )}
-
-      {/* Corrected code */}
-      {corrected_code && (
-        <div className="glass-card overflow-hidden animate-fade-in">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-green-400" />
-              <span className="font-display font-600 text-sm text-white">Improved Code</span>
-              <span className="text-white/20 text-xs">(with agent comments)</span>
-            </div>
-            <CopyButton text={corrected_code} />
-          </div>
-          <pre className="overflow-x-auto p-5 text-xs font-mono text-green-300/85 leading-6 bg-[#0d1117] max-h-80">
-            <code>{corrected_code}</code>
-          </pre>
-        </div>
       )}
 
       {/* Learning points */}

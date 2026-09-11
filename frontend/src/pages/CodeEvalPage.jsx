@@ -11,12 +11,13 @@ import IssuesList from '../components/code_eval/IssuesList'
 import FeedbackPanel from '../components/code_eval/FeedbackPanel'
 import SubmissionHistory from '../components/code_eval/SubmissionHistory'
 import AgentSteps from '../components/code_eval/AgentSteps'
+import TestResults from '../components/code_eval/TestResults'
 
 const TABS = [
   { key: 'scores',   label: 'Scores'   },
+  { key: 'tests',    label: 'Tests'    },
   { key: 'issues',   label: 'Issues'   },
   { key: 'feedback', label: 'Feedback' },
-  { key: 'code',     label: 'Improved Code', hideWhenEmpty: true },
 ]
 
 export default function CodeEvalPage() {
@@ -88,10 +89,7 @@ export default function CodeEvalPage() {
     await reEvaluate(id)
   }
 
-  const visibleTabs = TABS.filter(t => {
-    if (t.hideWhenEmpty && !activeResult?.corrected_code) return false
-    return true
-  })
+  const visibleTabs = TABS
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -250,11 +248,11 @@ export default function CodeEvalPage() {
                 <div className="mt-6 glass-card p-4 text-left w-full max-w-xs">
                   <p className="text-white/20 text-xs font-mono uppercase tracking-wider mb-3">Agent pipeline</p>
                   {[
-                    '🔍 Static analysis (10 rule categories)',
-                    '📊 6-dimension scoring',
-                    '✦  Format button — auto-indent & clean',
-                    '🤖 Groq LLM deep review',
-                    '✏️  Corrected code with comments',
+                    '🔍 Static metrics via lizard',
+                    '🧪 Test cases generated & cross-checked',
+                    '▶️  Your code actually executed in a sandbox',
+                    '📊 Correctness counted, never guessed',
+                    '💡 A hint about what failed — never the fix',
                     '📚 Personalised learning points',
                   ].map((item, i) => (
                     <p key={i} className="text-white/40 text-xs mb-1.5">{item}</p>
@@ -287,7 +285,13 @@ export default function CodeEvalPage() {
                 {/* Tab content */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                   {activeTab === 'scores' && (
-                    <ScoreRadar scores={activeResult.scores} />
+                    <ScoreRadar
+                      scores={activeResult.scores}
+                      unverifiedReason={activeResult.unverified_reason}
+                    />
+                  )}
+                  {activeTab === 'tests' && (
+                    <TestResults result={activeResult} />
                   )}
                   {activeTab === 'issues' && (
                     <IssuesList issues={activeResult.issues} />
@@ -295,28 +299,8 @@ export default function CodeEvalPage() {
                   {activeTab === 'feedback' && (
                     <FeedbackPanel evaluation={{
                       ...activeResult,
-                      complexity: {
-                        time_complexity:       activeResult.time_complexity       ?? activeResult.complexity?.time_complexity,
-                        space_complexity:      activeResult.space_complexity      ?? activeResult.complexity?.space_complexity,
-                        cyclomatic_complexity: activeResult.cyclomatic_complexity ?? activeResult.complexity?.cyclomatic_complexity,
-                        lines_of_code:         activeResult.lines_of_code         ?? activeResult.complexity?.lines_of_code,
-                      }
+                      complexity: activeResult.metrics || {},
                     }} />
-                  )}
-                  {activeTab === 'code' && activeResult.corrected_code && (
-                    <div className="glass-card overflow-hidden">
-                      <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                        <p className="font-display font-600 text-sm text-white">Improved Code</p>
-                        <button
-                          onClick={() => setCode(activeResult.corrected_code)}
-                          className="text-brand-400 text-xs font-display font-600 hover:text-brand-300 transition-colors">
-                          Load into editor →
-                        </button>
-                      </div>
-                      <pre className="overflow-x-auto p-4 text-xs font-mono text-green-300/85 leading-6 bg-[#0d1117] max-h-[60vh]">
-                        <code>{activeResult.corrected_code}</code>
-                      </pre>
-                    </div>
                   )}
 
                   {/* ── Pipeline Step 5: Feedback Agent CTA ── */}
@@ -333,7 +317,7 @@ export default function CodeEvalPage() {
                       </div>
                       <button
                         onClick={() => navigate('/feedback', {
-                          state: { evaluation_id: activeResult.id }
+                          state: { evaluation_id: activeResult.evaluation_id }
                         })}
                         className="flex items-center gap-1.5 px-3 py-2 bg-pink-600 hover:bg-pink-500 text-white text-xs font-display font-600 rounded-xl transition-all shrink-0 active:scale-95"
                       >

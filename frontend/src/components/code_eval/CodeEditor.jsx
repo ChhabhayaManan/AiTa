@@ -254,8 +254,13 @@ export default function CodeEditor({
           <div>
             <p className="label text-xs mb-1">Problem Statement</p>
             <textarea value={problemContext} onChange={e => setProblemContext(e.target.value)}
-              placeholder="Describe the problem (optional)..." rows={3}
+              placeholder="Describe ONE test case (optional)..." rows={3}
               className="w-full bg-surface-700/40 border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-white/60 placeholder-white/20 font-body resize-none focus:outline-none focus:border-brand-500/30" />
+            <p className="text-white/25 text-xs mt-1 leading-relaxed">
+              Describe a single test case. Your program will receive{' '}
+              <span className="font-mono text-white/40">T</span> on the first line and
+              must loop over <span className="font-mono text-white/40">T</span> of them.
+            </p>
           </div>
           <div>
             <p className="label text-xs mb-1">Expected Output</p>

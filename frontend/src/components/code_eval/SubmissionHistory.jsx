@@ -13,13 +13,6 @@ const LANG_COLORS = {
   sql:        'text-green-400 bg-green-500/10',
 }
 
-const STATUS_CONFIG = {
-  done:    { dot: 'bg-green-400',                 label: 'Done'    },
-  running: { dot: 'bg-yellow-400 animate-pulse',  label: 'Running' },
-  pending: { dot: 'bg-white/20',                  label: 'Pending' },
-  failed:  { dot: 'bg-red-400',                   label: 'Failed'  },
-}
-
 function scoreColor(score) {
   if (score == null) return 'text-white/25'
   if (score >= 80)   return 'text-green-400'
@@ -79,10 +72,7 @@ export default function SubmissionHistory({
         )}
 
         {submissions.map(sub => {
-          const statusCfg  = STATUS_CONFIG[sub.status] || STATUS_CONFIG.pending
           const langColor  = LANG_COLORS[sub.language] || 'text-white/40 bg-surface-600'
-          // score from the summary list (SubmissionSummary doesn't include evaluations)
-          // we store score separately in the list after first eval via stats context
           const isActive   = sub.id === activeId
           const isHovered  = hovered === sub.id
 
@@ -104,8 +94,9 @@ export default function SubmissionHistory({
               }`}
             >
               <div className="flex items-start gap-2.5">
-                {/* Status dot */}
-                <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${statusCfg.dot}`} />
+                <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${
+                  sub.problem_id ? 'bg-green-500/60' : 'bg-white/15'
+                }`} title={sub.problem_id ? 'has a problem statement' : 'no problem statement'} />
 
                 <div className="flex-1 min-w-0">
                   {/* Title — AI-generated meaningful name */}
@@ -120,9 +111,8 @@ export default function SubmissionHistory({
                       {sub.language}
                     </span>
 
-                    {/* Eval count */}
-                    {sub.eval_count > 0 && (
-                      <span className="text-white/20 text-xs font-mono">{sub.eval_count}× eval</span>
+                    {sub.problem_id && (
+                      <span className="text-white/20 text-xs font-mono">verifiable</span>
                     )}
                   </div>
 
