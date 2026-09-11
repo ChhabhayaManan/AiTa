@@ -1,0 +1,203 @@
+[
+  {
+    "external_id": "mbpp-002",
+    "source": "mbpp",
+    "statement": "The first line contains space-separated integers. The second line contains space-separated integers. Print the integers that appear in both lines, in ascending order, separated by single spaces. Print each such integer only once. If no integer appears in both lines, print nothing at all.",
+    "constraints": "Each line holds between 0 and 100 integers; each integer is between -1000 and 1000.",
+    "topic": "sets",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-011",
+    "source": "mbpp",
+    "statement": "The first line contains a single word made of lowercase letters. The second line contains a single character. Print the word with every occurrence of that character removed. If removing the character leaves nothing, print an empty line.",
+    "constraints": "The word is between 1 and 200 characters long.",
+    "topic": "strings",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-014",
+    "source": "mbpp",
+    "statement": "The first line contains an integer n, the number of values that follow. The second line contains n space-separated integers. Print the largest of those integers. If n is 0, print the word None instead.",
+    "constraints": "0 <= n <= 200; each integer is between -100000 and 100000.",
+    "topic": "arrays",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-057",
+    "source": "mbpp",
+    "statement": "The first line contains an integer n, the number of values that follow. The second line contains n space-separated integers. Print the sum of only the even integers among them. If there are no even integers, print 0.",
+    "constraints": "0 <= n <= 200; each integer is between -1000 and 1000.",
+    "topic": "arrays",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-063",
+    "source": "mbpp",
+    "statement": "A single line contains a sentence made of words separated by single spaces. Print the number of words in the sentence. If the line is empty, print 0.",
+    "constraints": "The line is at most 500 characters long.",
+    "topic": "strings",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-078",
+    "source": "mbpp",
+    "statement": "The first line contains an integer n, the number of values that follow. The second line contains n space-separated integers. Print the same integers sorted in ascending order, separated by single spaces, on one line. If n is 0, print an empty line.",
+    "constraints": "0 <= n <= 300; each integer is between -10000 and 10000.",
+    "topic": "sorting",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-090",
+    "source": "mbpp",
+    "statement": "The first line contains an integer n, the number of values that follow. The second line contains n space-separated integers. Print those integers with duplicates removed, keeping the order of first appearance, separated by single spaces.",
+    "constraints": "0 <= n <= 300; each integer is between -1000 and 1000.",
+    "topic": "arrays",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-105",
+    "source": "mbpp",
+    "statement": "A single line contains a string. Print the same string with every lowercase letter converted to uppercase and every uppercase letter converted to lowercase. Characters that are not letters are printed unchanged.",
+    "constraints": "The string is between 1 and 200 characters long.",
+    "topic": "strings",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-127",
+    "source": "mbpp",
+    "statement": "The first line contains an integer n, the number of values that follow. The second line contains n space-separated integers. Print the average of those integers, rounded to exactly two decimal places. If n is 0, print 0.00 instead.",
+    "constraints": "0 <= n <= 200; each integer is between -10000 and 10000.",
+    "topic": "arithmetic",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-160",
+    "source": "mbpp",
+    "statement": "The first line contains an integer n, the number of values that follow. The second line contains n space-separated integers. The third line contains a single integer target. Print the 0-based position of the first occurrence of target among the n integers. If target does not appear, print -1.",
+    "constraints": "0 <= n <= 300; every integer is between -1000 and 1000.",
+    "topic": "searching",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-231",
+    "source": "mbpp",
+    "statement": "A single line contains a string. Print the number of vowels in it, counting a, e, i, o and u in both lowercase and uppercase.",
+    "constraints": "The string is between 1 and 500 characters long.",
+    "topic": "strings",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "mbpp-284",
+    "source": "mbpp",
+    "statement": "A single line contains an integer n. Print the word Prime if n is a prime number, and Composite otherwise. Treat any n less than 2 as Composite.",
+    "constraints": "-1000 <= n <= 100000.",
+    "topic": "numbers",
+    "difficulty": "easy"
+  },
+
+  {
+    "external_id": "dsa-two-sum",
+    "source": "dsa",
+    "statement": "The first line contains an integer n, the number of elements. The second line contains n space-separated integers. The third line contains an integer target. Print the two 0-based indices i and j with i less than j such that the values at those positions add up to target, separated by a single space. If no such pair exists, print -1. If several pairs exist, print the one with the smallest i, and among those the smallest j.",
+    "constraints": "2 <= n <= 200; each value is between -1000 and 1000; target is between -2000 and 2000.",
+    "topic": "hashing",
+    "difficulty": "medium"
+  },
+  {
+    "external_id": "dsa-valid-parentheses",
+    "source": "dsa",
+    "statement": "A single line contains a string made only of the characters ( ) [ ] { }. Print YES if every bracket is closed by the matching kind of bracket in the correct order, and NO otherwise. An empty line counts as YES.",
+    "constraints": "The string is at most 200 characters long.",
+    "topic": "stacks",
+    "difficulty": "medium"
+  },
+  {
+    "external_id": "dsa-binary-search",
+    "source": "dsa",
+    "statement": "The first line contains an integer n, the number of elements. The second line contains n space-separated integers sorted in ascending order. The third line contains an integer target. Print the 0-based index of target within the sorted list. If target is not present, print -1.",
+    "constraints": "0 <= n <= 500; each value is between -100000 and 100000; all values are distinct.",
+    "topic": "searching",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "dsa-reverse-string",
+    "source": "dsa",
+    "statement": "A single line contains a string. Print the same string with its characters in reverse order.",
+    "constraints": "The string is between 1 and 500 characters long and contains no leading or trailing spaces.",
+    "topic": "strings",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "dsa-max-subarray",
+    "source": "dsa",
+    "statement": "The first line contains an integer n, the number of elements. The second line contains n space-separated integers. Print the largest sum obtainable from any contiguous block of one or more of those integers.",
+    "constraints": "1 <= n <= 500; each value is between -10000 and 10000.",
+    "topic": "dynamic programming",
+    "difficulty": "medium"
+  },
+  {
+    "external_id": "dsa-merge-sorted",
+    "source": "dsa",
+    "statement": "The first line contains an integer n. The second line contains n space-separated integers in ascending order. The third line contains an integer m. The fourth line contains m space-separated integers in ascending order. Print all n plus m integers in ascending order, separated by single spaces, on one line. If both lists are empty, print an empty line.",
+    "constraints": "0 <= n, m <= 300; each value is between -10000 and 10000.",
+    "topic": "two pointers",
+    "difficulty": "medium"
+  },
+  {
+    "external_id": "dsa-palindrome",
+    "source": "dsa",
+    "statement": "A single line contains a string. Print YES if the string reads the same forwards and backwards, and NO otherwise. Compare characters exactly as given, without ignoring case or punctuation.",
+    "constraints": "The string is between 1 and 500 characters long.",
+    "topic": "strings",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "dsa-anagram",
+    "source": "dsa",
+    "statement": "The first line contains a string. The second line contains another string. Print YES if the two strings contain exactly the same characters with the same counts in any order, and NO otherwise. Compare characters exactly as given.",
+    "constraints": "Each string is between 1 and 300 characters long.",
+    "topic": "hashing",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "dsa-fibonacci",
+    "source": "dsa",
+    "statement": "A single line contains an integer n. Print the nth Fibonacci number, where the sequence starts 0, 1, 1, 2, 3, 5 and the 0th value is 0.",
+    "constraints": "0 <= n <= 60.",
+    "topic": "recursion",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "dsa-fizzbuzz",
+    "source": "dsa",
+    "statement": "A single line contains an integer n. Print one value per line for every integer from 1 to n inclusive. Print Fizz when the integer divides by 3, Buzz when it divides by 5, FizzBuzz when it divides by both, and otherwise the integer itself. If n is less than 1, print nothing.",
+    "constraints": "0 <= n <= 200.",
+    "topic": "loops",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "dsa-second-largest",
+    "source": "dsa",
+    "statement": "The first line contains an integer n, the number of elements. The second line contains n space-separated integers. Print the second largest distinct value among them. If fewer than two distinct values exist, print None instead.",
+    "constraints": "0 <= n <= 300; each value is between -10000 and 10000.",
+    "topic": "arrays",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "dsa-count-characters",
+    "source": "dsa",
+    "statement": "A single line contains a string of lowercase letters. Print one line for each distinct letter in alphabetical order, giving the letter, a single space, and how many times it appears.",
+    "constraints": "The string is between 1 and 500 lowercase letters with no spaces.",
+    "topic": "hashing",
+    "difficulty": "easy"
+  },
+  {
+    "external_id": "dsa-move-zeroes",
+    "source": "dsa",
+    "statement": "The first line contains an integer n, the number of elements. The second line contains n space-separated integers. Print the same integers on one line separated by single spaces, with every zero moved to the end while the non-zero values keep their original relative order.",
+    "constraints": "0 <= n <= 300; each value is between -1000 and 1000.",
+    "topic": "two pointers",
+    "difficulty": "easy"
+  }
+]
