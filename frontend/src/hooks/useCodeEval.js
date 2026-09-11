@@ -49,7 +49,7 @@ export function useCodeEval() {
   }, [])
 
   // ── Submit + evaluate in one shot ─────────────────────────────────────────
-  const submitAndEvaluate = useCallback(async ({ language, code, title, problemContext, expectedOutput }) => {
+  const submitAndEvaluate = useCallback(async ({ language, code, title, problemContext, expectedOutput, problemId }) => {
     setEvaluating(true)
     setActiveResult(null)
     setActiveSub(null)
@@ -60,6 +60,7 @@ export function useCodeEval() {
         title:           title                          || undefined,
         problem_context: problemContext?.slice(0, 5000) || undefined,
         expected_output: expectedOutput?.slice(0, 2000) || undefined,
+        problem_id:      problemId                      || undefined,
       })
       setActiveResult(data)
       toast.success(resultToast(data))

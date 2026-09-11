@@ -134,6 +134,9 @@ export const codeEvalAPI = {
   deleteSubmission: (id)   => api.delete(`/code-eval/submissions/${id}`),
   // Stats & progress
   getStats:         ()     => api.get('/code-eval/stats'),
+  // Problem bank
+  getProblems:      ()     => api.get('/code-eval/problems'),
+  getProblem:       (id)   => api.get(`/code-eval/problems/${id}`),
 }
 
 export const feedbackAPI = {

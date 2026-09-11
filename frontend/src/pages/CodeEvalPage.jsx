@@ -12,6 +12,8 @@ import FeedbackPanel from '../components/code_eval/FeedbackPanel'
 import SubmissionHistory from '../components/code_eval/SubmissionHistory'
 import AgentSteps from '../components/code_eval/AgentSteps'
 import TestResults from '../components/code_eval/TestResults'
+import ProblemBank from '../components/code_eval/ProblemBank'
+import ProblemStatement from '../components/code_eval/ProblemStatement'
 
 const TABS = [
   { key: 'scores',   label: 'Scores'   },
@@ -37,6 +39,7 @@ export default function CodeEvalPage() {
   const [title,          setTitle]      = useState('')
   const [problemContext, setProblemCtx] = useState('')
   const [expectedOutput, setExpectedOut]= useState('')
+  const [picked,         setPicked]     = useState(null)   // bank problem, if any
 
   // UI state
   const [activeTab,      setActiveTab]   = useState('scores')
@@ -72,7 +75,10 @@ export default function CodeEvalPage() {
 
   const handleEvaluate = async () => {
     setShowSteps(true)
-    await submitAndEvaluate({ language, code, title, problemContext, expectedOutput })
+    await submitAndEvaluate({
+      language, code, title, problemContext, expectedOutput,
+      problemId: picked?.id,
+    })
   }
 
   // clicking a history item → load code + show its last evaluation
@@ -155,6 +161,13 @@ export default function CodeEvalPage() {
           {/* Left: problem statement + code editor stacked */}
           <div className="flex-1 flex flex-col overflow-hidden border-r border-white/[0.06] min-w-0">
 
+            {/* ── Step 0: pick a problem from the bank (optional) ── */}
+            <ProblemBank
+              selected={picked}
+              onPick={(p) => { setPicked(p); setTitle(t => t || p.title) }}
+              onClear={() => setPicked(null)}
+            />
+
             {/* ── Step 1: Problem Statement ── */}
             <div className="shrink-0 border-b border-white/[0.06] bg-surface-800/50">
               <button
@@ -171,7 +184,13 @@ export default function CodeEvalPage() {
                 <span className="ml-auto text-white/20 text-xs font-mono">{showProblem ? '▲' : '▼'}</span>
               </button>
 
-              {showProblem && (
+              {showProblem && picked && (
+                <div className="px-4 pb-3 animate-slide-up">
+                  <ProblemStatement problem={picked} />
+                </div>
+              )}
+
+              {showProblem && !picked && (
                 <div className="px-4 pb-3 grid grid-cols-2 gap-3 animate-slide-up">
                   <div>
                     <p className="text-white/30 text-xs font-mono mb-1.5">
