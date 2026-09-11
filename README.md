@@ -124,7 +124,70 @@ cd aiTA
 
 ---
 
-### 2️⃣ Backend Setup
+## 🐳 Running with Docker (recommended)
+
+Three containers: `backend`, `frontend`, and `executor` — the sandbox the Code
+Evaluation Agent runs student code inside. **The executor is required**: without it
+every submission fails, because nothing else compiles or runs the code.
+
+```bash
+# backend/.env must exist first — see "Configure Environment Variables" below
+docker compose up -d --build
+```
+
+| Service | URL | Notes |
+|---|---|---|
+| Frontend | http://localhost:5173 | |
+| Backend | http://localhost:8000/docs | |
+| Executor | *(no published port)* | internal network only, by design |
+
+```bash
+docker compose ps                    # what is running
+docker compose logs -f backend       # follow backend logs
+docker compose down                  # stop everything
+docker compose build backend         # rebuild after changing requirements.txt
+```
+
+**The database is not in compose.** `DATABASE_URL` comes from `backend/.env`, so all
+three of the containers, your local venv, and Alembic point at the same database. If
+you want a Postgres running on your own machine instead, migrate it first, then add
+the override back to the `backend` service in `docker-compose.yml`:
+
+```yaml
+environment:
+  - DATABASE_URL=postgresql://postgres@host.docker.internal:5432/aita_db
+```
+
+#### Seeding the problem bank
+
+The bank ships 25 problems with their own test cases, so this needs no API key:
+
+```bash
+docker compose exec backend python -m scripts.ingest_problems
+```
+
+It is resumable — problems that already have cases are skipped, so rerunning is safe.
+
+#### Logging in without an email server
+
+OTPs are printed to the backend log whenever no SMTP or Gmail credentials are set:
+
+```bash
+docker compose logs backend | grep "\[DEV\] OTP"
+```
+
+To skip the OTP entirely, set `DEV_LOGIN_EMAIL` in `backend/.env` to an existing
+user's email. A **Dev login** button then appears on the login page, and
+`POST /auth/dev-login` returns tokens directly. Both require `DEBUG=True`; with
+either missing the endpoint 404s, so a production deploy cannot expose it.
+
+> **Do not remove the `exec` flag** on the executor's tmpfs mount in
+> `docker-compose.yml`. Docker mounts tmpfs `noexec` by default, which silently
+> breaks every compiled submission with "Permission denied".
+
+---
+
+### 2️⃣ Backend Setup (manual, without Docker)
 
 #### Install Dependencies
 
@@ -190,32 +253,38 @@ CREATE DATABASE aita_db;
 
 #### Run Migrations
 
-```bash
-# Run all migration files
-psql -U postgres -d aita_db -f backend/app/setup_db.sql
-psql -U postgres -d aita_db -f backend/app/migration_otp.sql
-psql -U postgres -d aita_db -f backend/app/migration_content_player.sql
-psql -U postgres -d aita_db -f backend/app/migration_code_eval.sql
-psql -U postgres -d aita_db -f backend/app/migration_feedback.sql
-psql -U postgres -d aita_db -f backend/app/migration_recommendation.sql
-psql -U postgres -d aita_db -f backend/app/migration_updates.sql
-```
+Alembic owns the schema. The `.sql` files under `backend/app/` are the old v1 setup
+and are kept for history only — do not run them.
 
-Or run them all at once:
+`alembic.ini` lives in `backend/app` and uses a relative `script_location`, so it
+must be run from that directory with `backend` on the import path:
 
 ```bash
 cd backend/app
-for file in setup_db.sql migration_*.sql; do
-  psql -U postgres -d aita_db -f "$file"
-done
+PYTHONPATH=.. alembic upgrade head        # Windows: set PYTHONPATH=..
 ```
+
+> Startup also calls `create_all()`, which creates **missing tables but never missing
+> columns**. On a database that predates a migration it will start cleanly while
+> silently running on a stale schema, so always migrate rather than relying on it.
 
 #### Start Backend Server
 
 ```bash
-cd backend/app
-uvicorn main:app --reload --port 8000
+cd backend
+uvicorn app.main:app --reload --port 8000
 ```
+
+Code evaluation still needs the sandbox, which is not part of the venv. The executor
+publishes no port — it sits on an internal network so only the backend container can
+reach it — so to drive it from a local venv you have to publish one yourself:
+
+```bash
+docker compose run -d --service-ports -p 8080:8080 executor
+# then, in backend/.env:  EXECUTOR_URL=http://localhost:8080
+```
+
+Running everything in Docker avoids this entirely.
 
 ✅ API docs available at: `http://localhost:8000/docs`
 
