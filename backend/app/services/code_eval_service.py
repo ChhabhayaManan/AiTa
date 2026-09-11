@@ -48,6 +48,7 @@ class CodeEvalService:
             title=req.title or _generate_title(req.language.value, req.code),
             problem_context=req.problem_context,
             expected_output=req.expected_output,
+            problem_id=req.problem_id,
         )
         db.add(submission)
         db.commit()

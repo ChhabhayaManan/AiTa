@@ -5,13 +5,47 @@ from typing import List
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
+from app.core.exceptions import ProblemNotFound
 from app.schemas.code_eval import (
     SubmitCodeRequest, SubmissionSummary, SubmissionDetail,
     EvaluationResult, UserEvalStats
 )
+from app.schemas.problem import ProblemSummary
 from app.services.code_eval_service import CodeEvalService
+from app.services.problems.listing import get_bank_problem, list_bank_problems
 
 router = APIRouter(prefix="/code-eval", tags=["Code Evaluation Agent"])
+
+
+# ─── Problem bank ─────────────────────────────────────────────────────────────
+
+@router.get(
+    "/problems",
+    response_model=List[ProblemSummary],
+    summary="List the problem bank",
+)
+def list_problems(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Every problem that has test cases, so every one listed can be graded."""
+    return list_bank_problems(db)
+
+
+@router.get(
+    "/problems/{problem_id}",
+    response_model=ProblemSummary,
+    summary="Get one problem from the bank",
+)
+def get_problem(
+    problem_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    problem = get_bank_problem(db, problem_id)
+    if problem is None:
+        raise ProblemNotFound(f"problem {problem_id} not found")
+    return problem
 
 
 # ─── Submit code ──────────────────────────────────────────────────────────────

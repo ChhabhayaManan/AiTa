@@ -2,7 +2,7 @@ from app.agents.code_eval.state import EvalState
 from app.core.exceptions import SubmissionNotFound
 from app.core.languages import EXECUTABLE_LANGUAGES
 from app.models.code_eval import CodeSubmission
-from app.models.problem import ProblemSource
+from app.models.problem import Problem, ProblemSource
 from app.models.user import User
 from app.services.problems.repository import get_or_create_problem
 
@@ -30,6 +30,22 @@ def route_mode(state: EvalState) -> EvalState:
         state.mode = "review"
         state.unverified_reason = "language_not_executable"
         state.log(f"Review mode: {submission.language.value} is not executable.")
+        return state
+
+    # A bank problem is bound by id, so it keeps its cached test cases instead of
+    # being re-fingerprinted from text the student may have edited.
+    picked = (
+        state.db.query(Problem).filter(Problem.id == submission.problem_id).first()
+        if submission.problem_id else None
+    )
+    if picked is not None:
+        state.problem_id = picked.id
+        state.problem_statement = picked.statement
+        state.mode = "verified"
+        state.log(
+            f"Verified mode: bank problem {picked.id}, "
+            f"{len(picked.test_cases)} cached cases."
+        )
         return state
 
     if not (submission.problem_context or "").strip():
