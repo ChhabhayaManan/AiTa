@@ -20,10 +20,11 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      # local Postgres runs on the host, not in this compose file —
-      # host.docker.internal lets the backend container reach it.
-      # If DATABASE_URL in backend/.env points elsewhere (e.g. Neon), remove this override.
-      - DATABASE_URL=postgresql://postgres@host.docker.internal:5432/aita_db
+      # DATABASE_URL deliberately not overridden here — it comes from backend/.env,
+      # the same database the host venv and Alembic migrate against. Pointing the
+      # container at a second database is what left it on a stale schema before.
+      # To use a host Postgres instead, migrate it first, then add:
+      #   - DATABASE_URL=postgresql://postgres@host.docker.internal:5432/aita_db
       - EXECUTOR_URL=http://executor:8080
     depends_on:
       - executor
