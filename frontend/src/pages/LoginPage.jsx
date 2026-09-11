@@ -46,7 +46,7 @@ function OtpInput({ value, onChange, error, autoFocus }) {
 }
 
 export default function LoginPage() {
-  const { loginStep1, loginStep2 } = useAuth()
+  const { loginStep1, loginStep2, devLogin } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from?.pathname || '/dashboard'
@@ -58,6 +58,31 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [errors,       setErrors]       = useState({})
   const [loading,      setLoading]      = useState(false)
+
+  // ── Dev login, shown only when the backend actually offers it ─────────────
+  // Asked of the backend rather than read from a build flag: the frontend ships
+  // as a production build even in local Docker, so import.meta.env.DEV is false.
+  const [devAvailable, setDevAvailable] = useState(false)
+  const [devEmail,     setDevEmail]     = useState('')
+  const [devLoading,   setDevLoading]   = useState(false)
+
+  useEffect(() => {
+    authAPI.devLoginAvailable()
+      .then(({ data }) => { setDevEmail(data.message); setDevAvailable(true) })
+      .catch(() => setDevAvailable(false))
+  }, [])
+
+  const handleDevLogin = async () => {
+    setDevLoading(true)
+    try {
+      await devLogin()
+      navigate(from, { replace: true })
+    } catch {
+      setDevAvailable(false)
+    } finally {
+      setDevLoading(false)
+    }
+  }
   const [step,         setStep]         = useState(1)
   const [otpToken,     setOtpToken]     = useState('')
   const [emailHint,    setEmailHint]    = useState('')
@@ -303,6 +328,17 @@ export default function LoginPage() {
                     : 'Continue →'}
                 </button>
               </form>
+              {/* Disappears on its own in any deploy without DEV_LOGIN_EMAIL — the
+                  endpoint 404s and the button hides itself. */}
+              {devAvailable && (
+                <button
+                  onClick={handleDevLogin}
+                  disabled={devLoading}
+                  className="w-full mt-3 py-2 rounded-xl border border-dashed border-white/15 text-white/40 hover:text-white/70 hover:border-white/30 text-sm font-mono transition-colors"
+                >
+                  {devLoading ? 'Signing in…' : `Dev login — ${devEmail || 'skip OTP'}`}
+                </button>
+              )}
               <p className="text-center text-white/30 text-sm mt-6">
                 Don't have an account?{' '}
                 <Link to="/register" className="text-brand-400 hover:text-brand-300 font-500 transition-colors">Create one</Link>

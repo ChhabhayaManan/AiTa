@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,6 +9,7 @@ from app.schemas.user import (
     OTPChallengeResponse, VerifyOTPRequest,
     ForgotPasswordRequest, ResetPasswordRequest,
 )
+from app.core.config import settings
 from app.services.auth_service import AuthService
 from app.models.user import User
 
@@ -123,3 +124,30 @@ def logout(
 )
 def get_me(current_user: User = Depends(get_current_active_user)):
     return current_user
+
+
+@router.get(
+    "/dev-login",
+    response_model=MessageResponse,
+    summary="Is the dev login available?",
+)
+def dev_login_available():
+    """Lets the login page decide whether to offer the button. The frontend is served
+    as a production build, so it cannot tell from its own build flags."""
+    if not (settings.DEBUG and settings.DEV_LOGIN_EMAIL):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
+    return MessageResponse(message=settings.DEV_LOGIN_EMAIL)
+
+
+@router.post(
+    "/dev-login",
+    response_model=TokenResponse,
+    summary="Log in without a password or OTP (dev only)",
+)
+def dev_login(request: Request, db: Session = Depends(get_db)):
+    """Returns tokens for DEV_LOGIN_EMAIL. 404 unless DEBUG is on and that is set."""
+    return AuthService.dev_login(
+        db,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )

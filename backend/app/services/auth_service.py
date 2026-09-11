@@ -334,7 +334,14 @@ class AuthService:
         # Consume the OTP — can never be reused
         record.is_used = True
 
-        # Issue real tokens
+        return AuthService._issue_tokens(db, user, ip_address, user_agent)
+
+    # ── Token issuance, shared by every path that logs a user in ─────────────
+
+    @staticmethod
+    def _issue_tokens(
+        db: Session, user: User, ip_address: str = None, user_agent: str = None,
+    ) -> TokenResponse:
         jti        = str(uuid.uuid4())
         token_data = {"sub": str(user.id), "username": user.username, "role": user.role, "jti": jti}
 
@@ -350,7 +357,7 @@ class AuthService:
         db.add(session)
 
         user.total_sessions += 1
-        user.last_active_at  = now
+        user.last_active_at  = datetime.now(timezone.utc)
         db.commit()
 
         return TokenResponse(
@@ -359,6 +366,31 @@ class AuthService:
             token_type    = "bearer",
             expires_in    = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
+
+    # ── Dev-only login: no password, no OTP ──────────────────────────────────
+
+    @staticmethod
+    def dev_login(db: Session, ip_address: str = None,
+                  user_agent: str = None) -> TokenResponse:
+        """Log in as DEV_LOGIN_EMAIL without a password or an OTP.
+
+        Only reachable when DEBUG is on AND DEV_LOGIN_EMAIL is set, so a
+        production deploy that never sets it cannot expose this.
+        """
+        if not (settings.DEBUG and settings.DEV_LOGIN_EMAIL):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Not found.")
+
+        user = db.query(User).filter(User.email == settings.DEV_LOGIN_EMAIL).first()
+        if user is None or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"DEV_LOGIN_EMAIL '{settings.DEV_LOGIN_EMAIL}' "
+                       "matches no active user.",
+            )
+
+        logger.warning("[DEV] passwordless login as %s", user.email)
+        return AuthService._issue_tokens(db, user, ip_address, user_agent)
 
     # ── Forgot Password: send OTP ─────────────────────────────────────────────
 

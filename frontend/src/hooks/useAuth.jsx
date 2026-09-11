@@ -43,6 +43,16 @@ export function AuthProvider({ children }) {
     return profile
   }, [])
 
+  // ─── Dev login: no password, no OTP. Backend 404s unless it is enabled ────
+  const devLogin = useCallback(async () => {
+    const { data } = await authAPI.devLogin()
+    localStorage.setItem('access_token', data.access_token)
+    localStorage.setItem('refresh_token', data.refresh_token)
+    const { data: profile } = await authAPI.getMe()
+    setUser(profile)
+    return profile
+  }, [])
+
   // ─── Logout ───────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     try { await authAPI.logout() } catch { /* ignore */ }
@@ -56,7 +66,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginStep1, loginStep2, logout, register, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, loginStep1, loginStep2, devLogin, logout, register, updateUser }}>
       {children}
     </AuthContext.Provider>
   )
