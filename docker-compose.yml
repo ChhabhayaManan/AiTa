@@ -1,4 +1,18 @@
 services:
+  executor:
+    build: ./backend/executor
+    networks: [sandbox]
+    read_only: true
+    tmpfs:
+      # exec is required: compiled C++ binaries are written here and executed.
+      # Docker defaults tmpfs to noexec, which silently breaks every C++ submission.
+      - /tmp:rw,exec,nosuid,size=128m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 1g
+
   backend:
     build: ./backend
     ports:
@@ -10,6 +24,10 @@ services:
       # host.docker.internal lets the backend container reach it.
       # If DATABASE_URL in backend/.env points elsewhere (e.g. Neon), remove this override.
       - DATABASE_URL=postgresql://postgres@host.docker.internal:5432/aita_db
+      - EXECUTOR_URL=http://executor:8080
+    depends_on:
+      - executor
+    networks: [default, sandbox]
 
   frontend:
     build:
@@ -20,3 +38,7 @@ services:
       - "5173:5173"
     depends_on:
       - backend
+
+networks:
+  sandbox:
+    internal: true
