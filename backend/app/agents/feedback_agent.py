@@ -22,6 +22,13 @@ from sqlalchemy.orm import Session
 
 from app.models.user import User, LearningProfile
 from app.models.feedback import FeedbackReport, FeedbackType, FeedbackTone
+
+
+def _fmt_correctness(eval_ctx: Dict) -> str:
+    score = eval_ctx.get("correctness")
+    if score is None:
+        return f"unverified ({eval_ctx.get('verification', 'unknown')})"
+    return f"{score:.0f} ({eval_ctx.get('tests_passed', 0)}/{eval_ctx.get('tests_total', 0)} tests)"
 from app.models.code_eval import CodeEvaluation, CodeSubmission
 from app.models.content_player import ContentPlayerSession
 from app.core.config import settings
@@ -128,11 +135,12 @@ class FeedbackAgent:
             "code":            (sub.code or "")[:1500] if sub else "",
             "overall":         ev.overall_score,
             "correctness":     ev.correctness_score,
-            "quality":         ev.quality_score,
+            "complexity":      ev.complexity_score,
             "efficiency":      ev.efficiency_score,
-            "security":        ev.security_score,
             "style":           ev.style_score,
-            "docs":            ev.documentation_score,
+            "verification":    ev.verification_status,
+            "tests_passed":    ev.tests_passed,
+            "tests_total":     ev.tests_total,
             "issues":          ev.issues or [],
             "time_complexity": ev.time_complexity,
             "key_improvements":ev.key_improvements or [],
@@ -165,11 +173,10 @@ class FeedbackAgent:
                 if issue.get("severity") in ("error", "critical"):
                     errors.append(f"[{issue.get('category','?')}] {issue.get('message','')}")
             for dim, score in [("correctness", eval_ctx["correctness"]),
-                                ("quality",     eval_ctx["quality"]),
+                                ("complexity",  eval_ctx["complexity"]),
                                 ("efficiency",  eval_ctx["efficiency"]),
-                                ("security",    eval_ctx["security"]),
-                                ("documentation", eval_ctx["docs"])]:
-                if score < 60:
+                                ("style",       eval_ctx["style"])]:
+                if score is not None and score < 60:
                     weak_concepts.append(dim)
             strengths.extend(eval_ctx.get("best_practices", [])[:3])
 
@@ -226,8 +233,10 @@ Respond ONLY with valid JSON (no markdown fences):
         if eval_ctx:
             parts.append(
                 f"CODE EVALUATION:\n"
-                f"Score: {eval_ctx['overall']:.0f}/100 | Correct: {eval_ctx['correctness']:.0f} | "
-                f"Quality: {eval_ctx['quality']:.0f} | Efficiency: {eval_ctx['efficiency']:.0f}\n"
+                f"Score: {eval_ctx['overall']:.0f}/100 | "
+                f"Correct: {_fmt_correctness(eval_ctx)} | "
+                f"Complexity: {eval_ctx['complexity']:.0f} | "
+                f"Efficiency: {eval_ctx['efficiency']:.0f}\n"
                 f"Issues: {json.dumps(patterns['errors'])}\n"
                 f"Learning points: {json.dumps(eval_ctx['learning_points'][:5])}\n"
                 f"Anti-patterns: {json.dumps(eval_ctx['anti_patterns'][:4])}\n"

@@ -47,11 +47,12 @@ def evaluate(
     db: Session = Depends(get_db),
 ):
     """
-    Runs the full evaluation pipeline:
-    1. Static analyser (heuristic rules — naming, complexity, security, docs)
-    2. Groq LLM deep analysis (correctness, Big-O, anti-patterns, improvements)
-    3. Blended scoring across 6 dimensions
-    4. Personalised learning points + corrected code
+    Runs the verified evaluation pipeline:
+    1. Static metrics via lizard
+    2. Test cases generated and cross-checked against a reference solution
+    3. The student's code executed in a sandbox against every case
+    4. Correctness measured as a pass rate — never estimated
+    5. A hint about the first failing case, which never states the fix
     """
     return CodeEvalService.evaluate(db, submission_id, current_user.id)
 
