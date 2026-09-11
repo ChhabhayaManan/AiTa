@@ -5,6 +5,8 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import Base, engine
+from app.core.exceptions import register_exception_handlers
+from app.models import code_eval as code_eval_models, problem as problem_models  # noqa: F401
 from app.api import auth, users, recommendations,content_player, code_eval,feedback
 
 
@@ -34,6 +36,8 @@ Use `/auth/login` to get a Bearer token, then click **Authorize**.
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,

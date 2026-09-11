@@ -26,6 +26,29 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str=""
     YOUTUBE_API_KEY: str=""
 
+    # ── LLM (Gemini) ──────────────────────────────────────────────────────
+    GEMINI_API_KEY: str = ""
+    # Free tier caps requests per day per model, so switching this id gets a fresh budget.
+    GEMINI_MODEL: str = "gemini-3.8-flash"
+    LLM_MAX_OUTPUT_TOKENS: int = 8192
+    LLM_MAX_ATTEMPTS: int = 3
+
+    # ── Code execution ────────────────────────────────────────────────────
+    EXECUTION_PROVIDER: str = "sidecar"
+    EXECUTOR_URL: str = "http://executor:8080"
+    EXEC_WALL_SECONDS: float = 2.0
+    EXEC_CPU_SECONDS: int = 2
+    EXEC_MEMORY_MB: int = 256
+    EXEC_MAX_PROCESSES: int = 64
+    EXEC_OUTPUT_KB: int = 64
+    EXEC_COMPILE_SECONDS: int = 10
+
+    # ── Evaluation pipeline ───────────────────────────────────────────────
+    EVAL_PIPELINE: str = "v2"
+    TEST_CASES_MIN: int = 3
+    TEST_CASES_TARGET: int = 8
+    REFERENCE_MAX_ATTEMPTS: int = 3
+
     # ── Email (SMTP) for OTP delivery ─────────────────────────────────────
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
