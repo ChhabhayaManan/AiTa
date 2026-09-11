@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Text,
-    Float, Enum, JSON, ForeignKey
+    Float, Enum, Index, JSON, ForeignKey
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -37,6 +37,10 @@ class SeverityLevel(str, enum.Enum):
 class CodeSubmission(Base):
     """A single code submission from a student for evaluation."""
     __tablename__ = "code_submissions"
+    __table_args__ = (
+        Index("ix_code_submissions_user_created", "user_id", "created_at"),
+        Index("ix_code_submissions_problem", "problem_id"),
+    )
 
     id              = Column(Integer, primary_key=True, index=True)
     user_id         = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -44,11 +48,9 @@ class CodeSubmission(Base):
     language        = Column(Enum(Language, values_callable=lambda x: [e.value for e in x]), nullable=False)
     code            = Column(Text, nullable=False)
     problem_context = Column(Text, nullable=True)              # optional problem statement
-    expected_output = Column(Text, nullable=True)              # optional expected output
+    expected_output = Column(Text, nullable=True)              # a bare output string, no paired stdin
 
-    # Eval status
-    status          = Column(Enum(EvalStatus, values_callable=lambda x: [e.value for e in x]), default=EvalStatus.PENDING)
-    eval_count      = Column(Integer, default=0)               # how many times re-evaluated
+    problem_id      = Column(Integer, ForeignKey("problems.id", ondelete="SET NULL"), nullable=True)
 
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
     updated_at      = Column(DateTime(timezone=True), onupdate=func.now())
@@ -65,19 +67,29 @@ class CodeEvaluation(Base):
     Multiple evaluations can exist per submission (re-evaluate after fix).
     """
     __tablename__ = "code_evaluations"
+    __table_args__ = (
+        Index("ix_code_evaluations_user_created", "user_id", "created_at"),
+    )
 
     id              = Column(Integer, primary_key=True, index=True)
     submission_id   = Column(Integer, ForeignKey("code_submissions.id", ondelete="CASCADE"))
     user_id         = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
 
-    # ── Overall scores (0-100) ────────────────────────────────────────────────
+    # ── Scores (0-100). correctness is NULL when it could not be measured. ────
     overall_score       = Column(Float, default=0.0)
-    correctness_score   = Column(Float, default=0.0)   # logic / output correctness
-    quality_score       = Column(Float, default=0.0)   # naming, structure, DRY
-    efficiency_score    = Column(Float, default=0.0)   # time/space complexity
-    security_score      = Column(Float, default=0.0)   # injection, edge cases
-    style_score         = Column(Float, default=0.0)   # formatting, conventions
-    documentation_score = Column(Float, default=0.0)   # comments, docstrings
+    correctness_score   = Column(Float, nullable=True)  # measured pass rate, never guessed
+    complexity_score    = Column(Float, default=0.0)    # lizard: CCN, length, params
+    efficiency_score    = Column(Float, default=0.0)    # Big-O band + measured wall time
+    style_score         = Column(Float, default=0.0)    # formatting, conventions
+
+    # ── Verification ──────────────────────────────────────────────────────────
+    mode                = Column(String(20), default="verified")
+    verification_status = Column(String(20), default="unverified")
+    unverified_reason   = Column(String(60), nullable=True)
+    tests_total         = Column(Integer, default=0)
+    tests_passed        = Column(Integer, default=0)
+    status              = Column(String(20), default="pending")
+    attempt_number      = Column(Integer, default=1)
 
     # ── Static analysis output ─────────────────────────────────────────────────
     issues              = Column(JSON, default=list)   # list of Issue dicts
@@ -93,7 +105,6 @@ class CodeEvaluation(Base):
     # ── LLM-generated deep analysis ───────────────────────────────────────────
     summary             = Column(Text, nullable=True)         # 2-3 sentence overall verdict
     detailed_feedback   = Column(Text, nullable=True)         # full markdown feedback
-    corrected_code      = Column(Text, nullable=True)         # improved version
     key_improvements    = Column(JSON, default=list)          # ["Use list comprehension", ...]
     learning_points     = Column(JSON, default=list)          # concepts student should revisit
     best_practices_used = Column(JSON, default=list)          # good things the student did
@@ -116,6 +127,9 @@ class CodeEvaluation(Base):
 class EvalHistoryEntry(Base):
     """Tracks score progression across re-evaluations for a user's code."""
     __tablename__ = "eval_history"
+    __table_args__ = (
+        Index("ix_eval_history_user_created", "user_id", "created_at"),
+    )
 
     id              = Column(Integer, primary_key=True, index=True)
     user_id         = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
