@@ -18,6 +18,7 @@ export function useCodeEval() {
   const [stats, setStats]                 = useState(null)
   const [evaluating, setEvaluating]       = useState(false)
   const [loading, setLoading]             = useState(false)
+  const [error, setError]                 = useState(null)    // last failed evaluation
 
   // ── Fetch submission list ─────────────────────────────────────────────────
   const fetchSubmissions = useCallback(async () => {
@@ -53,6 +54,7 @@ export function useCodeEval() {
     setEvaluating(true)
     setActiveResult(null)
     setActiveSub(null)
+    setError(null)
     try {
       const { data } = await codeEvalAPI.submitAndEvaluate({
         language,
@@ -69,7 +71,11 @@ export function useCodeEval() {
       setSubmissions(subs)
       return data
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Evaluation failed. Is the executor running?'))
+      // Kept in state as well as toasted: a toast disappears, and without this the
+      // panel falls back to the empty state as though nothing had been attempted.
+      const message = getErrorMessage(err, 'Evaluation failed. Is the executor running?')
+      setError({ message, status: err?.response?.status ?? null })
+      toast.error(message)
       return null
     } finally {
       setEvaluating(false)
@@ -79,13 +85,16 @@ export function useCodeEval() {
   // ── Re-evaluate an existing submission ────────────────────────────────────
   const reEvaluate = useCallback(async (submissionId) => {
     setEvaluating(true)
+    setError(null)
     try {
       const { data } = await codeEvalAPI.evaluate(submissionId)
       setActiveResult(data)
       toast.success(resultToast(data))
       return data
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Re-evaluation failed.'))
+      const message = getErrorMessage(err, 'Re-evaluation failed.')
+      setError({ message, status: err?.response?.status ?? null })
+      toast.error(message)
       return null
     } finally {
       setEvaluating(false)
@@ -117,11 +126,12 @@ export function useCodeEval() {
   const clearResult = useCallback(() => {
     setActiveResult(null)
     setActiveSub(null)
+    setError(null)
   }, [])
 
   return {
     submissions, activeResult, activeSubmission, stats,
-    evaluating, loading,
+    evaluating, loading, error,
     fetchSubmissions, openSubmission, submitAndEvaluate,
     reEvaluate, fetchStats, deleteSubmission, clearResult,
   }

@@ -12,11 +12,18 @@ export function getErrorMessage(err, fallback = 'Something went wrong.') {
   return String(detail)
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || '/api/v1'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
   timeout: 60000,   // 60s — gives Render free tier time to wake up
 })
+
+// An evaluation compiles code, runs it in the sandbox and calls an LLM, which
+// routinely passes 60s. Aborting the request does not stop the backend, so the
+// work completes while the UI reports "Network Error" and resets itself.
+const EVAL_TIMEOUT = 300000
 
 // ─── Request Interceptor: attach token ───────────────────────────────────────
 api.interceptors.request.use(
@@ -40,7 +47,9 @@ api.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const { data } = await axios.post('/api/v1/auth/refresh', {
+          // Must go through API_BASE. A relative path posts to the frontend's own
+          // origin, which 404s, so every refresh failed and logged the user out.
+          const { data } = await axios.post(`${API_BASE}/auth/refresh`, {
             refresh_token: refreshToken,
           })
           localStorage.setItem('access_token', data.access_token)
@@ -67,6 +76,9 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
   refresh: (refreshToken) => api.post('/auth/refresh', { refresh_token: refreshToken }),
+  // Both 404 unless the backend has DEBUG on and DEV_LOGIN_EMAIL set.
+  devLoginAvailable: () => api.get('/auth/dev-login'),
+  devLogin: () => api.post('/auth/dev-login'),
 }
 
 // ─── User Profile API ─────────────────────────────────────────────────────────
@@ -125,9 +137,9 @@ export const codeEvalAPI = {
   // Submit code (no eval yet)
   submit:           (data) => api.post('/code-eval/submit', data),
   // Evaluate an existing submission
-  evaluate:         (id)   => api.post(`/code-eval/submit/${id}/evaluate`),
+  evaluate:         (id)   => api.post(`/code-eval/submit/${id}/evaluate`, null, { timeout: EVAL_TIMEOUT }),
   // Submit + evaluate in one call  ← main action
-  submitAndEvaluate:(data) => api.post('/code-eval/evaluate', data),
+  submitAndEvaluate:(data) => api.post('/code-eval/evaluate', data, { timeout: EVAL_TIMEOUT }),
   // History
   getSubmissions:   ()     => api.get('/code-eval/submissions'),
   getSubmission:    (id)   => api.get(`/code-eval/submissions/${id}`),
