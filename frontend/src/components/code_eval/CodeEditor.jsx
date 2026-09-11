@@ -1,29 +1,55 @@
 import { useState, useRef, useCallback } from 'react'
 import { Code2, ChevronDown, Play, X, Plus, Wand2 } from 'lucide-react'
 
+// Only the languages the sandbox can actually compile and run. Anything else
+// would be graded in review mode, with no correctness score at all.
 const LANGUAGES = [
-  { value: 'python',     label: 'Python',     ext: '.py'   },
-  { value: 'javascript', label: 'JavaScript', ext: '.js'   },
-  { value: 'typescript', label: 'TypeScript', ext: '.ts'   },
-  { value: 'java',       label: 'Java',       ext: '.java' },
-  { value: 'cpp',        label: 'C++',        ext: '.cpp'  },
-  { value: 'c',          label: 'C',          ext: '.c'    },
-  { value: 'go',         label: 'Go',         ext: '.go'   },
-  { value: 'rust',       label: 'Rust',       ext: '.rs'   },
-  { value: 'sql',        label: 'SQL',        ext: '.sql'  },
+  { value: 'cpp',    label: 'C++',    ext: '.cpp' },
+  { value: 'python', label: 'Python', ext: '.py'  },
 ]
 
-const PLACEHOLDERS = {
-  python:     '# Paste or type your Python code here\ndef solution():\n    pass\n',
-  javascript: '// Paste or type your JavaScript code here\nfunction solution() {\n\n}\n',
-  typescript: '// Paste or type your TypeScript code here\nfunction solution(): void {\n\n}\n',
-  java:       '// Paste or type your Java code here\npublic class Solution {\n    public static void main(String[] args) {\n\n    }\n}\n',
-  cpp:        '// Paste or type your C++ code here\n#include <iostream>\nusing namespace std;\n\nint main() {\n\n    return 0;\n}\n',
-  c:          '// Paste or type your C code here\n#include <stdio.h>\n\nint main() {\n\n    return 0;\n}\n',
-  go:         '// Paste or type your Go code here\npackage main\n\nimport "fmt"\n\nfunc main() {\n\n}\n',
-  rust:       '// Paste or type your Rust code here\nfn main() {\n\n}\n',
-  sql:        '-- Paste or type your SQL code here\nSELECT *\nFROM table_name\nWHERE condition;\n',
+// Starter code, not a placeholder: it already reads the test count and loops,
+// which is the part people get wrong. Edit or delete it freely.
+export const TEMPLATES = {
+  cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;              // first line is the number of test cases
+    // cin.ignore();       // uncomment if you read whole lines with getline
+    while (t--) {
+        // read one test case
+        // solve it
+        // print the answer on its own line
+    }
+    return 0;
 }
+`,
+  python: `import sys
+
+data = sys.stdin.read().split("\\n")
+pos = 0
+
+def line():
+    global pos
+    value = data[pos] if pos < len(data) else ""
+    pos += 1
+    return value
+
+t = int(line())               # first line is the number of test cases
+out = []
+for _ in range(t):
+    # read one test case with line()
+    # solve it
+    # out.append(str(answer))
+    pass
+
+print("\\n".join(out))
+`,
+}
+
+const PLACEHOLDERS = TEMPLATES
 
 
 // ── Code Formatter ────────────────────────────────────────────────────────────

@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Sparkles, Menu, X, Code2, TrendingUp, MessageSquare
+  ArrowLeft, Sparkles, Menu, X, Code2, TrendingUp, MessageSquare, AlertTriangle
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useCodeEval } from '../hooks/useCodeEval'
-import CodeEditor from '../components/code_eval/CodeEditor'
+import CodeEditor, { TEMPLATES } from '../components/code_eval/CodeEditor'
 import ScoreRadar from '../components/code_eval/ScoreRadar'
 import IssuesList from '../components/code_eval/IssuesList'
 import FeedbackPanel from '../components/code_eval/FeedbackPanel'
@@ -28,14 +28,14 @@ export default function CodeEvalPage() {
 
   const {
     submissions, activeResult, activeSubmission, stats,
-    evaluating, loading,
+    evaluating, loading, error,
     fetchSubmissions, openSubmission, submitAndEvaluate,
     reEvaluate, fetchStats, deleteSubmission,
   } = useCodeEval()
 
   // Editor state
-  const [code,           setCode]       = useState('')
-  const [language,       setLanguage]   = useState('python')
+  const [code,           setCode]       = useState(TEMPLATES.cpp)
+  const [language,       setLanguage]   = useState('cpp')
   const [title,          setTitle]      = useState('')
   const [problemContext, setProblemCtx] = useState('')
   const [expectedOutput, setExpectedOut]= useState('')
@@ -66,12 +66,20 @@ export default function CodeEvalPage() {
   useEffect(() => {
     if (activeSubmission) {
       setCode(activeSubmission.code || '')
-      setLanguage(activeSubmission.language || 'python')
+      setLanguage(activeSubmission.language || 'cpp')
       setTitle(activeSubmission.title || '')
       setProblemCtx(activeSubmission.problem_context || '')
       setExpectedOut(activeSubmission.expected_output || '')
     }
   }, [activeSubmission?.id])
+
+  // Swapping language swaps the starter code — but only while it is still a
+  // starter. Anything the student has actually written is left alone.
+  const handleLanguageChange = (next) => {
+    const untouched = !code.trim() || Object.values(TEMPLATES).includes(code)
+    setLanguage(next)
+    if (untouched && TEMPLATES[next]) setCode(TEMPLATES[next])
+  }
 
   const handleEvaluate = async () => {
     setShowSteps(true)
@@ -230,7 +238,7 @@ export default function CodeEvalPage() {
 
             <CodeEditor
               code={code}                 setCode={setCode}
-              language={language}         setLanguage={setLanguage}
+              language={language}         setLanguage={handleLanguageChange}
               title={title}               setTitle={setTitle}
               problemContext={problemContext} setProblemContext={setProblemCtx}
               expectedOutput={expectedOutput} setExpectedOutput={setExpectedOut}
@@ -253,8 +261,35 @@ export default function CodeEvalPage() {
               </div>
             )}
 
+            {/* Failed evaluation — must not fall through to the empty state, which
+                reads as "nothing happened" when something actually broke. */}
+            {!evaluating && !activeResult && error && (
+              <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                <div className="w-16 h-16 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center mb-4">
+                  <AlertTriangle size={28} className="text-red-400" />
+                </div>
+                <h3 className="font-display font-700 text-white text-lg mb-2">Evaluation failed</h3>
+                <p className="text-red-300/80 text-sm leading-relaxed max-w-sm font-mono break-words">
+                  {error.message}
+                </p>
+                {error.status && (
+                  <p className="text-white/20 text-xs font-mono mt-2">HTTP {error.status}</p>
+                )}
+                <button
+                  onClick={handleEvaluate}
+                  className="mt-6 px-4 py-2 rounded-xl bg-orange-600/15 border border-orange-500/25 text-orange-300 text-sm font-display font-600 hover:bg-orange-600/25 transition-colors"
+                >
+                  Try again
+                </button>
+                <p className="text-white/25 text-xs mt-4 max-w-xs leading-relaxed">
+                  Your code is still in the editor. If this timed out, the evaluation
+                  may have finished on the server — check History.
+                </p>
+              </div>
+            )}
+
             {/* Empty state */}
-            {!evaluating && !activeResult && (
+            {!evaluating && !activeResult && !error && (
               <div className="flex flex-col items-center justify-center h-full text-center px-8">
                 <div className="w-16 h-16 rounded-2xl bg-orange-600/10 border border-orange-500/20 flex items-center justify-center mb-4">
                   <Sparkles size={28} className="text-orange-400" />
