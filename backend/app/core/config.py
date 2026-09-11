@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # ── LLM (Gemini) ──────────────────────────────────────────────────────
     GEMINI_API_KEY: str = ""
     # Free tier caps requests per day per model, so switching this id gets a fresh budget.
-    GEMINI_MODEL: str = "gemini-3.8-flash"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     LLM_MAX_OUTPUT_TOKENS: int = 8192
     LLM_MAX_ATTEMPTS: int = 3
 
