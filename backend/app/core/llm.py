@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -21,7 +22,32 @@ class LLMUsage:
     model: str
 
 
-def get_chat_model(temperature: float = 0.0) -> ChatGoogleGenerativeAI:
+NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+
+
+def get_chat_model(temperature: float = 0.0) -> ChatOpenAI:
+    """Prose: feedback and explanations. NVIDIA's limits are far higher than the
+    Gemini free tier, and its endpoint is OpenAI-compatible."""
+    return ChatOpenAI(
+        model=settings.NVIDIA_MODEL,
+        api_key=settings.NVIDIA_API_KEY,
+        base_url=NVIDIA_BASE_URL,
+        temperature=temperature,
+        max_completion_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
+        # Nemotron reasons before answering, and on a structured call it spends the
+        # entire budget thinking and returns nothing to parse. Not optional.
+        extra_body={"chat_template_kwargs": {"thinking": False}},
+    )
+
+
+def get_codegen_model(temperature: float = 0.0) -> ChatGoogleGenerativeAI:
+    """Code inside a JSON field, which is a stricter requirement than prose.
+
+    Every NVIDIA model reachable on this key returns the program with its line
+    breaks stripped, making it a single unparseable line. Plain completions from
+    the same models are fine, so it is the structured-output path, not the model
+    being weak. Gemini stays here until an NVIDIA model gets this right.
+    """
     return ChatGoogleGenerativeAI(
         model=settings.GEMINI_MODEL,
         google_api_key=settings.GEMINI_API_KEY,
@@ -30,7 +56,7 @@ def get_chat_model(temperature: float = 0.0) -> ChatGoogleGenerativeAI:
     )
 
 
-def structured(model: ChatGoogleGenerativeAI, schema: type[BaseModel]):
+def structured(model, schema: type[BaseModel]):
     return model.with_structured_output(schema, include_raw=True)
 
 
@@ -47,7 +73,8 @@ def _read_usage(raw: Any) -> int:
         return 0
 
 
-def invoke_with_retry(runnable, payload, *, attempts: int | None = None) -> tuple[Any, LLMUsage]:
+def invoke_with_retry(runnable, payload, *, attempts: int | None = None,
+                      model: str | None = None) -> tuple[Any, LLMUsage]:
     budget = attempts or settings.LLM_MAX_ATTEMPTS
     started = time.monotonic()
     last: Exception | None = None
@@ -64,7 +91,7 @@ def invoke_with_retry(runnable, payload, *, attempts: int | None = None) -> tupl
             continue
 
         elapsed_ms = int((time.monotonic() - started) * 1000)
-        usage_model = settings.GEMINI_MODEL
+        usage_model = model or settings.NVIDIA_MODEL
         if isinstance(result, dict):
             return result.get("parsed"), LLMUsage(
                 tokens=_read_usage(result.get("raw")),

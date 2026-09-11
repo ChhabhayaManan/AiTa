@@ -23,6 +23,9 @@ google-api-python-client==2.122.0
 # so an unpinned upgrade silently changes how the graph is built.
 langchain-core==1.6.2
 langchain-google-genai==4.4.0
+# NVIDIA NIM is OpenAI-compatible; langchain-nvidia-ai-endpoints mangles
+# structured output, so talk to it through the OpenAI client instead.
+langchain-openai==1.6.2
 langgraph==1.2.11
 
 # Code quality metrics for Python and C++ in one library.

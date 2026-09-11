@@ -20,15 +20,23 @@ class Settings(BaseSettings):
     APP_NAME: str = "aiTA - AI Teaching Assistant"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
+    # Set to an existing user's email to enable POST /auth/dev-login, which skips
+    # the password and the OTP. Ignored unless DEBUG is also true.
+    DEV_LOGIN_EMAIL: str = ""
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 
     # ── Groq API Key for LLM agent reasoning ─────────────────────────────
     GROQ_API_KEY: str=""
     YOUTUBE_API_KEY: str=""
 
-    # ── LLM (Gemini) ──────────────────────────────────────────────────────
+    # ── LLM (NVIDIA NIM) ──────────────────────────────────────────────────
+    NVIDIA_API_KEY: str = ""
+    # meta/llama-3.3-70b-instruct and most of the catalogue hit end of life on
+    # 2026-08-26; available_models still lists them, so ping before switching.
+    NVIDIA_MODEL: str = "nvidia/nemotron-3-super-120b-a12b"
+    # Kept because the Gemini free tier is still a usable fallback by hand;
+    # nothing reads these unless get_chat_model is pointed back at Gemini.
     GEMINI_API_KEY: str = ""
-    # Free tier caps requests per day per model, so switching this id gets a fresh budget.
     GEMINI_MODEL: str = "gemini-3.6-flash"
     LLM_MAX_OUTPUT_TOKENS: int = 8192
     LLM_MAX_ATTEMPTS: int = 3
