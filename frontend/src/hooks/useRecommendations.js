@@ -44,16 +44,18 @@ export function useRecommendations() {
     setThoughtSteps([])
     setRecommendations([])
 
+    // Placeholders shown until the real step_log arrives. They mirror the stages
+    // ContentRecommendationAgent.run() actually logs, so the two do not contradict
+    // each other when the response swaps them out.
     const progressSteps = [
-      '📦 Checking content catalog (auto-seeding if empty)...',
-      '🔍 Extracting your learning profile & history...',
-      '🤝 Running Collaborative Filtering across all learners...',
-      '📚 Matching content topics to your interests & weak areas...',
-      '⚙️  Merging scores + applying RL exploration bonus...',
-      '🎬 Fetching real YouTube videos for content items...',
-      '🤖 Sending top candidates to Groq AI for reasoning...',
-      '🧠 Groq re-ranking and writing personalised explanations...',
-      '💾 Persisting your personalised recommendations...',
+      '🔍 Step 1: Reading your learning profile, history & error patterns...',
+      '🎯 Step 2: Generating content for your topics & languages...',
+      '🗺️  Step 3: Analysing knowledge gaps and learning path...',
+      '🤝 Step 4a: Collaborative Filtering — finding similar learners...',
+      '📚 Step 4b: Content-Based Filtering — matching your profile...',
+      '⚙️  Step 5: Merging CF + CBF + RL exploration bonus...',
+      '🤖 Step 6: AI re-ranking with full profile context...',
+      '💾 Step 7: Saving your personalised recommendations...',
     ]
 
     let stepIdx = 0
@@ -83,7 +85,9 @@ export function useRecommendations() {
         ...prev,
         `❌ Error: ${getErrorMessage(err, 'Agent run failed.')}`
       ])
-      toast.error('Agent run failed. Check GROQ_API_KEY in your .env')
+      // An unreachable model is not what lands here — the agent degrades to a
+      // score-ordered ranking and still returns. This is the run itself failing.
+      toast.error(getErrorMessage(err, 'Agent run failed. Please try again.'))
     } finally {
       setGenerating(false)
     }

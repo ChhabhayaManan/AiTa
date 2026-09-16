@@ -137,12 +137,14 @@ export default function FeedbackPage() {
                 <h3 style={S.genTitle}>Analysing your performance…</h3>
                 <p style={S.genSub}>Reading your latest code evaluation and learning sessions</p>
                 <div style={S.stepsList}>
+                  {/* Placeholders shown while the run is in flight. They mirror the
+                      nodes the feedback graph actually runs, in order, so they do not
+                      contradict the agent_steps the finished report carries. */}
                   {[
-                    { e: '🔍', t: 'Fetching latest code evaluation' },
-                    { e: '📚', t: 'Reading learning session data' },
-                    { e: '📊', t: 'Identifying error patterns and gaps' },
-                    { e: '🤖', t: 'Groq LLM synthesising personalised feedback' },
-                    { e: '👤', t: 'Updating your profile in real time' },
+                    { e: '🔍', t: 'Collecting context from upstream agents' },
+                    { e: '📊', t: 'Analysing error patterns and concept gaps' },
+                    { e: '📝', t: 'Synthesising personalised feedback' },
+                    { e: '👤', t: 'Writing signals back to the learning profile' },
                   ].map((s, i) => (
                     <div key={i} style={S.stepRow}>
                       <span>{s.e}</span>
