@@ -31,7 +31,7 @@ def generate_recommendations(
     1. Collaborative Filtering
     2. Content-Based Filtering
     3. RL exploration bonus
-    4. Claude LLM reasoning & ranking
+    4. LLM re-ranking of the merged candidates
 
     Returns batch_id + agent thought steps.
     """
