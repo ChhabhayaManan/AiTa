@@ -2,8 +2,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
+from openai import OpenAIError
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -25,35 +25,39 @@ class LLMUsage:
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 
+def _nvidia(model: str, temperature: float) -> ChatOpenAI:
+    try:
+        return ChatOpenAI(
+            model=model,
+            api_key=settings.NVIDIA_API_KEY,
+            base_url=NVIDIA_BASE_URL,
+            temperature=temperature,
+            max_completion_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
+            # These models reason before answering, and on a structured call they spend
+            # the entire budget thinking and return nothing to parse. Not optional.
+            extra_body={"chat_template_kwargs": {"thinking": False}},
+        )
+    except OpenAIError as exc:
+        # The client refuses to be built at all — no credentials, unusable base URL.
+        # Narrow on purpose: a bad keyword or a wrong type fails pydantic validation
+        # instead, and that is a bug in us, not an outage to degrade around.
+        raise LLMUnavailable(f"LLM client could not be built: {exc}") from exc
+
+
 def get_chat_model(temperature: float = 0.0) -> ChatOpenAI:
-    """Prose: feedback and explanations. NVIDIA's limits are far higher than the
-    Gemini free tier, and its endpoint is OpenAI-compatible."""
-    return ChatOpenAI(
-        model=settings.NVIDIA_MODEL,
-        api_key=settings.NVIDIA_API_KEY,
-        base_url=NVIDIA_BASE_URL,
-        temperature=temperature,
-        max_completion_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
-        # Nemotron reasons before answering, and on a structured call it spends the
-        # entire budget thinking and returns nothing to parse. Not optional.
-        extra_body={"chat_template_kwargs": {"thinking": False}},
-    )
+    """Prose: feedback, explanations, conversation."""
+    return _nvidia(settings.NVIDIA_MODEL, temperature)
 
 
-def get_codegen_model(temperature: float = 0.0) -> ChatGoogleGenerativeAI:
-    """Code inside a JSON field, which is a stricter requirement than prose.
+def get_codegen_model(temperature: float = 0.0) -> ChatOpenAI:
+    """Code inside a JSON field, a stricter requirement than prose.
 
-    Every NVIDIA model reachable on this key returns the program with its line
-    breaks stripped, making it a single unparseable line. Plain completions from
-    the same models are fine, so it is the structured-output path, not the model
-    being weak. Gemini stays here until an NVIDIA model gets this right.
+    Kept separate because the prose model cannot do this: it strips the line breaks
+    out of a program returned in a JSON string, leaving one unparseable line. Plain
+    completions from it are fine, so it is the structured-output path rather than
+    the model being weak.
     """
-    return ChatGoogleGenerativeAI(
-        model=settings.GEMINI_MODEL,
-        google_api_key=settings.GEMINI_API_KEY,
-        temperature=temperature,
-        max_output_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
-    )
+    return _nvidia(settings.NVIDIA_CODEGEN_MODEL, temperature)
 
 
 def structured(model, schema: type[BaseModel]):

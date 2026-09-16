@@ -31,13 +31,16 @@ class Settings(BaseSettings):
 
     # ── LLM (NVIDIA NIM) ──────────────────────────────────────────────────
     NVIDIA_API_KEY: str = ""
-    # meta/llama-3.3-70b-instruct and most of the catalogue hit end of life on
-    # 2026-08-26; available_models still lists them, so ping before switching.
+    # Two models, one provider. Most of the catalogue is already end of life and
+    # available_models still lists the dead ones, so ping before switching either.
+    #
+    # Prose. Nemotron cannot write code into a JSON field: it strips the line
+    # breaks out and the program becomes one unparseable line.
     NVIDIA_MODEL: str = "nvidia/nemotron-3-super-120b-a12b"
-    # Kept because the Gemini free tier is still a usable fallback by hand;
-    # nothing reads these unless get_chat_model is pointed back at Gemini.
-    GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-3.6-flash"
+    # Code. Retires 2026-09-13 and nothing else on this key writes code, so expect
+    # to change this. Test generation fails loudly when it goes; the seeded bank
+    # keeps working, because those problems ship their own cases.
+    NVIDIA_CODEGEN_MODEL: str = "deepseek-ai/deepseek-v4-pro-0813"
     LLM_MAX_OUTPUT_TOKENS: int = 8192
     LLM_MAX_ATTEMPTS: int = 3
 

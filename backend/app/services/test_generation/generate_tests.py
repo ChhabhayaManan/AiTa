@@ -41,7 +41,8 @@ def _default_generator(**kwargs) -> GeneratedTests:
             count=kwargs["count"],
         )
     runnable = structured(get_codegen_model(), GeneratedTests)
-    result, _ = invoke_with_retry(runnable, prompt, model=settings.GEMINI_MODEL)
+    result, _ = invoke_with_retry(runnable, prompt,
+                                  model=settings.NVIDIA_CODEGEN_MODEL)
     return result
 
 
