@@ -11,6 +11,7 @@ from app.core.exceptions import SubmissionNotFound
 from app.models.code_eval import CodeSubmission
 from app.models.problem import Problem
 from app.schemas.code_eval import SubmissionDetail, SubmitCodeRequest
+from app.services.problems.listing import is_curated
 
 
 def _generate_title(language: str, code: str) -> str:
@@ -41,6 +42,14 @@ class CodeEvalService:
 
     @staticmethod
     def submit(db: Session, user_id: int, req: SubmitCodeRequest) -> CodeSubmission:
+        # A problem_id no longer implies the bank: the content player sends the id of
+        # whatever /generate-problem served, which is curated or generated. Only the
+        # row itself can say which, so load it.
+        problem = (
+            db.query(Problem).filter(Problem.id == req.problem_id).first()
+            if req.problem_id is not None else None
+        )
+
         submission = CodeSubmission(
             user_id=user_id,
             language=req.language,
@@ -49,6 +58,7 @@ class CodeEvalService:
             problem_context=req.problem_context,
             expected_output=req.expected_output,
             problem_id=req.problem_id,
+            from_bank=problem is not None and is_curated(problem),
         )
         db.add(submission)
         db.commit()

@@ -17,9 +17,9 @@ class SubmitCodeRequest(BaseModel):
     title:           Optional[str] = Field(None, max_length=300)
     problem_context: Optional[str] = Field(None, max_length=5000)
     expected_output: Optional[str] = Field(None, max_length=2000)
-    # Set when the student picked a bank problem. Binding by id beats sending the
-    # statement back: the displayed text carries a preamble the stored one does not,
-    # so a round trip through the fingerprint would create a duplicate problem.
+    # Set when the submission answers a stored problem, curated or generated. Binding
+    # by id beats sending the statement back: the displayed text carries a preamble the
+    # stored one does not, so a round trip through the fingerprint would duplicate it.
     problem_id:      Optional[int] = None
 
 

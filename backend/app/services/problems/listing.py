@@ -3,10 +3,16 @@
 from sqlalchemy.orm import Session
 
 from app.agents.code_eval.multi_test import display_statement, merge_cases
-from app.models.problem import Problem, TestCaseKind
+from app.models.problem import Problem, ProblemSource, TestCaseKind
 from app.schemas.problem import ProblemSummary
 
 _PREFIXES = ("dsa-", "mbpp-")
+
+CURATED_SOURCES = (ProblemSource.DSA, ProblemSource.MBPP)
+
+
+def is_curated(problem: Problem) -> bool:
+    return problem.source in CURATED_SOURCES
 
 
 def _title(problem: Problem) -> str:
@@ -53,11 +59,20 @@ def to_summary(problem: Problem) -> ProblemSummary:
 
 
 def list_bank_problems(db: Session) -> list[ProblemSummary]:
-    """Only problems that can actually be graded, i.e. that have test cases."""
-    problems = db.query(Problem).order_by(Problem.id).all()
+    """Only curated problems that can actually be graded, i.e. that have test cases."""
+    problems = (
+        db.query(Problem)
+        .filter(Problem.source.in_(CURATED_SOURCES))
+        .order_by(Problem.id)
+        .all()
+    )
     return [to_summary(p) for p in problems if p.test_cases]
 
 
 def get_bank_problem(db: Session, problem_id: int) -> ProblemSummary | None:
-    problem = db.query(Problem).filter(Problem.id == problem_id).first()
+    problem = (
+        db.query(Problem)
+        .filter(Problem.id == problem_id, Problem.source.in_(CURATED_SOURCES))
+        .first()
+    )
     return to_summary(problem) if problem is not None else None

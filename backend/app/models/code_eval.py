@@ -4,6 +4,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import false
 from app.core.database import Base
 import enum
 
@@ -51,6 +52,7 @@ class CodeSubmission(Base):
     expected_output = Column(Text, nullable=True)              # a bare output string, no paired stdin
 
     problem_id      = Column(Integer, ForeignKey("problems.id", ondelete="SET NULL"), nullable=True)
+    from_bank       = Column(Boolean, nullable=False, default=False, server_default=false())
 
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
     updated_at      = Column(DateTime(timezone=True), onupdate=func.now())
