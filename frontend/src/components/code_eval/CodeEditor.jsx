@@ -3,7 +3,7 @@ import { Code2, ChevronDown, Play, X, Plus, Wand2 } from 'lucide-react'
 
 // Only the languages the sandbox can actually compile and run. Anything else
 // would be graded in review mode, with no correctness score at all.
-const LANGUAGES = [
+export const LANGUAGES = [
   { value: 'cpp',    label: 'C++',    ext: '.cpp' },
   { value: 'python', label: 'Python', ext: '.py'  },
 ]

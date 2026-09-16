@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { contentPlayerAPI, codeEvalAPI } from '../utils/api'
+import { LANGUAGES, TEMPLATES } from '../components/code_eval/CodeEditor'
 import toast from 'react-hot-toast'
 import {
   ArrowLeft, RefreshCw, Eye, EyeOff, Play, ChevronDown,
@@ -15,8 +16,6 @@ const DIFFICULTY_STYLE = {
   hard:   { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)'   },
   expert: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)',   border: 'rgba(139,92,246,0.3)'  },
 }
-
-const LANGUAGES = ['python', 'javascript', 'java', 'c++', 'go', 'rust']
 
 // ── Markdown-lite renderer ────────────────────────────────────────────────────
 function Md({ text }) {
@@ -61,6 +60,7 @@ export default function CodeHelpPage() {
   const [problem, setProblem]     = useState(null)
   const [generating, setGenerating] = useState(false)
   const [seenTitles, setSeenTitles] = useState([])  // track generated problem titles
+  const [seenIds, setSeenIds]     = useState([])    // bank picks are ordered by id — without these, "new problem" returns the same one
 
   // ── Editor state ──────────────────────────────────────────────────────────
   const [code, setCode]           = useState('')
@@ -93,6 +93,17 @@ export default function CodeHelpPage() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMsgs])
 
+  const langLabel = LANGUAGES.find(l => l.value === language)?.label || language
+
+  // Swapping language swaps the starter code — but only while it is still a
+  // starter. Anything the student has actually written is left alone.
+  const handleLanguageChange = (next) => {
+    const starters = [...Object.values(TEMPLATES), problem?.starter_code]
+    const untouched = !code.trim() || starters.includes(code)
+    setLang(next)
+    if (untouched && TEMPLATES[next]) setCode(TEMPLATES[next])
+  }
+
   // ── Generate problem ──────────────────────────────────────────────────────
   const generateProblem = async () => {
     if (!topic.trim()) { toast.error('Enter a topic first'); return }
@@ -103,6 +114,7 @@ export default function CodeHelpPage() {
         difficulty,
         language,
         exclude_titles: seenTitles,   // tell backend which problems to skip
+        exclude_ids: seenIds,
       })
       setProblem(data)
       setCode(data.starter_code || '')
@@ -115,6 +127,9 @@ export default function CodeHelpPage() {
       // Track this title so it won't be generated again this session
       if (data.title) {
         setSeenTitles(prev => [...new Set([...prev, data.title])])
+      }
+      if (data.problem_id) {
+        setSeenIds(prev => [...new Set([...prev, data.problem_id])])
       }
 
       // Create a content player session for history
@@ -214,6 +229,10 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
         language,
         code,
         title: problem?.title || topic,
+        // Bind by id so the graph grades against the stored problem's test cases.
+        // The description is the rendered statement, so falling back to it creates a
+        // duplicate problem with a fresh suite.
+        problem_id: problem?.problem_id,
         problem_context: problem?.description || '',
       })
       setEvalResult(data)
@@ -256,6 +275,10 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
     }
   }
 
+  // The backend withholds both on purpose — they are the answer. Without this the
+  // Solution tab offers a reveal that uncovers an empty box.
+  const hasSolution = Boolean(problem?.solution_code || problem?.explanation)
+
   const diffStyle = DIFFICULTY_STYLE[difficulty] || DIFFICULTY_STYLE.medium
   const probDiffStyle = problem ? (DIFFICULTY_STYLE[problem.difficulty] || DIFFICULTY_STYLE.medium) : diffStyle
 
@@ -289,7 +312,7 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
                 style={S.input}
                 placeholder="e.g. Binary Search, Two Pointers, Dynamic Programming..."
                 value={topic}
-                onChange={e => { setTopic(e.target.value); setSeenTitles([]) }}
+                onChange={e => { setTopic(e.target.value); setSeenTitles([]); setSeenIds([]) }}
                 onKeyDown={e => e.key === 'Enter' && generateProblem()}
                 autoFocus
               />
@@ -318,7 +341,7 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
                 <label style={S.label}>Difficulty</label>
                 <div style={S.diffRow}>
                   {Object.entries(DIFFICULTY_STYLE).map(([k, v]) => (
-                    <button key={k} onClick={() => { setDiff(k); setSeenTitles([]) }} style={{
+                    <button key={k} onClick={() => { setDiff(k); setSeenTitles([]); setSeenIds([]) }} style={{
                       ...S.diffBtn,
                       background: difficulty === k ? v.bg : 'rgba(255,255,255,0.03)',
                       border: `1px solid ${difficulty === k ? v.border : 'rgba(255,255,255,0.08)'}`,
@@ -329,8 +352,8 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
               </div>
               <div style={S.fieldGroup}>
                 <label style={S.label}>Language</label>
-                <select value={language} onChange={e => setLang(e.target.value)} style={S.select}>
-                  {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+                <select value={language} onChange={e => handleLanguageChange(e.target.value)} style={S.select}>
+                  {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                 </select>
               </div>
             </div>
@@ -415,7 +438,7 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
               { id: 'problem',  label: 'Problem',  icon: <BookOpen size={13} /> },
               { id: 'hints',    label: 'Hints',    icon: <Lightbulb size={13} /> },
               { id: 'solution', label: 'Solution', icon: <Eye size={13} /> },
-            ].map(tab => (
+            ].filter(tab => tab.id !== 'solution' || hasSolution).map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
                 ...S.tab,
                 background: activeTab === tab.id ? 'rgba(255,255,255,0.08)' : 'transparent',
@@ -436,7 +459,7 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
                   <span style={{ ...S.diffPill, background: probDiffStyle.bg, border: `1px solid ${probDiffStyle.border}`, color: probDiffStyle.color }}>
                     {problem.difficulty}
                   </span>
-                  <span style={S.langPill}>{language}</span>
+                  <span style={S.langPill}>{langLabel}</span>
                   <span style={S.topicPill}>{topic}</span>
                 </div>
 
@@ -527,7 +550,7 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
             )}
 
             {/* Solution tab */}
-            {activeTab === 'solution' && problem && (
+            {activeTab === 'solution' && problem && hasSolution && (
               <div>
                 {!showSolution ? (
                   <div style={S.solutionBlur}>
@@ -541,12 +564,16 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
                   </div>
                 ) : (
                   <div>
-                    <p style={S.sectionLabel}>Solution</p>
-                    <div style={S.codeDisplay}>
-                      <pre style={{ margin: 0, overflowX: 'auto', color: '#e2e8f0', fontSize: 13, lineHeight: 1.6 }}>
-                        <code>{problem.solution_code}</code>
-                      </pre>
-                    </div>
+                    {problem.solution_code && (
+                      <>
+                        <p style={S.sectionLabel}>Solution</p>
+                        <div style={S.codeDisplay}>
+                          <pre style={{ margin: 0, overflowX: 'auto', color: '#e2e8f0', fontSize: 13, lineHeight: 1.6 }}>
+                            <code>{problem.solution_code}</code>
+                          </pre>
+                        </div>
+                      </>
+                    )}
                     {problem.explanation && (
                       <>
                         <p style={{ ...S.sectionLabel, marginTop: 20 }}>Explanation</p>
@@ -567,11 +594,11 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Code2 size={14} color="rgba(255,255,255,0.4)" />
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Solution</span>
-              <span style={S.langPill}>{language}</span>
+              <span style={S.langPill}>{langLabel}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button
-                onClick={() => setCode(problem?.starter_code || '')}
+                onClick={() => setCode(TEMPLATES[language] || problem?.starter_code || '')}
                 style={S.resetBtn}
                 title="Reset to starter code"
               >
