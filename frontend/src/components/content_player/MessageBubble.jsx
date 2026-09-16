@@ -222,6 +222,7 @@ export default function MessageBubble({ message, onRate }) {
             <p className="text-white/90 text-sm leading-relaxed">{message.content}</p>
           </div>
           <p className="text-white/20 text-xs text-right mt-1 font-mono">
+            {message._unanswered && <span className="text-yellow-400/60 mr-2">saved · awaiting a reply</span>}
             {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
@@ -255,6 +256,14 @@ export default function MessageBubble({ message, onRate }) {
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Improvised problem — no stored problem, so nothing can grade it */}
+          {message._improvised && (
+            <div className="mt-3 flex items-start gap-2 bg-yellow-500/5 border border-yellow-500/15 rounded-xl px-3 py-2">
+              <AlertTriangle size={13} className="text-yellow-400 shrink-0 mt-0.5" />
+              <p className="text-yellow-300/70 text-xs">This is a practice problem I wrote here in chat — it isn't in the problem bank, so it can't be auto-graded or submitted for evaluation.</p>
             </div>
           )}
 

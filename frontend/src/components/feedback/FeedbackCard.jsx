@@ -77,6 +77,13 @@ export default function FeedbackCard({ report }) {
             {typeConfig.label}
           </span>
           <span className={`text-xs font-mono ${toneConfig.color}`}>{toneConfig.label}</span>
+          {report.pattern_only && (
+            <span
+              title="The language model was unavailable, so this report was built from the error-pattern analysis alone."
+              className="px-2.5 py-1 rounded-lg border text-xs font-display font-600 text-yellow-400 bg-yellow-600/10 border-yellow-500/20">
+              ⚠ Pattern analysis only
+            </span>
+          )}
           <span className="flex items-center gap-1 text-white/25 text-xs font-mono ml-auto">
             <Clock size={11} /> {timeAgo(report.created_at)}
           </span>

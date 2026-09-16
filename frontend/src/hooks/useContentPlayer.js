@@ -106,6 +106,9 @@ export function useContentPlayer() {
         _concepts:      data.concepts || data.detected_concepts || [],
         _suggestions:   data.follow_up_suggestions || [],
         _confusion:     data.comfort_signal === 'struggling' || data.confusion_detected,
+        // "improvised" means no stored problem existed and the tutor invented one in
+        // prose: there is nothing to submit against and nothing to grade it with.
+        _improvised:    data.problem_origin === 'improvised',
       }
 
       setMessages(prev =>
@@ -140,8 +143,15 @@ export function useContentPlayer() {
 
       return data
     } catch (err) {
-      setMessages(prev => prev.filter(m => m.id !== 'typing' && m.id !== tempUserMsg.id))
-      const errMsg = err.response?.data?.detail || 'Failed to get response. Check your Groq API key.'
+      // A 503 means the backend saved the message and only the reply failed. Dropping
+      // the bubble would contradict the toast and invite a retype, which writes a
+      // second user row; keep it, unanswered, so a retry is a follow-up not a copy.
+      const saved = err.response?.status === 503
+      setMessages(prev => prev
+        .filter(m => m.id !== 'typing' && (saved || m.id !== tempUserMsg.id))
+        .map(m => m.id === tempUserMsg.id ? { ...m, _pending: false, _unanswered: true } : m)
+      )
+      const errMsg = err.response?.data?.detail || 'Failed to get a reply. Please try again.'
       toast.error(errMsg)
       return null
     } finally {
