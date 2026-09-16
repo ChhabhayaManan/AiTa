@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
-from app.core.database import Base, engine
 from app.core.exceptions import register_exception_handlers
 from app.models import code_eval as code_eval_models, problem as problem_models  # noqa: F401
 from app.api import auth, users, recommendations,content_player, code_eval,feedback
@@ -12,8 +11,9 @@ from app.api import auth, users, recommendations,content_player, code_eval,feedb
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    print(f"✅ Database tables created/verified.")
+    # No create_all here. It adds missing tables but never missing columns, so a
+    # database behind a migration starts up looking healthy and fails later on the
+    # first write. Alembic owns the schema: run `alembic upgrade head`.
     print(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} is running.")
     yield
     print("👋 Shutting down aiTA backend.")
@@ -27,7 +27,7 @@ app = FastAPI(
 
 ### Agents
 - 👤 **User Profiling Agent** — Builds dynamic learner models
-- 🤖 **Content Recommendation Agent** — CF + CBF + Claude LLM reasoning
+- 🤖 **Content Recommendation Agent** — CF + CBF + LLM re-ranking
 
 ### Authentication
 Use `/auth/login` to get a Bearer token, then click **Authorize**.
