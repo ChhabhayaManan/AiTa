@@ -1,20 +1,9 @@
 import time
 
 from app.agents.code_eval.state import EvalState
+from app.core.text import ellipsize
 from app.models.code_eval import CodeEvaluation, EvalHistoryEntry
 from app.models.problem import ExecRole, ExecutionResult
-
-
-def _fit(value: str | None, limit: int) -> str | None:
-    """Clamp to the column width.
-
-    A model writing one sentence too many must not throw away a completed
-    evaluation: the run has already compiled, executed and been scored by the time
-    this row is written, and a DataError here loses all of it.
-    """
-    if value is None:
-        return None
-    return value if len(value) <= limit else value[: limit - 1] + "…"
 
 
 def persist(state: EvalState, *, started_ms: int | None = None) -> EvalState:
@@ -46,8 +35,8 @@ def persist(state: EvalState, *, started_ms: int | None = None) -> EvalState:
         status="done",
         attempt_number=attempt,
         issues=[i.model_dump() for i in report.issues],
-        time_complexity=_fit(report.metrics.time_complexity, 120),
-        space_complexity=_fit(report.metrics.space_complexity, 120),
+        time_complexity=ellipsize(report.metrics.time_complexity, 120),
+        space_complexity=ellipsize(report.metrics.space_complexity, 120),
         cyclomatic_complexity=report.metrics.cyclomatic_complexity,
         lines_of_code=report.metrics.lines_of_code,
         comment_ratio=report.metrics.comment_ratio,
@@ -61,7 +50,7 @@ def persist(state: EvalState, *, started_ms: int | None = None) -> EvalState:
         agent_steps=report.agent_steps,
         tokens_used=report.tokens_used,
         latency_ms=latency_ms,
-        model_used=_fit(report.model_used, 100),
+        model_used=ellipsize(report.model_used, 100),
         static_tool_used="lizard",
     )
     state.db.add(evaluation)

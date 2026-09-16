@@ -5,7 +5,7 @@ happened by the time the row is written. A value one character too long for its
 column used to raise DataError there and throw the whole run away.
 """
 
-from app.agents.code_eval.nodes.persist import _fit
+from app.core.text import ellipsize
 from app.models.code_eval import CodeEvaluation
 
 PROSE = ("O(n) per test case, where n is the length of the string, due to the "
@@ -22,20 +22,20 @@ def test_the_observed_failure_now_fits():
 
 
 def test_short_values_are_untouched():
-    assert _fit("O(n log n)", 120) == "O(n log n)"
+    assert ellipsize("O(n log n)", 120) == "O(n log n)"
 
 
 def test_none_stays_none():
-    assert _fit(None, 120) is None
+    assert ellipsize(None, 120) is None
 
 
 def test_a_value_at_the_limit_is_untouched():
     exact = "x" * 120
-    assert _fit(exact, 120) == exact
+    assert ellipsize(exact, 120) == exact
 
 
 def test_an_overlong_value_is_clamped_not_raised():
-    clamped = _fit("y" * 500, 120)
+    clamped = ellipsize("y" * 500, 120)
     assert len(clamped) == 120
     assert clamped.endswith("…")
 

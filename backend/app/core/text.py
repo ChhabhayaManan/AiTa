@@ -25,3 +25,15 @@ def truncate(text: str, limit_kb: int) -> tuple[str, bool]:
     if len(encoded) <= limit:
         return text, False
     return encoded[:limit].decode("utf-8", errors="ignore"), True
+
+
+def ellipsize(value: str | None, limit: int) -> str | None:
+    """Clamp to a column width, marking the cut with an ellipsis.
+
+    A model writing one sentence too many must not throw away finished work: by the
+    time a row is written the expensive part has already happened, and a DataError
+    there loses all of it.
+    """
+    if value is None:
+        return None
+    return value if len(value) <= limit else value[: limit - 1] + "…"
