@@ -93,7 +93,7 @@ Copy to: backend/app/schemas/content_player.py
 """
 
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import datetime
 
 
@@ -138,9 +138,17 @@ class ChatResponse(BaseModel):
     topic_changed: bool = False
     comfort_signal: str = "comfortable"
     tokens_used: int = 0
+    # The name the frontend has always read (useContentPlayer.js) and no response has
+    # ever carried, so the follow-up chips have never had anything to show.
+    follow_up_suggestions: List[str] = []
     # Question mastery
     question_solved: bool = False          # True if this submission was marked solved
     difficulty_increased: bool = False     # True if difficulty was auto-bumped this turn
+    # The problem set on this turn, if any. origin is "bank" | "generated" |
+    # "improvised", the last meaning no real problem existed and the tutor was asked
+    # to make one up — a degraded turn, labelled as one.
+    problem_id: Optional[int] = None
+    problem_origin: Optional[str] = None
 
 
 class MessageFeedback(BaseModel):
@@ -152,9 +160,12 @@ class GenerateProblemRequest(BaseModel):
     difficulty: str = "medium"
     language: str = "python"
     exclude_titles: list = []   # titles already shown — don't repeat these
+    exclude_ids: List[int] = []  # problem ids already shown this session
 
 
 class GenerateProblemResponse(BaseModel):
+    problem_id: int
+    origin: Literal["bank", "generated"]
     title: str
     difficulty: str
     description: str
@@ -162,5 +173,5 @@ class GenerateProblemResponse(BaseModel):
     constraints: list = []
     hints: list = []
     starter_code: str = ""
-    solution_code: str = ""
+    solution_code: str = ""   # always empty: it is the reference, not the student's
     explanation: str = ""

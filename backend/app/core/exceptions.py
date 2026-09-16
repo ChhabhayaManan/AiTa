@@ -18,6 +18,16 @@ class ProblemNotFound(AitaError):
     status_code = 404
 
 
+class SessionNotFound(AitaError):
+    """A Content Player session that does not exist, or is not this user's.
+
+    One exception for both so a caller cannot tell the two apart: answering
+    differently would let a student probe for other people's session ids.
+    """
+
+    status_code = 404
+
+
 class ExecutorUnavailable(AitaError):
     status_code = 503
 

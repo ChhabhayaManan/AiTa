@@ -213,7 +213,10 @@ class ContentPlayerSession(Base):
     total_messages    = Column(Integer, default=0)
     total_tokens_used = Column(Integer, default=0)
     concepts_covered  = Column(JSON, default=list)
-    agent_model       = Column(String(100), default="llama-3.3-70b-versatile")
+    # Written from the usage the call actually reports. No default: a session that
+    # has not been answered yet has not been answered by any model, and the previous
+    # default named one that was decommissioned in August 2026.
+    agent_model       = Column(String(100), nullable=True)
 
     # Learning signals
     confusion_detected = Column(Boolean, default=False)
@@ -221,7 +224,7 @@ class ContentPlayerSession(Base):
     weak_signals       = Column(JSON, default=list)
 
     # Question mastery tracking
-    solved_questions       = Column(JSON, default=list)   # list of question title hashes marked solved
+    solved_questions       = Column(JSON, default=list)   # list of problems.id set to the student
     consecutive_easy_solves = Column(Integer, default=0)  # streak of easy solves → triggers difficulty bump
 
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
