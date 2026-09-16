@@ -78,9 +78,19 @@ aiTA/
 │       │   ├── auth_service.py     # Gmail API OAuth2 + SMTP fallback
 │       │   └── ...
 │       └── agents/                 # AI agent logic
-│           ├── content_player_agent.py
-│           ├── code_eval_agent.py
-│           ├── feedback_agent.py
+│           ├── code_eval_agent.py   # v1 pipeline, kept behind EVAL_PIPELINE
+│           ├── content_player/      # Content player agent (LangGraph package)
+│           ├── code_eval/           # Code evaluation agent (LangGraph package)
+│           ├── feedback/            # Feedback agent (LangGraph package)
+│           │   ├── graph.py
+│           │   ├── state.py
+│           │   ├── schemas.py
+│           │   ├── prompts.py
+│           │   └── nodes/
+│           │       ├── gather_context.py
+│           │       ├── analyse_patterns.py
+│           │       ├── synthesise.py
+│           │       └── persist.py
 │           └── recommendation_agent.py
 └── frontend/
     ├── index.html
@@ -264,9 +274,10 @@ cd backend/app
 PYTHONPATH=.. alembic upgrade head        # Windows: set PYTHONPATH=..
 ```
 
-> Startup also calls `create_all()`, which creates **missing tables but never missing
-> columns**. On a database that predates a migration it will start cleanly while
-> silently running on a stale schema, so always migrate rather than relying on it.
+> Startup no longer calls `create_all()`. It created **missing tables but never
+> missing columns**, so a database behind a migration started cleanly on a stale
+> schema and failed later on the first write. Migrating is now the only way the
+> schema is created or updated — run it before starting the server.
 
 #### Start Backend Server
 
