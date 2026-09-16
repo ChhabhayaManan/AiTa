@@ -1,9 +1,10 @@
-from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from app.agents.feedback_agent import FeedbackAgent
+from sqlalchemy.orm import Session
+
+from app.agents.feedback.graph import generate_feedback
 from app.models.feedback import FeedbackTone
 from app.schemas.feedback import GenerateFeedbackRequest
-from typing import Optional
+from app.services.feedback import reports
 
 
 class FeedbackService:
@@ -15,10 +16,11 @@ class FeedbackService:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Provide at least one of evaluation_id or cp_session_id."
             )
-        agent = FeedbackAgent(db)
         try:
             tone = FeedbackTone(req.tone) if isinstance(req.tone, str) else req.tone
-            return agent.generate(user_id, req.evaluation_id, req.cp_session_id, tone)
+            return generate_feedback(
+                db, user_id, req.evaluation_id, req.cp_session_id, tone
+            )
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
         except RuntimeError as e:
@@ -26,19 +28,19 @@ class FeedbackService:
 
     @staticmethod
     def get_reports(db: Session, user_id: int):
-        return FeedbackAgent(db).get_reports(user_id)
+        return reports.get_reports(db, user_id)
 
     @staticmethod
     def get_report(db: Session, report_id: int, user_id: int):
         try:
-            return FeedbackAgent(db).get_report(report_id, user_id)
+            return reports.get_report(db, report_id, user_id)
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     @staticmethod
     def mark_read(db: Session, report_id: int, user_id: int):
-        FeedbackAgent(db).mark_read(report_id, user_id)
+        reports.mark_read(db, report_id, user_id)
 
     @staticmethod
     def unread_count(db: Session, user_id: int) -> int:
-        return FeedbackAgent(db).unread_count(user_id)
+        return reports.unread_count(db, user_id)

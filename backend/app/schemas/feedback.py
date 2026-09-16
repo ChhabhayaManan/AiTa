@@ -49,6 +49,7 @@ class FeedbackReportResponse(BaseModel):
     agent_steps:    List[str]             = []
     tokens_used:    int                   = 0
     latency_ms:     int                   = 0
+    pattern_only:   bool                  = False
     is_read:        bool                  = False
     created_at:     datetime
 

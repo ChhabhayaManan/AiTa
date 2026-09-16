@@ -4,6 +4,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import false
 from app.core.database import Base
 import enum
 
@@ -67,6 +68,9 @@ class FeedbackReport(Base):
     # ── Agent run metadata ─────────────────────────────────────────────────────
     agent_steps   = Column(JSON,    default=list)          # thought log from pipeline
     tokens_used   = Column(Integer, default=0)
+    # True when the narrative came from pattern analysis alone because the LLM was
+    # unavailable. The UI labels it so a degraded report is never read as analysis.
+    pattern_only  = Column(Boolean, nullable=False, default=False, server_default=false())
     latency_ms    = Column(Integer, default=0)
     is_read       = Column(Boolean, default=False)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())

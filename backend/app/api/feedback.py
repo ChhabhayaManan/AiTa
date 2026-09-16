@@ -31,9 +31,12 @@ def generate(
     1. Pulls Code Evaluation result (if evaluation_id given)
     2. Pulls Content Player session (if cp_session_id given)
     3. Analyses error patterns + misconceptions
-    4. Groq LLM synthesises personalised narrative feedback
+    4. Synthesises a personalised narrative from those findings
     5. Updates User Profile (weak_areas, error_patterns, topic_scores)
     6. Returns rich FeedbackReport
+
+    If the language model is unavailable the report is still returned, built from
+    the pattern analysis alone and flagged with `pattern_only`.
     """
     return FeedbackService.generate(db, current_user.id, req)
 
