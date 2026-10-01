@@ -8,11 +8,32 @@ from app.models.user import User
 from app.models.code_eval import CodeEvaluation, CodeSubmission
 from app.models.content_player import ContentPlayerSession
 from app.schemas.feedback import (
-    GenerateFeedbackRequest, FeedbackReportResponse, MarkReadRequest
+    GenerateFeedbackRequest, FeedbackReportResponse, MarkReadRequest,
+    HintRequest, HintResponse,
 )
 from app.services.feedback_service import FeedbackService
+from app.services.hints.service import request_hint
 
 router = APIRouter(prefix="/feedback", tags=["Feedback Agent"])
+
+
+@router.post(
+    "/hint",
+    response_model=HintResponse,
+    summary="Next rung of the hint ladder for a problem",
+)
+def hint(
+    req: HintRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """One level up per request (L2 concept → L3 steps → L4 line pointer, capped at 4),
+    grounded in the latest failing attempt. Every reply passes the leak guardrail."""
+    result = request_hint(db, current_user.id, req.problem_id)
+    return HintResponse(
+        problem_id=result.problem_id, evaluation_id=result.evaluation_id,
+        level=result.level, text=result.text, source=result.source,
+    )
 
 
 @router.post(

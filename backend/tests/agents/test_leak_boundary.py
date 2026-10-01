@@ -69,3 +69,28 @@ def test_report_exposes_at_most_one_expected_output():
                        if isinstance(c, dict) and "expected_stdout" in c]
     assert expected_values == []
     assert payload["first_failing_case"]["expected_stdout"] == "out"
+
+
+def test_hint_payloads_declare_no_forbidden_field():
+    from app.agents.code_eval.schemas import HintReport
+    from app.schemas.feedback import HintResponse
+
+    for model in (HintReport, HintResponse):
+        assert set(model.model_fields).isdisjoint(FORBIDDEN_REPORT_FIELDS)
+
+
+def test_l1_hint_is_built_from_the_failing_case_only():
+    from app.agents.code_eval.nodes.hint_l1 import hint_l1
+
+    state = EvalState(db=None, submission_id=1, user_id=1,
+                      reference_solution="THE_REFERENCE_SOLUTION_BODY")
+    state.report = EvalReport(
+        verification_status="verified",
+        first_failing_case=FailingCaseReport(
+            ordinal=2, kind="edge", status="wrong_answer", passed=False, time_ms=1,
+            stdin="1\n-7\n", expected_stdout="-7", actual_stdout="0",
+        ),
+    )
+    hint_l1(state)
+    assert state.report.hint.level == 1
+    assert "THE_REFERENCE_SOLUTION_BODY" not in state.report.model_dump_json()

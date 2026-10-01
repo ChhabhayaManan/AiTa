@@ -59,3 +59,16 @@ class FeedbackReportResponse(BaseModel):
 
 class MarkReadRequest(BaseModel):
     is_read: bool = True
+
+
+class HintRequest(BaseModel):
+    problem_id: int
+
+
+class HintResponse(BaseModel):
+    problem_id:    int
+    evaluation_id: int
+    level:         int
+    text:          str
+    source:        str
+    max_level:     int = 4
