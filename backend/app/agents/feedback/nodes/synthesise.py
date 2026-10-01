@@ -4,6 +4,7 @@ import logging
 from app.agents.feedback.prompts import (
     CP_BLOCK,
     EVAL_BLOCK,
+    LEARNING_BLOCK,
     PATTERN_BLOCK,
     PATTERN_ONLY_HEADLINE,
     PATTERN_ONLY_MOTIVATIONAL,
@@ -14,6 +15,8 @@ from app.agents.feedback.schemas import FeedbackNarrative
 from app.agents.feedback.state import FeedbackState
 from app.core.exceptions import LLMUnavailable
 from app.core.llm import get_chat_model, invoke_with_retry, structured
+from app.models.code_eval import Language
+from app.services.hints import guardrail
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,8 @@ logger = logging.getLogger(__name__)
 # model id and an API error body — goes to the log instead.
 PATTERN_ONLY_STEP = ("Detailed feedback could not be generated. "
                      "Reporting the pattern analysis on its own.")
+WITHHELD_STEP = ("Detailed feedback was withheld because it gave away the solution. "
+                 "Reporting the pattern analysis on its own.")
 
 
 def _score(value) -> str:
@@ -60,6 +65,20 @@ def _context(state: FeedbackState) -> str:
             learning_points=json.dumps(e["learning_points"][:5]),
             anti_patterns=json.dumps(e["anti_patterns"][:4]),
             summary=e["summary"],
+        ))
+        learning = e["learning"]
+        case = learning["failing_case"]
+        parts.append(LEARNING_BLOCK.format(
+            topic=learning["topic_label"] or "unclassified",
+            mastery="n/a" if learning["mastery"] is None else f"{learning['mastery']:.2f}",
+            evidence=learning["evidence"],
+            failing=(f"input {case['stdin']!r}, expected {case['expected']!r}, "
+                     f"got {case['actual']!r}") if case else "none - every test passed",
+            statuses=", ".join(learning["case_statuses"]) or "n/a",
+            this_attempt=", ".join(learning["this_attempt_misconceptions"]) or "none",
+            counts=json.dumps(learning["misconception_counts"]),
+            hint_level=learning["hint_level"],
+            recent=json.dumps(learning["recent_events"]),
         ))
     if state.cp_ctx:
         c = state.cp_ctx
@@ -100,33 +119,61 @@ def _from_patterns(patterns: dict) -> FeedbackNarrative:
     )
 
 
+def _narrative_text(narrative: FeedbackNarrative) -> str:
+    return "\n".join([narrative.headline, narrative.summary, narrative.motivational or "",
+                      *narrative.strengths, *narrative.errors, *narrative.misconceptions,
+                      *narrative.action_items])
+
+
+def _leaks(state: FeedbackState, narrative: FeedbackNarrative) -> str | None:
+    """The same guardrail every hint passes through: reference lines quoted, too much
+    code, or a code block that solves the problem."""
+    if not state.eval_ctx:
+        return None
+    learning = state.eval_ctx["learning"]
+    try:
+        language = Language(state.eval_ctx["language"])
+    except ValueError:
+        language = Language.PYTHON
+    verdict = guardrail.check(
+        _narrative_text(narrative), 3, language, learning["test_cases"],
+        references=learning["references"], student_code=state.eval_ctx["code"],
+    )
+    return verdict.reason if verdict.blocked else None
+
+
+def _fall_back(state: FeedbackState, step: str) -> FeedbackState:
+    state.pattern_only = True
+    state.narrative = _from_patterns(state.patterns)
+    state.log(step)
+    return state
+
+
 def synthesise(state: FeedbackState) -> FeedbackState:
     state.log("Synthesising personalised feedback.")
     try:
         runnable = (state.synthesise_runnable
                     or structured(get_chat_model(temperature=0.4), FeedbackNarrative))
-        narrative, usage = invoke_with_retry(
-            runnable, [("system", _system(state)), ("human", _context(state))]
-        )
+        for attempt in range(2):
+            narrative, usage = invoke_with_retry(
+                runnable, [("system", _system(state)), ("human", _context(state))]
+            )
+            if narrative is None:
+                # Structured output that failed to parse is the same situation as no
+                # call at all, and must be labelled the same way.
+                logger.warning("Feedback synthesis returned no parsed narrative for user %s",
+                               state.user_id)
+                return _fall_back(state, PATTERN_ONLY_STEP)
+            state.tokens_used += usage.tokens
+            leak = _leaks(state, narrative)
+            if leak is None:
+                state.narrative = narrative
+                state.log(f"Feedback synthesised ({state.tokens_used} tokens).")
+                return state
+            logger.warning("Feedback for user %s blocked by the guardrail: %s",
+                           state.user_id, leak)
     except LLMUnavailable as exc:
         logger.warning("Feedback synthesis unavailable for user %s: %s",
                        state.user_id, exc.detail)
-        state.pattern_only = True
-        state.narrative = _from_patterns(state.patterns)
-        state.log(PATTERN_ONLY_STEP)
-        return state
-
-    if narrative is None:
-        # Structured output that failed to parse is the same situation as no call at
-        # all, and must be labelled the same way rather than persisted as empty prose.
-        logger.warning("Feedback synthesis returned no parsed narrative for user %s",
-                       state.user_id)
-        state.pattern_only = True
-        state.narrative = _from_patterns(state.patterns)
-        state.log(PATTERN_ONLY_STEP)
-        return state
-
-    state.narrative = narrative
-    state.tokens_used = usage.tokens
-    state.log(f"Feedback synthesised ({usage.tokens} tokens).")
-    return state
+        return _fall_back(state, PATTERN_ONLY_STEP)
+    return _fall_back(state, WITHHELD_STEP)

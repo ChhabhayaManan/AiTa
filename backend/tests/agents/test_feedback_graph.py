@@ -177,35 +177,110 @@ def test_an_unparseable_narrative_is_labelled_like_an_outage(session, user):
     assert report.action_items
 
 
-def test_profile_is_updated_on_the_happy_path(session, user):
+@pytest.mark.parametrize("runnable", [FakeSynthesiseRunnable, unavailable])
+def test_feedback_never_writes_the_profile(session, user, runnable):
     evaluation = make_evaluation(session, user)
-    generate_feedback(session, user.id, evaluation.id, None,
-                      FeedbackTone.CONSTRUCTIVE,
-                      synthesise_runnable=FakeSynthesiseRunnable())
+    report = generate_feedback(session, user.id, evaluation.id, None,
+                               FeedbackTone.CONSTRUCTIVE, synthesise_runnable=runnable())
 
     profile = session.query(LearningProfile).filter(
         LearningProfile.user_id == user.id).one()
-    assert set(profile.weak_areas) >= {"loops", "correctness", "complexity",
-                                       "indexing"}
-    assert profile.error_patterns == ["[logic] off by one"]
-    assert profile.topic_scores == {"loops": 0.5, "indexing": 0.4}
-    assert profile.recommended_next == ["indexing", "loop invariants"]
-    assert profile.last_updated_by_agent is not None
+    assert profile.weak_areas == ["loops"]
+    assert profile.error_patterns == []
+    assert profile.topic_scores == {}
+    assert profile.last_updated_by_agent is None
+    assert report.profile_updates == {}
+    assert report.concept_map
 
 
-def test_profile_is_updated_on_the_failure_path(session, user):
-    evaluation = make_evaluation(session, user)
-    report = generate_feedback(
-        session, user.id, evaluation.id, None, FeedbackTone.CONSTRUCTIVE,
-        synthesise_runnable=unavailable(),
+def _bound_evaluation(session, user):
+    """A failing attempt at a bank problem, the way Code Eval leaves it on disk."""
+    from app.models.learning import LearningEvent
+    from app.models.problem import (
+        ExecRole,
+        ExecutionResult,
+        Problem,
+        ProblemReference,
+        ProblemSource,
+        ReferenceStatus,
+        TestCase,
+        TestCaseKind,
+        TestCaseOrigin,
     )
 
-    profile = session.query(LearningProfile).filter(
-        LearningProfile.user_id == user.id).one()
-    assert set(profile.weak_areas) >= {"loops", "correctness", "complexity"}
-    assert profile.error_patterns == ["[logic] off by one"]
-    assert profile.topic_scores == {"correctness": 0.3, "complexity": 0.3}
-    assert report.profile_updates["recommended_next"] == ["correctness", "complexity"]
+    problem = Problem(source=ProblemSource.DSA, statement="max", statement_hash="f" * 64,
+                      topic="dynamic_programming")
+    problem.test_cases = [
+        TestCase(kind=TestCaseKind.SAMPLE, stdin="1\n5\n", expected_stdout="5",
+                 stdin_hash="a", origin=TestCaseOrigin.PROBLEM_SAMPLE, ordinal=0),
+        TestCase(kind=TestCaseKind.EDGE, stdin="1\n-7\n", expected_stdout="-7",
+                 stdin_hash="b", origin=TestCaseOrigin.CROSS_CHECKED, ordinal=1,
+                 rationale="all negative"),
+    ]
+    problem.references = [ProblemReference(
+        language=Language.PYTHON, status=ReferenceStatus.VALIDATED,
+        source="values = read()\nbest = cur = values[0]\nprint(best)")]
+    session.add(problem)
+    session.commit()
+
+    submission = CodeSubmission(user_id=user.id, language=Language.PYTHON, title="t",
+                                code="best = 0\nprint(best)", problem_id=problem.id)
+    session.add(submission)
+    session.commit()
+    evaluation = make_evaluation(session, user, submission_id=submission.id)
+    for case, status, out in zip(problem.test_cases, ("ok", "wrong_answer"), ("5", "0")):
+        session.add(ExecutionResult(evaluation_id=evaluation.id, test_case_id=case.id,
+                                    role=ExecRole.STUDENT, status=status, stdout=out))
+    for n, tags in enumerate((["wrong_initial_value"], ["wrong_initial_value"],
+                              ["wrong_initial_value", "off_by_one"])):
+        session.add(LearningEvent(
+            user_id=user.id, kind="code", topic="dynamic_programming", score=0.5,
+            weight=1.0, misconceptions=tags,
+            source_ref=f"evaluation:{evaluation.id}" if n == 2 else f"evaluation:{900 + n}"))
+    session.commit()
+    return evaluation
+
+
+def test_context_cites_the_failing_input_and_repeated_misconceptions(session, user):
+    evaluation = _bound_evaluation(session, user)
+    runnable = FakeSynthesiseRunnable()
+
+    generate_feedback(session, user.id, evaluation.id, None, FeedbackTone.CONSTRUCTIVE,
+                      synthesise_runnable=runnable)
+
+    system, human = (text for _, text in runnable.payloads[0])
+    assert "quote its input" in system and "NEVER state the fix" in system
+    assert "input '1\\n-7\\n', expected '-7', got '0'" in human
+    assert '"wrong_initial_value": 3' in human
+    assert "Misconceptions tagged on this attempt: wrong_initial_value, off_by_one" in human
+    assert "Topic: Dynamic Programming" in human
+    assert "Per-test results: ok, wrong_answer" in human
+
+
+def test_feedback_quoting_the_reference_is_regenerated_then_withheld(session, user):
+    evaluation = _bound_evaluation(session, user)
+    leaky = narrative()
+    leaky.summary = "Just write best = cur = values[0] and you are done."
+    runnable = FakeSynthesiseRunnable(result=leaky)
+
+    report = generate_feedback(session, user.id, evaluation.id, None,
+                               FeedbackTone.CONSTRUCTIVE, synthesise_runnable=runnable)
+
+    assert len(runnable.payloads) == 2
+    assert report.pattern_only is True
+    assert "values[0]" not in report.summary
+    assert any("withheld" in step for step in report.agent_steps)
+
+
+def test_clean_feedback_passes_the_guardrail(session, user):
+    evaluation = _bound_evaluation(session, user)
+    runnable = FakeSynthesiseRunnable()
+
+    report = generate_feedback(session, user.id, evaluation.id, None,
+                               FeedbackTone.CONSTRUCTIVE, synthesise_runnable=runnable)
+
+    assert len(runnable.payloads) == 1
+    assert report.pattern_only is False
 
 
 def test_feedback_type_is_code_review_from_an_evaluation(session, user):
