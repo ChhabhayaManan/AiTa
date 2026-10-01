@@ -535,7 +535,7 @@ def test_a_long_message_about_another_topic_switches_everything(session, user):
     assert "trees" in user.interested_topics
     profile = session.query(LearningProfile).filter(
         LearningProfile.user_id == user.id).one()
-    assert "trees" in profile.recommended_next
+    assert profile.recommended_next == []
 
 
 def test_confusion_is_read_from_the_student_not_asserted_by_the_model(session, user):

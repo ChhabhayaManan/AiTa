@@ -16,17 +16,12 @@ def _union(existing, new) -> list:
 
 
 def _sync_topic(state: ChatState) -> None:
-    """A topic the student actually moved to follows them everywhere: the session
-    they are in, what to recommend next, and what they are known to be studying."""
+    """A topic the student actually moved to follows them into the session and onto
+    what they are known to be studying. The learner profile is the Profiling Agent's;
+    chat is not graded evidence, so nothing here writes it."""
     session, user = state.session, state.user
     topic = state.effective_topic
     session.topic = topic
-
-    profile = getattr(user, "learning_profile", None) if user is not None else None
-    if profile is not None:
-        rec_next = profile.recommended_next or []
-        if topic not in rec_next:
-            profile.recommended_next = rec_next + [topic]
 
     if user is not None:
         topics = user.interested_topics or []

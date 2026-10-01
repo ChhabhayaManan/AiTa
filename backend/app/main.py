@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.models import code_eval as code_eval_models, problem as problem_models  # noqa: F401
-from app.api import auth, users, recommendations,content_player, code_eval,feedback
+from app.api import auth, users, recommendations,content_player, code_eval,feedback, profile, assessment
 
 
 @asynccontextmanager
@@ -53,6 +53,8 @@ app.include_router(recommendations.router, prefix="/api/v1")
 app.include_router(content_player.router, prefix="/api/v1")
 app.include_router(code_eval.router,prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")
+app.include_router(profile.router, prefix="/api/v1")
+app.include_router(assessment.router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Health"])
