@@ -8,6 +8,7 @@ from app.models import (  # noqa: F401
     code_eval,
     content_player,
     feedback,
+    learning,
     problem,
     recommendation,
     user,

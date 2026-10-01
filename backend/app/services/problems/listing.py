@@ -3,6 +3,7 @@
 from sqlalchemy.orm import Session
 
 from app.agents.code_eval.multi_test import display_statement, merge_cases
+from app.core.topics import TOPIC_LABELS
 from app.models.problem import Problem, ProblemSource, TestCaseKind
 from app.schemas.problem import ProblemSummary
 
@@ -27,15 +28,23 @@ def _title(problem: Problem) -> str:
             rest = ext[len(prefix):]
             if not rest.isdigit():
                 return rest.replace("-", " ").title()
-    topic = (problem.topic or "problem").replace("_", " ").title()
+    topic = TOPIC_LABELS.get(problem.topic) or (problem.topic or "problem").replace("_", " ").title()
     return f"{topic} #{problem.id}"
 
 
-def _sample(problem: Problem) -> tuple[str | None, str | None]:
+def sample_case(problem: Problem):
+    """The one case the student is shown. Run executes exactly this, so nothing
+    hidden ever reaches the client."""
     cases = sorted(problem.test_cases, key=lambda c: c.ordinal or 0)
     if not cases:
+        return None
+    return next((c for c in cases if c.kind is TestCaseKind.SAMPLE), cases[0])
+
+
+def _sample(problem: Problem) -> tuple[str | None, str | None]:
+    case = sample_case(problem)
+    if case is None:
         return None, None
-    case = next((c for c in cases if c.kind is TestCaseKind.SAMPLE), cases[0])
     # Shown as the program actually receives it: a test count, then the block.
     stdin, expected = merge_cases([case])
     return stdin, expected

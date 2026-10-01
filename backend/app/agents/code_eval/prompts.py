@@ -1,3 +1,5 @@
+from app.core.topics import MISCONCEPTIONS
+
 TEST_GENERATION_PROMPT = """You prepare test cases for a beginner programming exercise.
 
 PROBLEM STATEMENT (this describes ONE test case):
@@ -88,6 +90,11 @@ ABSOLUTE RULES:
 
 Estimate the time and space complexity of the student's code in Big-O notation.
 Be encouraging and specific. Never demotivating.
+
+MISCONCEPTION TAGS: """ + ", ".join(MISCONCEPTIONS) + """
+If any test failed, put in `misconceptions` the one or two tags from that list that best
+explain the failures, using the exact tag text. Use none of them if none fit. If every
+test passed, leave `misconceptions` empty.
 """
 
 NO_FAILURE_BLOCK = "Every test case passed. There is no failing case to discuss."

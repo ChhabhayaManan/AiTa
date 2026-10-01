@@ -52,6 +52,15 @@ def test_topic_match_is_case_insensitive(session, make_problem):
     assert picked is not None and picked.id == problem.id
 
 
+@pytest.mark.parametrize("asked", ["dynamic programming", "DP", "dynamic_programming"])
+def test_free_text_topic_finds_the_canonical_bank_topic(session, make_problem, asked):
+    problem = make_problem(topic="dynamic_programming")
+
+    picked = pick_problem(session, topic=asked, difficulty="easy")
+
+    assert picked is not None and picked.id == problem.id
+
+
 def test_student_problem_is_never_picked(session, make_problem):
     make_problem(source=ProblemSource.STUDENT)
 

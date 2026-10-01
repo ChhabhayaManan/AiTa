@@ -4,6 +4,7 @@ from app.agents.code_eval.schemas import (
 )
 from app.agents.code_eval.state import EvalState
 from app.agents.code_eval.static_metrics import StaticMetrics
+from app.core.topics import clean_misconceptions
 
 
 def _case_reports(state: EvalState) -> list[CaseReport]:
@@ -97,6 +98,10 @@ def score(state: EvalState) -> EvalState:
         best_practices_used=getattr(explanation, "best_practices_used", []) or [],
         anti_patterns=getattr(explanation, "anti_patterns", []) or [],
         suggested_resources=getattr(explanation, "suggested_resources", []) or [],
+        misconceptions=(
+            clean_misconceptions(getattr(explanation, "misconceptions", []))
+            if state.tests_passed < state.tests_total else []
+        ),
         agent_steps=list(state.steps),
         tokens_used=state.tokens_used,
         model_used=state.model_used,

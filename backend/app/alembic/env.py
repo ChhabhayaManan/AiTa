@@ -9,7 +9,7 @@ from app.core.database import Base
 # Importing every model module is what lets autogenerate see the full schema.
 # Dropping one silently produces a migration that deletes its table.
 from app.models import (  # noqa: F401
-    code_eval, content_player, feedback, problem, recommendation, user,
+    code_eval, content_player, feedback, learning, problem, recommendation, user,
 )
 
 config = context.config

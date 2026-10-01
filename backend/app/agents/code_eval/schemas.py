@@ -30,6 +30,13 @@ class Explanation(BaseModel):
     best_practices_used: list[str] = []
     anti_patterns: list[str] = []
     suggested_resources: list[str] = []
+    # Free strings rather than a Literal: one unknown tag would otherwise fail the
+    # whole structured parse and lose the explanation. Filtered after parsing.
+    misconceptions: list[str] = Field(
+        default=[],
+        description="Tags from the MISCONCEPTION TAGS list that explain the failures; "
+                    "empty when every test passed",
+    )
 
 
 class CaseReport(BaseModel):
@@ -48,6 +55,11 @@ class FailingCaseReport(CaseReport):
     actual_stdout: str
     stderr: str = ""
     rationale: Optional[str] = None
+
+
+class HintReport(BaseModel):
+    level: int
+    text: str
 
 
 class ScoreBreakdown(BaseModel):
@@ -114,6 +126,8 @@ class EvalReport(BaseModel):
     best_practices_used: list[str] = []
     anti_patterns: list[str] = []
     suggested_resources: list[str] = []
+    misconceptions: list[str] = []
+    hint: Optional[HintReport] = None
 
     agent_steps: list[str] = []
     tokens_used: int = 0

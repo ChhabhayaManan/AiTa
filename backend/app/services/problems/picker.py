@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.topics import normalise_topic
 from app.models.problem import Difficulty, Problem
 from app.services.problems.listing import CURATED_SOURCES
 
@@ -64,7 +65,11 @@ def pick_problem(
     )
 
     if topic:
-        query = query.filter(func.lower(Problem.topic) == topic.strip().lower())
+        wanted = {topic.strip().lower()}
+        canonical = normalise_topic(topic)
+        if canonical:
+            wanted.add(canonical)
+        query = query.filter(func.lower(Problem.topic).in_(wanted))
 
     if difficulty is not None:
         level = coerce_difficulty(difficulty)

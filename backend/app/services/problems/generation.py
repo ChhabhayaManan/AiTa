@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ExecutorUnavailable, LLMUnavailable
 from app.core.llm import get_chat_model, invoke_with_retry, structured
+from app.core.topics import normalise_topic
 from app.models.problem import Difficulty, Problem, ProblemSource
 from app.services.problems.picker import coerce_difficulty
 from app.services.problems.repository import get_or_create_problem
@@ -85,7 +86,7 @@ def generate_problem(
         db,
         draft.statement,
         source=ProblemSource.GENERATED,
-        topic=topic.strip() or None,
+        topic=normalise_topic(topic) or topic.strip() or None,
         difficulty=level,
         constraints="\n".join(constraints) or None,
     )
