@@ -37,10 +37,10 @@ class Settings(BaseSettings):
     # Prose. Nemotron cannot write code into a JSON field: it strips the line
     # breaks out and the program becomes one unparseable line.
     NVIDIA_MODEL: str = "nvidia/nemotron-3-super-120b-a12b"
-    # Code. Retires 2026-09-13 and nothing else on this key writes code, so expect
-    # to change this. Test generation fails loudly when it goes; the seeded bank
-    # keeps working, because those problems ship their own cases.
-    NVIDIA_CODEGEN_MODEL: str = "deepseek-ai/deepseek-v4-pro-0813"
+    # Code. The dedicated codegen model retired 2026-09-13 and nothing else on this
+    # key writes code, so this is the chat model until a replacement exists. Only
+    # bank-miss generation depends on it; seeded problems ship their own cases.
+    NVIDIA_CODEGEN_MODEL: str = "nvidia/nemotron-3-super-120b-a12b"
     LLM_MAX_OUTPUT_TOKENS: int = 8192
     LLM_MAX_ATTEMPTS: int = 3
 

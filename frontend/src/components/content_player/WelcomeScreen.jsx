@@ -61,7 +61,7 @@ export default function WelcomeScreen({ onStartSession }) {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600/10 border border-brand-500/20 rounded-full text-brand-400 text-xs font-mono mb-4">
             <Zap size={12} />
-            Powered by Groq · llama-3.3-70b-versatile
+            Powered by NVIDIA NIM · nemotron-3-super
           </div>
           <h1 className="font-display font-800 text-4xl text-white mb-3">
             Content Player Agent

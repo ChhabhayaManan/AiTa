@@ -8,11 +8,12 @@ from app.models.user import User
 from app.core.exceptions import ProblemNotFound
 from app.schemas.code_eval import (
     SubmitCodeRequest, SubmissionSummary, SubmissionDetail,
-    EvaluationResult, UserEvalStats
+    EvaluationResult, UserEvalStats, RunCodeRequest, RunCodeResult
 )
 from app.schemas.problem import ProblemSummary
 from app.services.code_eval_service import CodeEvalService
 from app.services.problems.listing import get_bank_problem, list_bank_problems
+from app.services.problems.sample_run import run_sample
 
 router = APIRouter(prefix="/code-eval", tags=["Code Evaluation Agent"])
 
@@ -46,6 +47,22 @@ def get_problem(
     if problem is None:
         raise ProblemNotFound(f"problem {problem_id} not found")
     return problem
+
+
+# ─── Run against the shown example ───────────────────────────────────────────
+
+@router.post(
+    "/run",
+    response_model=RunCodeResult,
+    summary="Run code against the problem's shown example",
+)
+def run(
+    req: RunCodeRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Executes the code in the sandbox on the visible example only. Not scored, not saved."""
+    return run_sample(db, req.problem_id, req.language, req.code)
 
 
 # ─── Submit code ──────────────────────────────────────────────────────────────

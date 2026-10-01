@@ -23,6 +23,29 @@ class SubmitCodeRequest(BaseModel):
     problem_id:      Optional[int] = None
 
 
+class RunCodeRequest(BaseModel):
+    problem_id: int
+    language:   Language
+    code:       str = Field(..., min_length=1, max_length=50000)
+
+
+class RunCase(BaseModel):
+    input:    str
+    expected: str
+    actual:   str
+    passed:   bool
+
+
+class RunCodeResult(BaseModel):
+    verdict:        str
+    status:         str
+    compile_output: Optional[str] = None
+    stderr:         str = ""
+    passed:         int
+    total:          int
+    cases:          List[RunCase]
+
+
 class SubmissionSummary(BaseModel):
     id:         int
     title:      Optional[str]

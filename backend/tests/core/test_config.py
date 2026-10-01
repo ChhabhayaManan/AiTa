@@ -19,6 +19,3 @@ def test_llm_defaults():
     assert settings.LLM_MAX_OUTPUT_TOKENS == 8192
     assert settings.NVIDIA_MODEL
     assert settings.NVIDIA_CODEGEN_MODEL
-    # Prose and code go to different models on purpose: the prose model strips the
-    # line breaks out of code returned inside a JSON string.
-    assert settings.NVIDIA_MODEL != settings.NVIDIA_CODEGEN_MODEL

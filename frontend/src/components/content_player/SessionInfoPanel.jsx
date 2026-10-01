@@ -139,8 +139,8 @@ export default function SessionInfoPanel({ session, onClose }) {
         {/* Model */}
         <div>
           <p className="label">AI Model</p>
-          <p className="text-white/30 text-xs font-mono">{session.agent_model || 'llama-3.3-70b-versatile'}</p>
-          <p className="text-white/15 text-xs mt-0.5">via Groq</p>
+          <p className="text-white/30 text-xs font-mono">{session.agent_model || 'nemotron-3-super-120b-a12b'}</p>
+          <p className="text-white/15 text-xs mt-0.5">via NVIDIA NIM</p>
         </div>
       </div>
     </div>

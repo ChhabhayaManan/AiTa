@@ -191,7 +191,7 @@ export default function FeedbackPanel({ evaluation }) {
 
       {/* Footer metadata */}
       <div className="flex items-center gap-4 px-1 text-white/20 text-xs font-mono">
-        <span>Groq · llama-3.3-70b</span>
+        <span>NVIDIA NIM</span>
         {tokens_used > 0 && <span>{tokens_used} tokens</span>}
         {latency_ms  > 0 && <span>{(latency_ms/1000).toFixed(1)}s</span>}
       </div>

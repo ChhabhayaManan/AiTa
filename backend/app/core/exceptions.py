@@ -36,6 +36,10 @@ class LLMUnavailable(AitaError):
     status_code = 503
 
 
+class LanguageNotExecutable(AitaError):
+    status_code = 422
+
+
 class UnverifiableSubmission(AitaError):
     def __init__(self, reason: str):
         super().__init__(reason)

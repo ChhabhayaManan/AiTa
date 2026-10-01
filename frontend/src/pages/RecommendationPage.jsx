@@ -85,14 +85,14 @@ export default function RecommendationPage() {
         {/* ── Header ── */}
         <div className="mb-8">
           <div className="flex items-center gap-2 text-purple-400 text-xs font-mono mb-2">
-            <Sparkles size={12} /> CF + CBF + RL + Groq LLM · YouTube-powered
+            <Sparkles size={12} /> CF + CBF + RL + LLM · YouTube-powered
           </div>
           <h1 className="font-display font-800 text-3xl text-white mb-2">
             Your Learning Path
           </h1>
           <p className="text-white/40 text-sm max-w-xl leading-relaxed">
             Recommendations built entirely from your profile — your topics, languages, and skill level.
-            Real YouTube videos fetched per topic, ranked by Groq AI, fresh every session.
+            Real YouTube videos fetched per topic, ranked by an LLM, fresh every session.
           </p>
         </div>
 
@@ -127,7 +127,7 @@ export default function RecommendationPage() {
               { step: '2', label: 'Content Generation',   desc: 'YouTube search per your topics', color: 'text-red-400    bg-red-600/10'    },
               { step: '3', label: 'Collab. Filtering',    desc: 'Similar learner patterns',       color: 'text-blue-400   bg-blue-600/10'   },
               { step: '4', label: 'Content-Based',        desc: 'Matches topics + difficulty',    color: 'text-green-400  bg-green-600/10'  },
-              { step: '5', label: 'Groq AI Ranking',      desc: 'Re-ranks + explains picks',      color: 'text-brand-400  bg-brand-600/10'  },
+              { step: '5', label: 'LLM Ranking',          desc: 'Re-ranks + explains picks',      color: 'text-brand-400  bg-brand-600/10'  },
             ].map(s => (
               <div key={s.step} className={`rounded-xl p-3 ${s.color.split(' ')[1]}`}>
                 <div className={`text-xs font-mono mb-1 ${s.color.split(' ')[0]}`}>Step {s.step}</div>
@@ -163,7 +163,7 @@ export default function RecommendationPage() {
             </h3>
             <p className="text-white/40 text-sm mb-6 max-w-md mx-auto">
               Click <strong className="text-white">Run Agent</strong> — it reads your profile topics
-              and languages, fetches real YouTube content for each, then uses Groq AI to rank
+              and languages, fetches real YouTube content for each, then uses an LLM to rank
               and explain every pick just for you.
             </p>
             <div className="flex flex-col items-center gap-3">
@@ -176,7 +176,7 @@ export default function RecommendationPage() {
               </button>
               <div className="flex items-center gap-4 text-white/20 text-xs font-mono">
                 <span className="flex items-center gap-1"><Youtube size={11} className="text-red-400/60" /> Real YouTube videos</span>
-                <span className="flex items-center gap-1"><Zap size={11} className="text-brand-400/60" /> Groq-powered ranking</span>
+                <span className="flex items-center gap-1"><Zap size={11} className="text-brand-400/60" /> LLM-powered ranking</span>
               </div>
             </div>
           </div>
@@ -273,7 +273,7 @@ export default function RecommendationPage() {
                 <RefreshCw size={16} /> Regenerate Recommendations
               </button>
               <p className="text-white/20 text-xs mt-2">
-                Runs full pipeline: CF + CBF + YouTube search + Groq reasoning
+                Runs full pipeline: CF + CBF + YouTube search + LLM reasoning
               </p>
             </div>
           </>

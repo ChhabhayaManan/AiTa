@@ -82,6 +82,68 @@ def test_missing_submission_returns_404_from_domain_error(client):
     assert "4242" in response.json()["detail"]
 
 
+def test_run_executes_the_example_without_saving_anything(client, monkeypatch):
+    test_client, db, _ = client
+
+    from app.models.code_eval import CodeSubmission
+    from app.models.problem import (
+        Problem,
+        ProblemSource,
+        TestCase,
+        TestCaseKind,
+        TestCaseOrigin,
+    )
+    from app.services.execution.base import ExecResult, ExecStatus
+    from tests.conftest import FakeExecutionProvider
+
+    problem = Problem(source=ProblemSource.DSA, statement="max", statement_hash="r" * 64)
+    problem.test_cases = [TestCase(
+        kind=TestCaseKind.SAMPLE, stdin="1\n-15\n", expected_stdout="-15",
+        stdin_hash="a", origin=TestCaseOrigin.PROBLEM_SAMPLE, ordinal=0,
+    )]
+    db.add(problem)
+    db.commit()
+
+    provider = FakeExecutionProvider([ExecResult(status=ExecStatus.OK, stdout="0\n")])
+    monkeypatch.setattr("app.services.execution.run_code.get_provider", lambda: provider)
+
+    response = test_client.post("/api/v1/code-eval/run", json={
+        "problem_id": problem.id, "language": "python", "code": "print(0)",
+    })
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["verdict"] == "Wrong answer on test 1"
+    assert body["cases"][0]["expected"] == "-15"
+    assert body["cases"][0]["actual"] == "0"
+    assert db.query(CodeSubmission).count() == 0
+
+
+def test_run_rejects_a_language_the_sandbox_cannot_execute(client):
+    test_client, db, _ = client
+
+    from app.models.problem import (
+        Problem,
+        ProblemSource,
+        TestCase,
+        TestCaseKind,
+        TestCaseOrigin,
+    )
+
+    problem = Problem(source=ProblemSource.DSA, statement="q", statement_hash="s" * 64)
+    problem.test_cases = [TestCase(
+        kind=TestCaseKind.SAMPLE, stdin="", expected_stdout="1",
+        stdin_hash="a", origin=TestCaseOrigin.PROBLEM_SAMPLE, ordinal=0,
+    )]
+    db.add(problem)
+    db.commit()
+
+    response = test_client.post("/api/v1/code-eval/run", json={
+        "problem_id": problem.id, "language": "sql", "code": "select 1",
+    })
+    assert response.status_code == 422
+
+
 def test_review_mode_evaluation_returns_null_correctness(client, monkeypatch):
     test_client, _, _ = client
 

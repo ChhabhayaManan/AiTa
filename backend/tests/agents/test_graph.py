@@ -236,7 +236,7 @@ def test_llm_unavailable_during_generation_falls_back_to_review(session, user):
     submission = make_submission(session, user)
 
     def exploding_generator(**kwargs):
-        raise LLMUnavailable("quota")
+        raise LLMUnavailable("provider down")
 
     report = evaluate_submission(
         session, submission.id, user.id,
@@ -254,7 +254,7 @@ def test_llm_unavailable_during_explanation_still_returns_scores(session, user):
     report = evaluate_submission(
         session, submission.id, user.id, provider=provider,
         generator=lambda **k: generated_tests(),
-        explain_runnable=FakeExplainRunnable(error=LLMUnavailable("quota")),
+        explain_runnable=FakeExplainRunnable(error=LLMUnavailable("provider down")),
     )
 
     assert report.scores.correctness == 100.0
