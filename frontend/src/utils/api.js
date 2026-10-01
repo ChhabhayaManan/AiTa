@@ -91,7 +91,7 @@ export const userAPI = {
 }
 
 export const recommendationAPI = {
-  // Trigger the AI agent — long timeout since it fetches YouTube + calls Groq
+  // Trigger the AI agent — long timeout since it fetches YouTube + calls the LLM
   generate: () => api.post('/recommendations/generate', {}, { timeout: 120000 }),
   // Get current stored recommendations
   getAll: () => api.get('/recommendations/'),
@@ -140,6 +140,8 @@ export const codeEvalAPI = {
   evaluate:         (id)   => api.post(`/code-eval/submit/${id}/evaluate`, null, { timeout: EVAL_TIMEOUT }),
   // Submit + evaluate in one call  ← main action
   submitAndEvaluate:(data) => api.post('/code-eval/evaluate', data, { timeout: EVAL_TIMEOUT }),
+  // Run against the shown example only — not scored, not saved
+  run:              (data) => api.post('/code-eval/run', data),
   // History
   getSubmissions:   ()     => api.get('/code-eval/submissions'),
   getSubmission:    (id)   => api.get(`/code-eval/submissions/${id}`),
@@ -158,6 +160,19 @@ export const feedbackAPI = {
   unreadCount: ()        => api.get('/feedback/unread-count'),
   getReport:   (id)      => api.get(`/feedback/${id}`),
   markRead:    (id)      => api.patch(`/feedback/${id}/read`),
+  // Next rung of the hint ladder for a problem the student is failing
+  hint:        (problemId) => api.post('/feedback/hint', { problem_id: problemId }, { timeout: EVAL_TIMEOUT }),
+}
+
+export const profileAPI = {
+  getMastery: () => api.get('/profile/mastery'),
+}
+
+export const assessmentAPI = {
+  // May generate a coding problem when the bank has none left, which calls the LLM
+  next:        ()               => api.get('/assessment/next', { timeout: EVAL_TIMEOUT }),
+  answerMcq:   (id, chosenIndex) => api.post(`/assessment/mcq/${id}/answer`, { chosen_index: chosenIndex }),
+  submitDebug: (id, code)       => api.post(`/assessment/debug/${id}/submit`, { code }, { timeout: EVAL_TIMEOUT }),
 }
 
 export default api

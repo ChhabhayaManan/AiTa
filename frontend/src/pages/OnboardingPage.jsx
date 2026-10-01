@@ -159,11 +159,11 @@ export default function OnboardingPage() {
         onboarding_complete: true,
       })
       updateUser(data)
-      toast.success("You're all set! Let's start learning 🚀")
-      navigate('/dashboard')
+      toast.success("You're all set! First, a quick 6-question check 🚀")
+      navigate('/practice')
     } catch {
       toast.error('Failed to save preferences. You can update them in your profile.')
-      navigate('/dashboard')
+      navigate('/practice')
     } finally {
       setSaving(false)
     }
@@ -358,7 +358,7 @@ export default function OnboardingPage() {
                 disabled={saving || !canNext()}
                 style={{ ...S.btnNext, opacity: saving || !canNext() ? 0.5 : 1 }}
               >
-                {saving ? 'Saving...' : "Let's go! 🚀"}
+                {saving ? 'Saving...' : 'Take the 6-question check →'}
               </button>
             )}
           </div>

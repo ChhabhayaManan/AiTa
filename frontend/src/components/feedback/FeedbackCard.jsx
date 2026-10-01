@@ -167,9 +167,9 @@ export default function FeedbackCard({ report }) {
 
       {/* ── Concept Map ── */}
       {Object.keys(report.concept_map || {}).length > 0 && (
-        <Section icon={BookOpen} title="Concept Understanding Map" color="text-brand-400">
+        <Section icon={BookOpen} title="Concept Map (the model's impression)" color="text-brand-400">
           <p className="text-white/30 text-xs mb-4">
-            Agent-estimated understanding level for each concept covered (0% = gap, 100% = mastered).
+            The language model's own estimate for this report only. Your measured mastery, computed from graded attempts, is on the dashboard.
           </p>
           <ConceptMap conceptMap={report.concept_map} />
         </Section>

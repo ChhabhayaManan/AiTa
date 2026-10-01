@@ -27,9 +27,9 @@ const TYPE_COLOR = {
 
 const CAPABILITIES = [
   { icon: Brain,       color: '#ec4899', bg: 'rgba(236,72,153,0.1)',  title: 'Pattern Analysis',       desc: 'Tracks errors and conceptual gaps across all your sessions automatically.' },
-  { icon: AlertCircle, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  title: 'Context-Aware Feedback', desc: 'Explains why errors matter and how to fix them — not just correct/incorrect.' },
+  { icon: AlertCircle, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  title: 'Context-Aware Feedback', desc: 'Quotes the failing test and your repeated mistakes, and leads you to the fix without giving it away.' },
   { icon: TrendingUp,  color: '#14b8a6', bg: 'rgba(20,184,166,0.1)',  title: 'Skill Progression',      desc: 'Synthesises Code Eval and Learning Studio findings into actionable next steps.' },
-  { icon: User,        color: '#818cf8', bg: 'rgba(129,140,248,0.1)', title: 'Profile Updates',         desc: 'Writes weak areas and mastery signals back to your profile in real time.' },
+  { icon: User,        color: '#818cf8', bg: 'rgba(129,140,248,0.1)', title: 'Reads Your Learner Model', desc: 'Grounded in your measured topic mastery, recurring mistakes and hint history. Only the Profiling Agent writes that model.' },
 ]
 
 function HistoryItem({ report, isActive, onClick }) {

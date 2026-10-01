@@ -167,54 +167,22 @@ export default function CodeHelpPage() {
   // ── Run against test cases ────────────────────────────────────────────────
   const runCode = async () => {
     if (!code.trim()) { toast.error('Write some code first'); return }
-    if (!problem?.examples?.length) { toast.error('No test cases available'); return }
+    if (!problem?.problem_id) { toast.error('No test cases available'); return }
     setRunning(true)
     setRunResults(null)
     try {
-      // Ask the AI to run the code against each example and report pass/fail
-      const testCases = problem.examples.map((ex, i) =>
-        `Test ${i + 1}:\n  Input: ${ex.input}\n  Expected Output: ${ex.output}`
-      ).join('\n\n')
-
-      const prompt = `You are a code runner. Given this ${language} code and test cases, determine if the code would produce the correct output for each test case.
-
-Code:
-\`\`\`${language}
-${code}
-\`\`\`
-
-Test Cases:
-${testCases}
-
-For each test case, respond ONLY with valid JSON (no markdown):
-{
-  "cases": [
-    { "input": "...", "expected": "...", "actual": "...", "passed": true/false, "error": null or "error message" }
-  ]
-}
-
-Simulate the execution mentally. If the code has a syntax error or would crash, set passed: false and error to the error message.`
-
-      const { data } = await contentPlayerAPI.chat(sessionId, { message: prompt })
-
-      // Parse JSON from response
-      let parsed = null
-      try {
-        const jsonMatch = data.response.match(/\{[\s\S]*\}/)
-        if (jsonMatch) parsed = JSON.parse(jsonMatch[0])
-      } catch { /* ignore */ }
-
-      if (parsed?.cases) {
-        const passed = parsed.cases.filter(c => c.passed).length
-        setRunResults({ passed, total: parsed.cases.length, cases: parsed.cases })
-        if (passed === parsed.cases.length) toast.success(`All ${passed} test cases passed!`)
-        else toast(`${passed}/${parsed.cases.length} test cases passed`, { icon: '🧪' })
-      } else {
-        // Fallback: show raw response
-        setRunResults({ passed: 0, total: problem.examples.length, cases: [], raw: data.response })
-      }
+      const { data } = await codeEvalAPI.run({ problem_id: problem.problem_id, language, code })
+      const error = data.compile_output || data.stderr || null
+      setRunResults({
+        passed: data.passed,
+        total: data.total,
+        verdict: data.verdict,
+        cases: data.cases.map(c => ({ ...c, error })),
+      })
+      if (data.passed === data.total) toast.success(data.verdict)
+      else toast(data.verdict, { icon: '🧪' })
     } catch (err) {
-      toast.error('Run failed. Try again.')
+      toast.error(err.response?.data?.detail || 'Run failed. Try again.')
     } finally {
       setRunning(false)
     }
@@ -653,7 +621,7 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
               <div style={S.runPanelHeader}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Play size={13} color={runResults.passed === runResults.total ? '#10b981' : '#f59e0b'} />
-                  <span style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>Test Results</span>
+                  <span style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{runResults.verdict}</span>
                   <span style={{
                     padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
                     background: runResults.passed === runResults.total ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
@@ -666,12 +634,7 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
                 <button onClick={() => setRunResults(null)} style={S.closeBtn}><X size={13} /></button>
               </div>
 
-              {runResults.raw ? (
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0, lineHeight: 1.6 }}>
-                  {runResults.raw}
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {runResults.cases.map((c, i) => (
                     <div key={i} style={{
                       background: c.passed ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)',
@@ -703,8 +666,7 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
                       )}
                     </div>
                   ))}
-                </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -736,6 +698,30 @@ Simulate the execution mentally. If the code has a syntax error or would crash, 
                   </div>
                 ))}
               </div>
+
+              {evalResult.verdict && (
+                <p style={{ color: evalResult.first_failing_case ? '#fca5a5' : '#10b981', fontSize: 13, fontWeight: 600, margin: '12px 0 0' }}>
+                  {evalResult.verdict}
+                  {evalResult.tests_total > 0 && ` · ${evalResult.tests_passed}/${evalResult.tests_total} tests passed`}
+                </p>
+              )}
+
+              {evalResult.first_failing_case && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={S.testRow}>
+                    <span style={S.testLabel}>Input</span>
+                    <code style={S.testCode}>{evalResult.first_failing_case.stdin}</code>
+                  </div>
+                  <div style={S.testRow}>
+                    <span style={S.testLabel}>Expected</span>
+                    <code style={{ ...S.testCode, color: '#86efac' }}>{evalResult.first_failing_case.expected_stdout}</code>
+                  </div>
+                  <div style={S.testRow}>
+                    <span style={S.testLabel}>Got</span>
+                    <code style={{ ...S.testCode, color: '#fca5a5' }}>{evalResult.first_failing_case.actual_stdout}</code>
+                  </div>
+                </div>
+              )}
 
               {evalResult.summary && (
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, margin: '12px 0 0', lineHeight: 1.6 }}>
@@ -820,7 +806,7 @@ const S = {
   exampleBox: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px', marginBottom: 10 },
   exRow: { display: 'flex', gap: 10, marginBottom: 6, alignItems: 'flex-start', flexWrap: 'wrap' },
   exLabel: { fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', minWidth: 80, fontFamily: 'monospace' },
-  exCode: { background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '2px 8px', fontSize: 13, color: '#7dd3fc', fontFamily: 'monospace' },
+  exCode: { background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '2px 8px', fontSize: 13, color: '#7dd3fc', fontFamily: 'monospace', whiteSpace: 'pre-wrap' },
   langPill: { padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa' },
   topicPill: { padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'rgba(20,184,166,0.1)', border: '1px solid rgba(20,184,166,0.25)', color: '#2dd4bf' },
   hintBox: { display: 'flex', gap: 10, padding: '12px 14px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, marginBottom: 10 },
@@ -848,5 +834,5 @@ const S = {
   runPanelHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   testRow: { display: 'flex', gap: 10, marginBottom: 4, alignItems: 'flex-start' },
   testLabel: { fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', minWidth: 64, fontFamily: 'monospace', paddingTop: 2 },
-  testCode: { background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '2px 8px', fontSize: 12, fontFamily: 'monospace', color: '#7dd3fc' },
+  testCode: { background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '2px 8px', fontSize: 12, fontFamily: 'monospace', color: '#7dd3fc', whiteSpace: 'pre-wrap' },
 }

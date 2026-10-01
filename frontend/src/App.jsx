@@ -14,6 +14,7 @@ import ContentPlayerPage from './pages/ContentPlayerPage'
 import CodeEvalPage from './pages/CodeEvalPage'
 import FeedbackPage from './pages/FeedbackPage'
 import CodeHelpPage from './pages/CodeHelpPage'
+import PracticePage from './pages/PracticePage'
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/code-eval"       element={<ProtectedRoute><CodeEvalPage /></ProtectedRoute>} />
             <Route path="/feedback"        element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
             <Route path="/code-help"       element={<ProtectedRoute><CodeHelpPage /></ProtectedRoute>} />
+            <Route path="/practice"        element={<ProtectedRoute><PracticePage /></ProtectedRoute>} />
             <Route path="*"               element={<Navigate to="/dashboard" replace />} />
           </Routes>
           </ErrorBoundary>

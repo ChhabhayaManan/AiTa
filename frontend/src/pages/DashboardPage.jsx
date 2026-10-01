@@ -11,8 +11,9 @@ import { feedbackAPI, codeEvalAPI, userAPI } from '../utils/api'
 import toast from 'react-hot-toast'
 import ThemeToggle from '../components/ui/ThemeToggle'
 import { SkeletonStatCard, SkeletonCard } from '../components/ui/Skeleton'
-import { Sparkline, RadialProgress, BarChart } from '../components/ui/MiniChart'
+import { Sparkline } from '../components/ui/MiniChart'
 import FeedbackModal from '../components/ui/FeedbackModal'
+import MasteryPanel from '../components/learning/MasteryPanel'
 
 const ROLE_LABELS = {
   student: 'Student', instructor: 'Instructor',
@@ -27,7 +28,7 @@ const FEATURES = [
   },
   {
     id: 'recommend', route: '/recommendations', icon: BookOpen, label: 'Recommendation Agent',
-    desc: 'AI-curated content matched to your profile using collaborative filtering and Groq-powered ranking.',
+    desc: 'AI-curated content matched to your profile using collaborative filtering and LLM-powered ranking.',
     color: 'text-blue-400', iconBg: 'bg-blue-600', border: 'border-blue-500/20', glow: 'hover:shadow-blue-500/10', tag: 'Agent',
   },
   {
@@ -37,7 +38,7 @@ const FEATURES = [
   },
   {
     id: 'code', route: '/code-eval', icon: Code2, label: 'Code Evaluation Agent',
-    desc: 'Paste a problem statement, write your solution, and get multi-dimensional AI analysis — scores, issues, corrected code.',
+    desc: 'Paste a problem statement, write your solution, and get it run against real tests — scores, the failing case, and a hint.',
     color: 'text-orange-400', iconBg: 'bg-orange-600', border: 'border-orange-500/20', glow: 'hover:shadow-orange-500/10', tag: 'Agent',
   },
   {
@@ -139,22 +140,8 @@ export default function DashboardPage() {
   const skillLevel   = user?.skill_level ?? 'beginner'
   const skillColor   = { beginner: 'text-green-400', intermediate: 'text-yellow-400', advanced: 'text-red-400' }[skillLevel] || 'text-white/50'
 
-  // Mock trend data (replace with real API data when available)
-  const scoreTrend  = codeStats?.score_history  || [60, 65, 58, 72, 68, 75, 80]
-  const sessionTrend = [1, 2, 1, 3, 2, 4, 3]
-
-  // Topic performance for bar chart
-  const topicPerf = codeStats?.topic_scores
-    ? Object.entries(codeStats.topic_scores).slice(0, 5).map(([label, value]) => ({ label, value: Math.round(value) }))
-    : [
-        { label: 'Arrays',  value: 78 },
-        { label: 'Trees',   value: 62 },
-        { label: 'DP',      value: 45 },
-        { label: 'Graphs',  value: 55 },
-        { label: 'Sorting', value: 82 },
-      ]
-
-  const overallScore = codeStats?.avg_score ?? Math.round(topicPerf.reduce((a, b) => a + b.value, 0) / topicPerf.length)
+  // Only real history is drawn; with fewer than two points there is no trend to show.
+  const scoreTrend = codeStats?.score_history?.length > 1 ? codeStats.score_history : null
 
   return (
     <div className="min-h-screen bg-surface-950">
@@ -239,8 +226,30 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard icon={Trophy}       label="Points"   value={user?.points ?? 0}          sub="Keep learning to earn more"  color="text-yellow-400" trend={scoreTrend}   loading={statsLoading} />
           <StatCard icon={Zap}          label="Level"    value={`Level ${user?.level ?? 1}`} sub={skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1)} color="text-brand-400" loading={statsLoading} />
-          <StatCard icon={Clock}        label="Sessions" value={user?.total_sessions ?? 0}   sub="Total learning sessions"     color="text-teal-400"  trend={sessionTrend} loading={statsLoading} />
+          <StatCard icon={Clock}        label="Sessions" value={user?.total_sessions ?? 0}   sub="Total learning sessions"     color="text-teal-400"  loading={statsLoading} />
           <StatCard icon={MessageSquare} label="Feedback" value={feedbackUnread > 0 ? feedbackUnread : '—'} sub={feedbackUnread > 0 ? 'Unread reports' : 'All caught up'} color="text-pink-400" loading={statsLoading} />
+        </div>
+
+        {/* ── Adaptive practice ── */}
+        <button
+          onClick={() => navigate('/practice')}
+          className="w-full glass-card p-6 mb-6 border-brand-500/25 flex items-center gap-5 text-left hover:-translate-y-0.5 transition-transform"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-brand-600 flex items-center justify-center shrink-0">
+            <Target size={22} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-display font-700 text-white text-lg">Continue practice</div>
+            <div className="text-white/40 text-sm">
+              The Assessment Agent picks your next question, debug challenge or coding problem from your measured mastery, and tells you why.
+            </div>
+          </div>
+          <ArrowRight size={18} className="text-brand-400 shrink-0" />
+        </button>
+
+        {/* ── Learner model ── */}
+        <div className="mb-8">
+          <MasteryPanel />
         </div>
 
 
@@ -271,7 +280,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             {[
               { icon: '📚', label: 'Get recommendations', desc: 'Run the AI agent to discover new content', route: '/recommendations', color: '#3b82f6' },
-              { icon: '💻', label: 'Practice a problem', desc: 'Generate a LeetCode-style problem to solve', route: '/code-help', color: '#14b8a6' },
+              { icon: '💻', label: 'Free practice', desc: 'Pick any topic and solve a problem of your choice', route: '/code-help', color: '#14b8a6' },
               { icon: '🧑‍💻', label: 'Evaluate your code', desc: 'Paste a problem + solution and get AI feedback', route: '/code-eval', color: '#f97316' },
               { icon: '📊', label: 'Review feedback', desc: 'Check your latest AI-generated feedback report', route: '/feedback', color: '#ec4899' },
             ].map(step => (
