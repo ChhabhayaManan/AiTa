@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 def emit_event(state: EvalState) -> EvalState:
     """Hand the graded attempt to the Profiling Agent. Only verified runs are evidence:
     review mode has no measured pass rate to learn from. The attempt is discounted by
-    the highest hint seen on this problem before it was submitted."""
+    the highest Practice hint seen on this problem before it was submitted; chat is not
+    practice and never moves mastery."""
     report = state.report
     if (report is None or report.evaluation_id is None
             or report.verification_status != "verified" or not report.tests_total
@@ -23,7 +24,7 @@ def emit_event(state: EvalState) -> EvalState:
     problem = state.db.get(Problem, state.problem_id)
     try:
         hint_level = highest_level(state.db, state.user_id, state.problem_id,
-                                   before=report.evaluation_id)
+                                   before=report.evaluation_id, sources=("practice",))
         ingest(state.db, EventInput(
             user_id=state.user_id,
             kind="code",

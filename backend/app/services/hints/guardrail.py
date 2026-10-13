@@ -1,14 +1,18 @@
 """A hint that contains the answer is not a hint. Every code block in a reply is run
 against the problem's tests: if it passes them, it was the solution, and it is blocked.
 Prose is checked too, statically: quoting a distinctive line of the reference solution
-blocks the reply. A pure paraphrase of the fix is not caught."""
+blocks the reply. A fix told in plain words is left to states_fix, an LLM judge."""
 
 import re
 from dataclasses import dataclass
 
+from pydantic import BaseModel
+
+from app.core import llm_gateway
 from app.core.exceptions import ExecutorUnavailable
 from app.models.code_eval import Language
 from app.services.execution.judge import judge
+from app.services.hints.prompts import FIX_CHECK_PROMPT
 
 _FENCE = re.compile(r"```[^\n]*\n(.*?)(?:```|$)", re.DOTALL)
 
@@ -70,6 +74,21 @@ def quotes_reference(text: str, references, student_code: str = "") -> bool:
     return any(line in squashed
                for reference in references or ()
                for line in distinctive_lines(reference, student_code))
+
+
+class FixVerdict(BaseModel):
+    change: str = ""
+    states_fix: bool
+
+
+def states_fix(hint: str, *, statement: str, language: str, code: str,
+               user_id: int | None = None) -> bool:
+    """Raises LLMUnavailable when the judge cannot run; an unparsed verdict counts as a
+    leak, so a hint is only shown once it has been cleared."""
+    prompt = FIX_CHECK_PROMPT.format(statement=statement, language=language, code=code,
+                                     hint=hint)
+    verdict = llm_gateway.invoke("hint_check", prompt, schema=FixVerdict, user_id=user_id).value
+    return verdict is None or verdict.states_fix
 
 
 def check(text: str, level: int, language: Language, test_cases, provider=None, *,

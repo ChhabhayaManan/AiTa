@@ -17,6 +17,7 @@ from app.models.problem import (
 )
 from app.models.user import User
 from app.services.hints import guardrail
+from app.services.hints.guardrail import states_fix as real_states_fix
 from app.services.hints.prompts import TEMPLATES
 from app.services.hints.service import (
     NoHintAvailable,
@@ -103,7 +104,7 @@ def test_ladder_climbs_one_level_per_request_and_caps_at_four(session, user, pro
 
     assert levels == [2, 3, 4, 4]
     assert "LEVEL 2" in llm.prompts[0] and "LEVEL 4" in llm.prompts[2]
-    assert "'-4 -9\\n'" in llm.prompts[0]
+    assert "input:\n-4 -9\nexpected output:\n-4\ntheir program printed:\n0" in llm.prompts[0]
 
 
 def test_full_pass_resets_the_ladder(session, user, problem):
@@ -151,6 +152,43 @@ def test_regenerates_once_before_falling_back(session, user, problem):
     assert hint.source == "llm"
     assert len(llm.prompts) == 2
     assert session.query(HintEvent).filter_by(level=2).one().was_blocked is True
+
+
+def test_a_fix_told_in_words_is_caught_by_the_judge_and_regenerated(
+        session, user, problem, monkeypatch):
+    attempt(session, user, problem, "3\n0\n")
+    judged = []
+
+    def judge(hint, **context):
+        judged.append(context["code"])
+        return "start at" in hint
+
+    monkeypatch.setattr(guardrail, "states_fix", judge)
+    llm = FakeHintLLM("Make the maximum start at the first value.",
+                      "What does your code assume before the first value?")
+
+    hint = request_hint(session, user.id, problem.id, runnable=llm)
+
+    assert (hint.source, hint.text) == ("llm", "What does your code assume before the first value?")
+    assert judged == ["print(0)", "print(0)"]
+    assert session.query(HintEvent).filter_by(level=2).one().was_blocked is True
+
+
+def test_fix_judge_asks_about_the_hint_and_treats_no_verdict_as_a_leak(monkeypatch):
+    verdicts = [guardrail.FixVerdict(states_fix=False), guardrail.FixVerdict(states_fix=True), None]
+    prompts = []
+
+    def fake_invoke(purpose, prompt, *, schema, user_id=None):
+        prompts.append((purpose, prompt))
+        return SimpleNamespace(value=verdicts.pop(0))
+
+    monkeypatch.setattr(guardrail.llm_gateway, "invoke", fake_invoke)
+    context = {"statement": "Print the largest value.", "language": "python", "code": "print(0)"}
+
+    assert [real_states_fix("Trace it by hand.", **context) for _ in range(3)] == [
+        False, True, True]
+    assert prompts[0][0] == "hint_check"
+    assert "Trace it by hand." in prompts[0][1] and "print(0)" in prompts[0][1]
 
 
 def test_guardrail_line_limits():

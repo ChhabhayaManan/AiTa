@@ -1,6 +1,6 @@
 from app.agents.code_eval.schemas import HintReport
 from app.agents.code_eval.state import EvalState
-from app.services.hints.service import FailingCase, l1_text, log_hint
+from app.services.hints.service import FailingCase, HintSource, l1_text, log_hint
 
 
 def hint_l1(state: EvalState) -> EvalState:
@@ -19,10 +19,10 @@ def hint_l1(state: EvalState) -> EvalState:
     return state
 
 
-def log_l1(state: EvalState) -> EvalState:
+def log_l1(state: EvalState, source: HintSource = "practice") -> EvalState:
     report = state.report
     if report is None or report.hint is None or report.evaluation_id is None:
         return state
     log_hint(state.db, user_id=state.user_id, problem_id=state.problem_id,
-             evaluation_id=report.evaluation_id, level=1)
+             evaluation_id=report.evaluation_id, level=1, source=source)
     return state

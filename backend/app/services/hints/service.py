@@ -4,13 +4,15 @@ Ladder position is measured in evaluation ids, not wall-clock time: a hint belon
 the evaluation it was about, and a fully passing evaluation resets the ladder."""
 
 from dataclasses import dataclass
+from typing import Literal
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import AitaError, LLMUnavailable
-from app.core.llm import get_chat_model, invoke_with_retry
-from app.models.code_eval import CodeEvaluation, CodeSubmission
+from app.core import llm_gateway
+from app.core.exceptions import AitaError, LLMUnavailable, ProblemNotFound
+from app.core.llm import invoke_with_retry
+from app.models.code_eval import CodeEvaluation, CodeSubmission, Language
 from app.models.learning import HintEvent
 from app.models.problem import (
     ExecRole,
@@ -20,11 +22,22 @@ from app.models.problem import (
     TestCase,
 )
 from app.services.hints import guardrail
-from app.services.hints.prompts import HINT_PROMPT, LEVEL_INSTRUCTIONS, TEMPLATES
+from app.services.hints.prompts import (
+    APPROACH_CODE_BLOCK,
+    APPROACH_HAS_CODE,
+    APPROACH_LEVEL_INSTRUCTIONS,
+    APPROACH_NO_CODE,
+    APPROACH_PROMPT,
+    APPROACH_TEMPLATES,
+    HINT_PROMPT,
+    LEVEL_INSTRUCTIONS,
+    TEMPLATES,
+)
 from app.services.profiling.service import top_misconceptions
 
 MAX_LEVEL = 4
 _CRASH_STATUSES = ("runtime_error", "timeout", "memory_exceeded")
+HintSource = Literal["practice", "chat"]
 
 
 class NoHintAvailable(AitaError):
@@ -46,7 +59,7 @@ class Hint:
     text: str
     source: str
     was_blocked: bool
-    evaluation_id: int
+    evaluation_id: int | None
     problem_id: int
 
 
@@ -72,21 +85,27 @@ def last_pass_id(db: Session, user_id: int, problem_id: int, before: int | None 
     return query.with_entities(func.max(CodeEvaluation.id)).scalar() or 0
 
 
-def highest_level(db: Session, user_id: int, problem_id: int, before: int | None = None) -> int:
+def highest_level(db: Session, user_id: int, problem_id: int, before: int | None = None,
+                  sources: tuple[HintSource, ...] | None = None) -> int:
     """Highest hint level seen on this problem since the last full pass. With `before`,
-    only hints about evaluations earlier than that one count."""
+    only hints about evaluations earlier than that one count; with `sources`, only hints
+    from those sources."""
     query = db.query(func.max(HintEvent.level)).filter(
         HintEvent.user_id == user_id,
         HintEvent.problem_id == problem_id,
         HintEvent.evaluation_id > last_pass_id(db, user_id, problem_id, before),
     )
+    if sources is not None:
+        query = query.filter(HintEvent.source.in_(sources))
     if before is not None:
         query = query.filter(HintEvent.evaluation_id < before)
     return query.scalar() or 0
 
 
 def next_level(db: Session, user_id: int, problem_id: int) -> int:
-    return min(MAX_LEVEL, highest_level(db, user_id, problem_id) + 1)
+    """Practice ladder position. Chat hints never move this ladder or mastery; they
+    still show in feedback via highest_level."""
+    return min(MAX_LEVEL, highest_level(db, user_id, problem_id, sources=("practice",)) + 1)
 
 
 def l1_text(case: FailingCase) -> str:
@@ -96,7 +115,7 @@ def l1_text(case: FailingCase) -> str:
             f"{case.stdin.rstrip()}\n"
             "What does your code do with it just before it stops?"
         )
-    checks = f" This case checks: {case.rationale}." if case.rationale else ""
+    checks = f" This case checks: {case.rationale.rstrip('.')}." if case.rationale else ""
     return (
         f"Your code fails on this input:\n{case.stdin.rstrip()}\n"
         f"Expected `{case.expected}`, but it printed `{case.actual}`.{checks} "
@@ -104,18 +123,24 @@ def l1_text(case: FailingCase) -> str:
     )
 
 
-def log_hint(db: Session, *, user_id: int, problem_id: int, evaluation_id: int,
-             level: int, was_blocked: bool = False) -> HintEvent:
+def log_hint(db: Session, *, user_id: int, problem_id: int, evaluation_id: int | None,
+             level: int, was_blocked: bool = False,
+             source: HintSource = "practice") -> HintEvent:
     event = HintEvent(user_id=user_id, problem_id=problem_id, evaluation_id=evaluation_id,
-                      level=level, was_blocked=was_blocked)
+                      level=level, was_blocked=was_blocked, source=source)
     db.add(event)
     db.commit()
     return event
 
 
 def leak_rate(db: Session) -> tuple[int, int]:
-    """(blocked, total) over LLM-written hints. L1 is a template and cannot leak."""
-    rows = db.query(HintEvent.was_blocked).filter(HintEvent.level >= 2).all()
+    """(blocked, total) over LLM-written hints: every L2+ hint, plus approach hints at
+    any level (chat, no evaluation). L1 about an evaluation is a template and cannot leak,
+    whichever surface logged it."""
+    rows = (db.query(HintEvent.was_blocked)
+            .filter(or_(HintEvent.level >= 2,
+                        and_(HintEvent.source == "chat", HintEvent.evaluation_id.is_(None))))
+            .all())
     return sum(1 for (blocked,) in rows if blocked), len(rows)
 
 
@@ -148,18 +173,57 @@ def failing_case(db: Session, evaluation: CodeEvaluation) -> FailingCase | None:
     return None
 
 
-def _llm_hint(level: int, context: dict, runnable) -> str:
-    prompt = HINT_PROMPT.format(
-        level_instruction=LEVEL_INSTRUCTIONS[level],
-        max_lines=guardrail.max_code_lines(level),
-        **context,
-    )
-    message, _ = invoke_with_retry(runnable, prompt)
+def _llm_hint(prompt: str, template: str, runnable, user_id: int) -> str | None:
+    if runnable is None:
+        result = llm_gateway.invoke("hint", prompt, user_id=user_id, template=template)
+        if result.status == "template":
+            return None
+        message = result.value
+    else:
+        message, _ = invoke_with_retry(runnable, prompt)
     return (getattr(message, "content", message) or "").strip()
 
 
-def request_hint(db: Session, user_id: int, problem_id: int, *, runnable=None,
-                 provider=None) -> Hint:
+def _guarded_hint(level, prompt, template, *, problem, language, student_code,
+                  evaluation_id, user_id, runnable, provider, fix_check: bool = False) -> Hint:
+    """fix_check: a hint about the student's code also goes past the LLM judge, which
+    catches a fix told in plain words. Approach hints without code have no bug to give
+    away."""
+    tests = list(problem.test_cases) if problem else []
+    references = reference_sources(problem)
+    problem_id = problem.id if problem else None
+
+    blocked = False
+    try:
+        for _ in range(2):
+            text = _llm_hint(prompt, template, runnable, user_id)
+            if text is None:
+                break
+            verdict = guardrail.check(text, level, language, tests, provider,
+                                      references=references, student_code=student_code)
+            if (text and not verdict.blocked and fix_check and guardrail.states_fix(
+                    text, statement=problem.statement if problem else "",
+                    language=language.value, code=student_code, user_id=user_id)):
+                verdict = guardrail.GuardVerdict(True, "states_fix")
+            if text and not verdict.blocked:
+                return Hint(level, text, "llm", blocked, evaluation_id, problem_id)
+            blocked = blocked or verdict.blocked
+    except LLMUnavailable:
+        pass
+    return Hint(level, template, "template", blocked, evaluation_id, problem_id)
+
+
+def _misconceptions(db: Session, user_id: int) -> str:
+    seen = [tag for tag, _ in top_misconceptions(db, user_id)[:3]]
+    return ", ".join(seen) or "none recorded"
+
+
+def _clamp(level: int) -> int:
+    return max(1, min(MAX_LEVEL, int(level)))
+
+
+def request_hint(db: Session, user_id: int, problem_id: int, *, level: int | None = None,
+                 source: HintSource = "practice", runnable=None, provider=None) -> Hint:
     evaluation = _evaluations(db, user_id, problem_id).order_by(CodeEvaluation.id.desc()).first()
     if evaluation is None:
         raise NoHintAvailable("Submit an attempt at this problem first.")
@@ -169,7 +233,7 @@ def request_hint(db: Session, user_id: int, problem_id: int, *, runnable=None,
     problem = db.get(Problem, problem_id)
     submission = db.get(CodeSubmission, evaluation.submission_id)
     case = failing_case(db, evaluation) or FailingCase(stdin="", expected="", actual="")
-    level = next_level(db, user_id, problem_id)
+    level = next_level(db, user_id, problem_id) if level is None else _clamp(level)
 
     if level == 1:
         hint = Hint(1, l1_text(case), "template", False, evaluation.id, problem_id)
@@ -178,35 +242,59 @@ def request_hint(db: Session, user_id: int, problem_id: int, *, runnable=None,
                             runnable, provider)
 
     log_hint(db, user_id=user_id, problem_id=problem_id, evaluation_id=evaluation.id,
-             level=hint.level, was_blocked=hint.was_blocked)
+             level=hint.level, was_blocked=hint.was_blocked, source=source)
     return hint
 
 
 def _ladder_hint(db, level, problem, submission, case, user_id, evaluation_id,
                  runnable, provider) -> Hint:
-    seen = [tag for tag, _ in top_misconceptions(db, user_id)[:3]]
-    context = {
-        "statement": problem.statement if problem else "",
-        "language": submission.language.value,
-        "code": submission.code,
-        "stdin": repr(case.stdin),
-        "expected": repr(case.expected),
-        "actual": repr(case.actual),
-        "misconceptions": ", ".join(seen) or "none recorded",
-    }
-    tests = list(problem.test_cases) if problem else []
-    references = reference_sources(problem)
+    prompt = HINT_PROMPT.format(
+        level_instruction=LEVEL_INSTRUCTIONS[level],
+        max_lines=guardrail.max_code_lines(level),
+        statement=problem.statement if problem else "",
+        language=submission.language.value,
+        code=submission.code,
+        stdin=case.stdin.rstrip() or "(empty)",
+        expected=case.expected.rstrip() or "(nothing)",
+        actual=case.actual.rstrip() or "(nothing)",
+        misconceptions=_misconceptions(db, user_id),
+    )
+    return _guarded_hint(level, prompt, TEMPLATES[level], problem=problem,
+                         language=submission.language, student_code=submission.code,
+                         evaluation_id=evaluation_id, user_id=user_id,
+                         runnable=runnable, provider=provider, fix_check=True)
 
-    blocked = False
-    try:
-        runnable = runnable or get_chat_model(temperature=0.4)
-        for _ in range(2):
-            text = _llm_hint(level, context, runnable)
-            verdict = guardrail.check(text, level, submission.language, tests, provider,
-                                      references=references, student_code=submission.code)
-            if text and not verdict.blocked:
-                return Hint(level, text, "llm", blocked, evaluation_id, problem.id)
-            blocked = blocked or verdict.blocked
-    except LLMUnavailable:
-        pass
-    return Hint(level, TEMPLATES[level], "template", blocked, evaluation_id, problem.id)
+
+def approach_hint(db: Session, user_id: int, problem_id: int, *, level: int,
+                  language: Language, has_code: bool = False, runnable=None,
+                  provider=None) -> Hint:
+    """A hint built from the problem statement, for a student with no code yet or with
+    code that has no tests to run against (has_code: their latest submission is shown).
+    Always logged as a chat hint, so it never moves the Practice ladder."""
+    problem = db.get(Problem, problem_id)
+    if problem is None:
+        raise ProblemNotFound(f"Problem {problem_id} not found.")
+    code = ""
+    if has_code:
+        latest = (db.query(CodeSubmission.code)
+                  .filter(CodeSubmission.user_id == user_id,
+                          CodeSubmission.problem_id == problem_id)
+                  .order_by(CodeSubmission.id.desc()).first())
+        code = latest.code if latest else ""
+    level = _clamp(level)
+    prompt = APPROACH_PROMPT.format(
+        situation=APPROACH_HAS_CODE if code else APPROACH_NO_CODE,
+        code_block=APPROACH_CODE_BLOCK.format(language=language.value, code=code) if code else "",
+        level_instruction=APPROACH_LEVEL_INSTRUCTIONS[level],
+        max_lines=guardrail.max_code_lines(level),
+        statement=problem.statement,
+        language=language.value,
+        misconceptions=_misconceptions(db, user_id),
+    )
+    hint = _guarded_hint(level, prompt, APPROACH_TEMPLATES[level], problem=problem,
+                         language=language, student_code=code, evaluation_id=None,
+                         user_id=user_id, runnable=runnable, provider=provider,
+                         fix_check=bool(code))
+    log_hint(db, user_id=user_id, problem_id=problem_id, evaluation_id=None,
+             level=hint.level, was_blocked=hint.was_blocked, source="chat")
+    return hint

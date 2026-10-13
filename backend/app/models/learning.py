@@ -60,6 +60,7 @@ class HintEvent(Base):
                            nullable=True)
     level         = Column(Integer, nullable=False)
     was_blocked   = Column(Boolean, nullable=False, default=False)
+    source        = Column(String(16), nullable=False, server_default="practice")
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
 
