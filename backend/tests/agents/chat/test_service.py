@@ -5,7 +5,7 @@ import threading
 
 import pytest
 
-from app.agents.chat.middleware import BUDGET_FALLBACK
+from app.agents.chat.middleware import BUDGET_FALLBACK, CODE_HIDDEN, REWRITE
 from app.agents.chat.prompts import PLAIN_PROMPT
 from app.agents.chat.service import (
     BUSY_REPLY,
@@ -105,6 +105,30 @@ def test_hint_requests_about_code_force_get_hint_and_other_questions_do_not(db, 
                         summary_model=ScriptedModel()))
 
     assert [m.calls[0].tool_choice for m in models] == ["get_hint", None, None]
+
+
+PROGRAM = "```c\n#include <stdio.h>\nint main(void) {\n  return 0;\n}\n```"
+PSEUDO = "1. Read n.\n2. Add each number to a running total.\n3. Print the total."
+
+
+def test_chat_never_shows_a_complete_program(db, student):
+    thread = new_thread(db, student)
+    snippet = "```c\nint *a = malloc(n * sizeof *a);\nfree(a);\n```"
+    turns = (["Use it like this:\n" + snippet],
+             [PROGRAM, f"Steps:\n```text\n{PSEUDO}\n```"],
+             [PROGRAM, "Still: " + PROGRAM])
+    replies, models = [], []
+    for script in turns:
+        model = ScriptedModel(script=list(script))
+        models.append(model)
+        replies.append(finish(run_turn(db, student.id, thread.id, "full code please",
+                                       model=model, summary_model=ScriptedModel()))[-1].content)
+
+    assert replies[0].endswith(snippet) and len(models[0].calls) == 1
+    assert replies[1] == f"Steps:\n```text\n{PSEUDO}\n```"
+    assert models[1].calls[1].messages[-1].content == REWRITE
+    assert "int main" not in replies[2] and CODE_HIDDEN in replies[2]
+    assert stored(db)[-1].content == replies[2]
 
 
 def test_citation_markers_without_sources_are_stripped_outside_code(db, student):

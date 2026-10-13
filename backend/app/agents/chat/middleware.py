@@ -1,6 +1,6 @@
 """Agent middleware: moderation on the way in and out, a forced answer once the tool
-budget is spent, tool-built replies shown verbatim, hint requests routed to get_hint, and
-tool start/end callbacks for the event stream."""
+budget is spent, no complete programs in replies, tool-built replies shown verbatim, hint
+requests routed to get_hint, and tool start/end callbacks for the event stream."""
 
 import json
 import re
@@ -17,7 +17,13 @@ from langchain.agents.middleware import (
     before_model,
     hook_config,
 )
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    HumanMessage,
+    RemoveMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from typing_extensions import NotRequired
 
 from app.agents.chat.tools import ToolContext, ToolTrace
@@ -33,6 +39,7 @@ BUDGET_FALLBACK = ("I couldn't finish checking everything for this question. Cou
 
 class ChatState(AgentState):
     moderation_flag: NotRequired[str | None]
+    code_rewritten: NotRequired[bool]
 
 
 @before_model(state_schema=ChatState, can_jump_to=["end"])
@@ -59,6 +66,54 @@ def moderation_out(state: ChatState, runtime) -> dict | None:
                                    response_metadata=last.response_metadata,
                                    usage_metadata=last.usage_metadata)],
             "moderation_flag": verdict.category}
+
+
+SNIPPET_LINES = 10
+_FENCE = re.compile(r"```([^\n`]*)\n(.*?)(?:```|$)", re.DOTALL)
+_PROGRAM = re.compile(r"\bmain\s*\(|\bif\s+__name__\s*==")
+_PROSE_TAGS = {"text", "txt", "pseudocode", "plaintext", "output", "console"}
+REWRITE = ("Your reply contains a complete program or a code block longer than 10 lines, "
+           "which aiTA never shows. Rewrite it: give the main logic as numbered plain-English "
+           "pseudocode in a ```text block, and keep any real code to one short snippet of at "
+           "most 10 lines for a specific construct.")
+CODE_HIDDEN = ("```text\nFull code is not shown in aiTA. Work from the steps above, or ask "
+               "for a hint.\n```")
+
+
+def _too_much_code(tag: str, body: str) -> bool:
+    if _PROGRAM.search(body):
+        return True
+    if tag.strip().lower() in _PROSE_TAGS:
+        return False
+    return sum(1 for line in body.splitlines() if line.strip()) > SNIPPET_LINES
+
+
+def _has_program(text: str) -> bool:
+    return any(_too_much_code(tag, body) for tag, body in _FENCE.findall(text))
+
+
+def _hide_programs(text: str) -> str:
+    return _FENCE.sub(lambda m: CODE_HIDDEN if _too_much_code(*m.groups()) else m.group(0), text)
+
+
+class NoFullPrograms(AgentMiddleware):
+    """Chat never shows a complete program: pseudocode for the logic, snippets of at most
+    SNIPPET_LINES for syntax. A reply that breaks this is rewritten once; if the rewrite
+    still breaks it, the offending blocks are replaced."""
+
+    state_schema = ChatState
+
+    @hook_config(can_jump_to=["model"])
+    def after_model(self, state: ChatState, runtime) -> dict | None:
+        last = state["messages"][-1]
+        if not isinstance(last, AIMessage) or last.tool_calls or not _has_program(last.text):
+            return None
+        if not state.get("code_rewritten"):
+            return {"messages": [RemoveMessage(id=last.id), HumanMessage(content=REWRITE)],
+                    "code_rewritten": True, "jump_to": "model"}
+        return {"messages": [AIMessage(id=last.id, content=_hide_programs(last.text),
+                                       response_metadata=last.response_metadata,
+                                       usage_metadata=last.usage_metadata)]}
 
 
 class AnswerWithinBudget(AgentMiddleware):
