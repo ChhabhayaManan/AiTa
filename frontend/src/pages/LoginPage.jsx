@@ -125,10 +125,6 @@ export default function LoginPage() {
     if (fpOtp.length === 6 && fpStep === 2) handleFpVerifyOtp(fpOtp)
   }, [fpOtp])
 
-  
-  useEffect(() => {
-    console.log('Entered OTP:', otp)
-  }, [otp])
   // ── Login handlers ────────────────────────────────────────────────────────
   const validateStep1 = () => {
     const e = {}

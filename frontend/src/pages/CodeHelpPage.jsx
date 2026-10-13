@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { contentPlayerAPI, codeEvalAPI } from '../utils/api'
+import { problemsAPI, codeEvalAPI } from '../utils/api'
 import { LANGUAGES, TEMPLATES } from '../components/code_eval/CodeEditor'
+import ChatPanel from '../components/chat/ChatPanel'
 import toast from 'react-hot-toast'
 import {
-  ArrowLeft, RefreshCw, Eye, EyeOff, Play, ChevronDown,
-  CheckCircle2, Clock, Lightbulb, BookOpen, Send, Loader2,
-  Code2, MessageSquare, Trophy, ChevronRight, X
+  ArrowLeft, RefreshCw, Eye, Play,
+  Lightbulb, BookOpen, Loader2,
+  Code2, Trophy, X, Sparkles
 } from 'lucide-react'
 
 const DIFFICULTY_STYLE = {
@@ -54,7 +55,7 @@ export default function CodeHelpPage() {
   const [phase, setPhase]         = useState('setup')   // setup | problem
   const [topic, setTopic]         = useState(prefillTopic)
   const [difficulty, setDiff]     = useState('medium')
-  const [language, setLang]       = useState('python')
+  const [language, setLang]       = useState(user?.preferred_language || 'c')
 
   // ── Problem state ─────────────────────────────────────────────────────────
   const [problem, setProblem]     = useState(null)
@@ -67,12 +68,7 @@ export default function CodeHelpPage() {
   const [showSolution, setShowSolution] = useState(false)
   const [activeTab, setActiveTab] = useState('problem')  // problem | hints | solution
 
-  // ── AI chat state ─────────────────────────────────────────────────────────
-  const [sessionId, setSessionId] = useState(null)
-  const [chatMsgs, setChatMsgs]   = useState([])
-  const [chatInput, setChatInput] = useState('')
-  const [chatLoading, setChatLoading] = useState(false)
-  const chatEndRef                = useRef(null)
+  const [historyId, setHistoryId] = useState(null)
 
   // ── Run state ─────────────────────────────────────────────────────────────
   const [running, setRunning]     = useState(false)
@@ -88,10 +84,6 @@ export default function CodeHelpPage() {
     try { return JSON.parse(localStorage.getItem('codehelp_history') || '[]') }
     catch { return [] }
   })
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatMsgs])
 
   const langLabel = LANGUAGES.find(l => l.value === language)?.label || language
 
@@ -109,7 +101,7 @@ export default function CodeHelpPage() {
     if (!topic.trim()) { toast.error('Enter a topic first'); return }
     setGenerating(true)
     try {
-      const { data } = await contentPlayerAPI.generateProblem({
+      const { data } = await problemsAPI.generate({
         topic,
         difficulty,
         language,
@@ -121,8 +113,6 @@ export default function CodeHelpPage() {
       setShowSolution(false)
       setActiveTab('problem')
       setEvalResult(null)
-      setChatMsgs([])
-      setSessionId(null)
 
       // Track this title so it won't be generated again this session
       if (data.title) {
@@ -132,18 +122,10 @@ export default function CodeHelpPage() {
         setSeenIds(prev => [...new Set([...prev, data.problem_id])])
       }
 
-      // Create a content player session for history
-      const { data: session } = await contentPlayerAPI.createSession({
-        mode: 'code_help',
-        topic: data.title || topic,
-        language,
-        difficulty,
-      })
-      setSessionId(session.id)
-
-      // Save to local history
+      const entryId = Date.now()
+      setHistoryId(entryId)
       const entry = {
-        id: session.id,
+        id: entryId,
         title: data.title,
         topic,
         difficulty,
@@ -209,7 +191,7 @@ export default function CodeHelpPage() {
       // Update history with score
       const score = Math.round(data.scores?.overall || 0)
       const updated = history.map(h =>
-        h.id === sessionId ? { ...h, score, solvedAt: new Date().toISOString() } : h
+        h.id === historyId ? { ...h, score, solvedAt: new Date().toISOString() } : h
       )
       setHistory(updated)
       localStorage.setItem('codehelp_history', JSON.stringify(updated))
@@ -223,29 +205,18 @@ export default function CodeHelpPage() {
     }
   }
 
-  // ── AI hint chat ──────────────────────────────────────────────────────────
-  const sendChat = async () => {
-    if (!chatInput.trim() || !sessionId) return
-    const msg = chatInput.trim()
-    setChatInput('')
-    setChatMsgs(prev => [...prev, { role: 'user', content: msg }])
-    setChatLoading(true)
-    try {
-      const { data } = await contentPlayerAPI.chat(sessionId, {
-        message: msg,
-        code_snippet: code || undefined,
-      })
-      setChatMsgs(prev => [...prev, { role: 'assistant', content: data.response }])
-    } catch {
-      setChatMsgs(prev => [...prev, { role: 'error', content: 'Failed to get hint.' }])
-    } finally {
-      setChatLoading(false)
-    }
-  }
-
   // The backend withholds both on purpose — they are the answer. Without this the
   // Solution tab offers a reveal that uncovers an empty box.
   const hasSolution = Boolean(problem?.solution_code || problem?.explanation)
+
+  // The id lets the chat's tools run against this problem's stored tests.
+  const firstExample = problem?.examples?.[0]
+  const problemContext = problem ? [
+    `${problem.title || topic}${problem.problem_id ? ` (problem_id ${problem.problem_id})` : ''}`,
+    problem.description,
+    firstExample && `Example input:\n${firstExample.input}\nExpected output:\n${firstExample.output}`,
+    problem.constraints?.length > 0 && `Constraints:\n${problem.constraints.join('\n')}`,
+  ].filter(Boolean).join('\n\n') : ''
 
   const diffStyle = DIFFICULTY_STYLE[difficulty] || DIFFICULTY_STYLE.medium
   const probDiffStyle = problem ? (DIFFICULTY_STYLE[problem.difficulty] || DIFFICULTY_STYLE.medium) : diffStyle
@@ -259,7 +230,7 @@ export default function CodeHelpPage() {
         <div style={S.setupWrap}>
           {/* Header */}
           <div style={S.setupHeader}>
-            <button onClick={() => navigate('/learn')} style={S.backBtn}>
+            <button onClick={() => navigate('/dashboard')} style={S.backBtn}>
               <ArrowLeft size={16} /> Back
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -406,6 +377,7 @@ export default function CodeHelpPage() {
               { id: 'problem',  label: 'Problem',  icon: <BookOpen size={13} /> },
               { id: 'hints',    label: 'Hints',    icon: <Lightbulb size={13} /> },
               { id: 'solution', label: 'Solution', icon: <Eye size={13} /> },
+              { id: 'chat',     label: 'Ask aiTA', icon: <Sparkles size={13} /> },
             ].filter(tab => tab.id !== 'solution' || hasSolution).map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
                 ...S.tab,
@@ -418,7 +390,7 @@ export default function CodeHelpPage() {
             ))}
           </div>
 
-          <div style={S.leftContent}>
+          <div style={{ ...S.leftContent, display: activeTab === 'chat' ? 'none' : 'block' }}>
             {/* Problem tab */}
             {activeTab === 'problem' && problem && (
               <div>
@@ -473,47 +445,6 @@ export default function CodeHelpPage() {
                   ))
                   : <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>No hints available.</p>
                 }
-
-                {/* AI Chat for hints */}
-                <div style={{ marginTop: 24 }}>
-                  <p style={S.sectionLabel}>Ask AI for a hint</p>
-                  <div style={S.chatArea}>
-                    {chatMsgs.length === 0 && (
-                      <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
-                        Ask for a hint without spoiling the solution
-                      </p>
-                    )}
-                    {chatMsgs.map((m, i) => (
-                      <div key={i} style={{
-                        ...S.chatMsg,
-                        alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                        background: m.role === 'user' ? 'rgba(20,184,166,0.12)' : 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${m.role === 'user' ? 'rgba(20,184,166,0.25)' : 'rgba(255,255,255,0.08)'}`,
-                        color: m.role === 'error' ? '#ef4444' : 'rgba(255,255,255,0.8)',
-                      }}>
-                        {m.content}
-                      </div>
-                    ))}
-                    {chatLoading && (
-                      <div style={{ ...S.chatMsg, alignSelf: 'flex-start', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.3)' }}>Thinking...</span>
-                      </div>
-                    )}
-                    <div ref={chatEndRef} />
-                  </div>
-                  <div style={S.chatInputRow}>
-                    <input
-                      style={S.chatInput}
-                      placeholder="Ask for a hint..."
-                      value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && sendChat()}
-                    />
-                    <button onClick={sendChat} disabled={!chatInput.trim() || chatLoading} style={S.chatSendBtn}>
-                      <Send size={14} />
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
 
@@ -552,6 +483,17 @@ export default function CodeHelpPage() {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Kept mounted while hidden so a reply in progress survives a tab switch */}
+          <div style={{ ...S.chatPane, display: activeTab === 'chat' ? 'flex' : 'none' }}>
+            <ChatPanel
+              key={problem?.problem_id || problem?.title}
+              problemContext={problemContext}
+              defaultLanguage={language}
+              getCode={() => ({ code, language })}
+              className="flex-1"
+            />
           </div>
         </div>
 
@@ -797,9 +739,10 @@ const S = {
   runBtn: { display: 'flex', alignItems: 'center', gap: 6, background: '#7c3aed', border: 'none', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
   splitLayout: { display: 'flex', flex: 1, overflow: 'hidden', height: 'calc(100vh - 53px)', position: 'relative', zIndex: 1 },
   leftPanel: { width: '42%', minWidth: 320, display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' },
-  tabs: { display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', flexShrink: 0 },
-  tab: { display: 'flex', alignItems: 'center', gap: 6, padding: '11px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', transition: 'all 0.15s' },
+  tabs: { display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', flexShrink: 0, overflowX: 'auto' },
+  tab: { display: 'flex', alignItems: 'center', gap: 6, padding: '11px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', transition: 'all 0.15s', whiteSpace: 'nowrap' },
   leftContent: { flex: 1, overflowY: 'auto', padding: '20px 20px 40px' },
+  chatPane: { flex: 1, minHeight: 0, padding: 12, flexDirection: 'column' },
   probName: { fontSize: 20, fontWeight: 700, color: '#fff', margin: '0 0 12px', letterSpacing: '-0.3px' },
   sectionLabel: { fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', margin: '20px 0 8px' },
   descText: { color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.7, margin: 0 },
@@ -810,11 +753,6 @@ const S = {
   langPill: { padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa' },
   topicPill: { padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'rgba(20,184,166,0.1)', border: '1px solid rgba(20,184,166,0.25)', color: '#2dd4bf' },
   hintBox: { display: 'flex', gap: 10, padding: '12px 14px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, marginBottom: 10 },
-  chatArea: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 14, minHeight: 120, maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 },
-  chatMsg: { padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.6, maxWidth: '90%' },
-  chatInputRow: { display: 'flex', gap: 8, marginTop: 10 },
-  chatInput: { flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '9px 14px', color: '#fff', fontSize: 13, outline: 'none' },
-  chatSendBtn: { background: '#14b8a6', border: 'none', borderRadius: 8, padding: '9px 14px', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center' },
   solutionBlur: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center' },
   revealBtn: { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 24px', color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   codeDisplay: { background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16, fontFamily: "'JetBrains Mono','Courier New',monospace" },

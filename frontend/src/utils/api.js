@@ -12,7 +12,7 @@ export function getErrorMessage(err, fallback = 'Something went wrong.') {
   return String(detail)
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api/v1'
+export const API_BASE = import.meta.env.VITE_API_URL || '/api/v1'
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -24,6 +24,22 @@ const api = axios.create({
 // routinely passes 60s. Aborting the request does not stop the backend, so the
 // work completes while the UI reports "Network Error" and resets itself.
 const EVAL_TIMEOUT = 300000
+
+// Must go through API_BASE. A relative path posts to the frontend's own
+// origin, which 404s, so every refresh failed and logged the user out.
+export async function refreshAccessToken() {
+  const { data } = await axios.post(`${API_BASE}/auth/refresh`, {
+    refresh_token: localStorage.getItem('refresh_token'),
+  })
+  localStorage.setItem('access_token', data.access_token)
+  localStorage.setItem('refresh_token', data.refresh_token)
+  return data.access_token
+}
+
+function sendToLogin() {
+  localStorage.clear()
+  window.location.href = '/login'
+}
 
 // ─── Request Interceptor: attach token ───────────────────────────────────────
 api.interceptors.request.use(
@@ -43,22 +59,13 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
-      const refreshToken = localStorage.getItem('refresh_token')
-
-      if (refreshToken) {
+      if (localStorage.getItem('refresh_token')) {
         try {
-          // Must go through API_BASE. A relative path posts to the frontend's own
-          // origin, which 404s, so every refresh failed and logged the user out.
-          const { data } = await axios.post(`${API_BASE}/auth/refresh`, {
-            refresh_token: refreshToken,
-          })
-          localStorage.setItem('access_token', data.access_token)
-          localStorage.setItem('refresh_token', data.refresh_token)
-          originalRequest.headers.Authorization = `Bearer ${data.access_token}`
+          const token = await refreshAccessToken()
+          originalRequest.headers.Authorization = `Bearer ${token}`
           return api(originalRequest)
         } catch {
-          localStorage.clear()
-          window.location.href = '/login'
+          sendToLogin()
         }
       }
     }
@@ -107,29 +114,8 @@ export const recommendationAPI = {
   seedContent: () => api.post('/recommendations/content/seed'),
 }
 
-// export const contentPlayerAPI = {
-//   // Session management
-//   createSession:  (data)      => api.post('/content-player/sessions', data),
-//   getSessions:    ()          => api.get('/content-player/sessions'),
-//   getSession:     (id)        => api.get(`/content-player/sessions/${id}`),
-//   archiveSession: (id)        => api.delete(`/content-player/sessions/${id}`),
-
-//   // Chat — the main action
-//   chat:           (id, data)  => api.post(`/content-player/sessions/${id}/chat`, data),
-
-//   // Message feedback
-//   rateMessage:    (msgId, wasHelpful) =>
-//     api.patch(`/content-player/messages/${msgId}/feedback`, { was_helpful: wasHelpful }),
-// }
-
-export const contentPlayerAPI = {
-  createSession:  (data)             => api.post('/content-player/sessions', data),
-  getSessions:    ()                 => api.get('/content-player/sessions'),
-  getSession:     (id)               => api.get(`/content-player/sessions/${id}`),
-  archiveSession: (id)               => api.delete(`/content-player/sessions/${id}`),
-  chat:           (sessionId, data)  => api.post(`/content-player/sessions/${sessionId}/chat`, data),
-  rateMessage:    (msgId, helpful)   => api.patch(`/content-player/messages/${msgId}/feedback`, { was_helpful: helpful }),
-  generateProblem:(data)             => api.post('/content-player/generate-problem', data),
+export const problemsAPI = {
+  generate: (data) => api.post('/problems/generate', data),
 };
 
 // ─── Code Evaluation Agent API ────────────────────────────────────────────────
@@ -166,6 +152,49 @@ export const feedbackAPI = {
 
 export const profileAPI = {
   getMastery: () => api.get('/profile/mastery'),
+}
+
+const signedOut = (res) => res.status === 401
+
+// The reply is a Server-Sent Events stream over POST, which axios cannot read
+// incrementally, so this one call uses fetch with the same token handling.
+async function postStream(path, body, signal) {
+  const send = () => {
+    const token = localStorage.getItem('access_token')
+    return fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+      signal,
+    })
+  }
+  let res = await send()
+  if (!signedOut(res)) return res
+  if (!localStorage.getItem('refresh_token')) {
+    sendToLogin()
+    return res
+  }
+  try {
+    await refreshAccessToken()
+  } catch {
+    sendToLogin()
+    return res
+  }
+  res = await send()
+  if (signedOut(res)) sendToLogin()
+  return res
+}
+
+export const chatAPI = {
+  listThreads:  ()                       => api.get('/chat/threads'),
+  getThread:    (id)                     => api.get(`/chat/threads/${id}`),
+  createThread: (mode)                   => api.post('/chat/threads', mode ? { mode } : {}),
+  thumbs:       (messageId, value)       => api.patch(`/chat/messages/${messageId}/thumbs`, { value }),
+  send:         (threadId, body, signal) => postStream(`/chat/threads/${threadId}/messages`, body, signal),
 }
 
 export const assessmentAPI = {

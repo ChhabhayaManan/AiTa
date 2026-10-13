@@ -48,7 +48,7 @@ function isYouTube(url) {
   return url && (url.includes('youtube.com') || url.includes('youtu.be'))
 }
 
-// Derive a clean topic name from content title for Content Player pre-fill
+// Derive a clean topic name from content title for the home chat's prefilled question
 function topicFromContent(content) {
   // Strip source prefix patterns like "Python for Beginners – " → "Python Basics"
   // Use the first meaningful chunk of the title
@@ -93,15 +93,9 @@ export default function RecommendationCard({ rec, rank, onDismiss, onInteract })
     if (content.url) window.open(content.url, '_blank')
   }
 
-  // Navigate to Content Player with topic pre-filled (pipeline connection)
   const handleLearn = () => {
     onInteract(content.id, 'view')
-    navigate('/learn', {
-      state: {
-        topic: topicFromContent(content),
-        fromRecommendation: true,
-      }
-    })
+    navigate('/dashboard?ask=' + encodeURIComponent(`Explain ${topicFromContent(content)}`))
   }
 
   return (
@@ -230,11 +224,11 @@ export default function RecommendationCard({ rec, rank, onDismiss, onInteract })
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
-            {/* Primary CTA: Learn with Content Player (pipeline step 3) */}
+            {/* Primary CTA: ask the home chat to explain this topic */}
             <button
               onClick={handleLearn}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-display font-600 rounded-lg transition-all"
-              title="Open in Content Player — get a walkthrough of this topic"
+              title="Ask aiTA to explain this topic"
             >
               <ArrowRight size={12} /> Learn This
             </button>
