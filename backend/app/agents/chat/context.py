@@ -1,6 +1,6 @@
 """What the agent is told about the student before its first model call."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,7 @@ class ChatContext:
     last_attempt: LastAttempt | None
     mastery_line: str
     summary: str | None
+    passages: list[dict] = field(default_factory=list)
 
 
 def _clip(text: str, limit: int) -> str:

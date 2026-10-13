@@ -13,7 +13,7 @@ def test_system_prompt_carries_the_last_attempt_only_when_there_is_one(db, stude
     assert "Last attempt: none yet" in fresh
     assert "No graded practice yet." in fresh and "Write code in C unless" in fresh
     assert "Tele-MANAS (free, 24x7): 14416, or 112" in fresh
-    for rule in ("call search_books and answer from what it returns",
+    for rule in ("answer from the Reference passages",
                  "ALWAYS pass it as problem_text", "ALWAYS call evaluate_code before judging",
                  "ALWAYS call get_hint", "NEVER write a citation marker",
                  "no hint or approach has been given for that problem yet",

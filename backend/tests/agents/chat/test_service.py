@@ -15,6 +15,7 @@ from app.agents.chat.service import (
     Token,
     ToolEnd,
     ToolStart,
+    _title,
     run_turn,
 )
 from app.core.exceptions import LLMUnavailable, TurnInProgress
@@ -42,7 +43,7 @@ def unit(axis: int) -> list[float]:
     return [1.0 if i == axis else 0.0 for i in range(EMBED_DIM)]
 
 
-def test_books_are_searched_only_when_the_model_chooses_and_cited_by_ref(db, student):
+def test_books_are_searched_before_the_model_and_agent_searches_continue_the_refs(db, student):
     for source_id, position, vector in (
             ("beej", 0, [1.0, 0.1]), ("beej", 7, [1.0, 0.2]), ("modernc", 0, [1.0, 0.3]),
             ("kr", 0, [0.0, 1.0])):
@@ -51,33 +52,42 @@ def test_books_are_searched_only_when_the_model_chooses_and_cited_by_ref(db, stu
                          lang_tag="c", position=position, text=f"{source_id} passage",
                          embedding=vector + [0.0] * (EMBED_DIM - 2)))
     thread = new_thread(db, student)
-    embed = {"embed": lambda text: unit(1)}
-
-    quiet = finish(run_turn(db, student.id, thread.id, "How does pointer arithmetic work in C?",
-                            model=ScriptedModel(script=["It moves by element size."]),
-                            summary_model=ScriptedModel(), tool_ctx_overrides=embed))
-    assert [type(e) for e in quiet] == [Token, Final]
-    assert quiet[-1].citations == [] and stored(db)[-1].tool_calls is None
-
     model = ScriptedModel(script=[tool_call("search_books", "c1", query="pointer to pointer"),
-                                  "Adding 1 moves it one element on [2]; see also [1]."])
-    events = finish(run_turn(db, student.id, thread.id, "and pointer to pointer?", model=model,
-                             summary_model=ScriptedModel(), tool_ctx_overrides=embed))
+                                  "Adding 1 moves it one element on [1]; see also [3]."])
 
-    assert [type(e) for e in events] == [ToolStart, ToolEnd, Token, Final]
-    start, end, token, final = events
-    assert (start.args, end.trace["summary"]) == ({"query": "pointer to pointer"}, "3 sources")
-    assert "Reference passages" not in model.calls[0].messages[0].content
+    events = finish(run_turn(
+        db, student.id, thread.id, "How does pointer arithmetic work in C?", model=model,
+        summary_model=ScriptedModel(),
+        tool_ctx_overrides={"embed": lambda text: unit(0) if "arithmetic" in text else unit(1)},
+    ))
+
+    assert [type(e) for e in events] == [ToolStart, ToolEnd] * 2 + [Token, Final]
+    auto, auto_end, agent, agent_end, token, final = events
+    assert auto.args == {"query": "How does pointer arithmetic work in C?", "auto": True}
+    assert (auto_end.trace["summary"], agent.args) == ("2 sources", {"query": "pointer to pointer"})
+    prompt = model.calls[0].messages[0].content
+    assert "Reference passages" in prompt and '"ref": 1, "title": "Beej"' in prompt
+    assert '"ref": 2, "title": "Modernc"' in prompt and "Kr" not in prompt
     passages = json.loads(model.calls[1].messages[-1].content)["results"]
     assert [(p["title"], p["ref"]) for p in passages] == [
-        ("Kr", 1), ("Modernc", 2), ("Beej", 3), ("Beej", 3)]
-    assert token.text == final.content == "Adding 1 moves it one element on [2]; see also [1]."
+        ("Kr", 3), ("Modernc", 2), ("Beej", 1), ("Beej", 1)]
+    assert token.text == final.content == "Adding 1 moves it one element on [1]; see also [3]."
 
-    reply = stored(db)[-1]
-    assert (reply.role, reply.id) == ("assistant", final.message_id)
-    assert [c["title"] for c in reply.citations] == ["Kr", "Modernc", "Beej"]
+    user_msg, reply = stored(db)
+    assert (user_msg.role, reply.role, reply.id) == ("user", "assistant", final.message_id)
+    assert [(c["name"], c["args"].get("auto")) for c in reply.tool_calls] == [
+        ("search_books", True), ("search_books", None)]
+    assert [c["title"] for c in reply.citations] == ["Beej", "Modernc", "Kr"]
     assert reply.citations == final.citations and reply.tool_calls == final.tool_calls
     assert db.get(ChatThread, thread.id).title == "How does pointer arithmetic work in C?"
+
+    for message in ("stuck on pointer arithmetic, any hint?",
+                    "Why does this pointer arithmetic fail?\n```c\np = p + 1;\n```"):
+        quiet = finish(run_turn(db, student.id, thread.id, message,
+                                model=ScriptedModel(script=["Try tracing it."]),
+                                summary_model=ScriptedModel(),
+                                tool_ctx_overrides={"embed": lambda text: unit(0)}))
+        assert [type(e) for e in quiet] == [Token, Final]
 
 
 def test_a_hint_is_the_reply_verbatim_and_the_model_is_not_asked_again(db, student):
@@ -211,6 +221,25 @@ def test_busy_and_failed_turns_are_saved_for_reload_but_kept_from_the_model(db, 
         ("user", "and loops?", None), ("assistant", FAILED, "error")]
     assert [m.content for m in model.calls[0].messages[1:]] == [
         "what is recursion?", "and loops?", "hello?"]
+
+
+def test_code_help_thread_title_is_problem_name_and_question():
+    content = ("Problem: Largest of N (problem_id 42)\n\nRead N numbers.\n\n"
+               "Example input:\n3\n1 2 3\n\nMy question: why does it fail?")
+    assert _title(content) == "Largest of N · why does it fail?"
+
+
+def test_try_again_replaces_the_failed_exchange_instead_of_duplicating_it(db, student):
+    thread = new_thread(db, student)
+    finish(run_turn(db, student.id, thread.id, "what is recursion?",
+                    model=ScriptedModel(script=[LLMUnavailable("gateway exhausted")]),
+                    summary_model=ScriptedModel()))
+    finish(run_turn(db, student.id, thread.id, "what is recursion? ",
+                    model=ScriptedModel(script=["A function calling itself."]),
+                    summary_model=ScriptedModel()))
+
+    assert [(m.role, m.content, m.moderation_flag) for m in stored(db)] == [
+        ("user", "what is recursion? ", None), ("assistant", "A function calling itself.", None)]
 
 
 def test_turn_finishes_without_a_listener_and_rolls_old_messages_into_the_summary(db, student):

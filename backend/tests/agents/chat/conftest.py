@@ -63,7 +63,7 @@ def new_thread(db, user, mode="aita") -> ChatThread:
 
 @pytest.fixture(autouse=True)
 def fake_query_embedding(monkeypatch):
-    """search_books must never load the real embedder in tests."""
+    """Every aita turn searches the books first; without passages that finds nothing."""
     monkeypatch.setattr("app.services.rag.embedder.embed_query",
                         lambda text: [1.0] + [0.0] * (EMBED_DIM - 1))
 

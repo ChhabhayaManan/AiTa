@@ -1,3 +1,5 @@
+import json
+
 from app.agents.chat.context import ChatContext
 
 LANGUAGE_NAMES = {"c": "C", "cpp": "C++", "python": "Python"}
@@ -7,11 +9,12 @@ PLAIN_PROMPT = "You are a helpful programming assistant."
 AITA_PROMPT = """You are aiTA, a friendly teaching assistant for beginners learning C, C++ and Python.
 
 Hard rules (follow them every time)
-1. Concept, theory or "what is / how does / why" questions about programming: call \
-search_books and answer from what it returns, citing each passage you use as [n]. This \
-holds in any language: "for loop C me kaise likhte hai?" or "pointer kya hota hai?" are \
-concept questions too (search in English keywords). Skip books for chit-chat such as \
-greetings or thanks, and for code checks or hint requests.
+1. Concept, theory or "what is / how does / why" questions about programming: answer from \
+the Reference passages at the end of this prompt when they are there, citing each one you \
+use as [n]. If there are none, or they do not cover the question, call search_books and \
+cite what it returns. This holds in any language: "for loop C me kaise likhte hai?" or \
+"pointer kya hota hai?" are concept questions too (search in English keywords). Skip books \
+for chit-chat such as greetings or thanks, and for code checks or hint requests.
 2. The student shares code for a problem, asks whether it is correct or why it fails, or \
 pastes an error: ALWAYS call evaluate_code before judging. Never judge correctness by \
 reading the code alone. When tests fail, the result is shown to the student as is. \
@@ -21,8 +24,8 @@ ladder leads the student there.
 call get_hint and choose the level. The hint is shown to the student exactly as returned.
 4. Questions about the student's own progress, scores or history: ALWAYS call \
 query_learning_data. Never guess these facts.
-5. NEVER write a citation marker like [1] unless it refers to a search_books passage from \
-THIS turn. Never invent sources or list them separately; put \
+5. NEVER write a citation marker like [1] unless it refers to a Reference passage or a \
+search_books passage from THIS turn. Never invent sources or list them separately; put \
 [n] inline after the sentence it supports.
 6. When the student pastes a problem statement, ALWAYS pass it as problem_text to \
 evaluate_code and get_hint, even if a last attempt is in the context.
@@ -106,6 +109,10 @@ def _context_block(ctx: ChatContext) -> str:
     lines.append(f"- Mastery: {ctx.mastery_line}")
     if ctx.summary:
         lines.append(f"- Earlier in this conversation: {ctx.summary}")
+    if ctx.passages:
+        lines.append("\nReference passages, found in the course books for this message "
+                     "(cite as [ref] when you use one)")
+        lines.extend(json.dumps(p, ensure_ascii=False) for p in ctx.passages)
     return "\n".join(lines)
 
 

@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     # Startup loads the book-search embedder in the background so the first chat
     # question does not wait for it. Tests and quick local runs can skip it.
     SKIP_EMBED_WARMUP: bool = False
+    # Cosine similarity a book passage needs before it is retrieved automatically for a
+    # chat message. Live bge-small scores: on-topic passages ~0.72-0.80, loosely related
+    # ones (hint requests, code reviews) just below.
+    RAG_MIN_SCORE: float = 0.68
     # Set to an existing user's email to enable POST /auth/dev-login, which skips
     # the password and the OTP. Ignored unless DEBUG is also true.
     DEV_LOGIN_EMAIL: str = ""

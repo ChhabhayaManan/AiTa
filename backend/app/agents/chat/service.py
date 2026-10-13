@@ -26,11 +26,13 @@ from app.agents.chat.middleware import (
     trace_dict,
 )
 from app.agents.chat.prompts import summary_prompt
-from app.agents.chat.tools import ToolContext, ToolTrace, build_tools
+from app.agents.chat.tools import PASSAGE_CHARS, ToolContext, ToolTrace, build_tools
+from app.core.config import settings
 from app.core.exceptions import LLMUnavailable, ThreadNotFound, TurnInProgress
 from app.core.llm_gateway import gateway_chat_model
 from app.models.chat import ChatMessage, ChatThread
 from app.services import moderation
+from app.services.rag.search import search
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,11 @@ SUMMARY_BATCH = 2
 SUMMARY_LINE_CHARS = 1500
 SUMMARY_CHARS = 2000
 MAX_GRAPH_STEPS = 60
+AUTO_HITS = 4
+AUTO_MIN_WORDS = 3
+AUTO_QUERY_CHARS = 500
+HELP_MAX_WORDS = 6
+ARG_CHARS = 200
 
 
 @dataclass
@@ -110,11 +117,21 @@ def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+_PROBLEM_MESSAGE = re.compile(r"^Problem: (.*?)(?: \(problem_id \d+\))?\n.*?\n\nMy question: (.*)$",
+                              re.DOTALL)
+
+
 def _title(content: str) -> str:
+    """Code Help's first message carries the whole problem; its name and the question
+    make the title, not the start of the statement."""
+    match = _PROBLEM_MESSAGE.match(content)
+    if match:
+        content = f"{match.group(1)} · {match.group(2)}"
     return _clip(" ".join(content.split()), TITLE_CHARS)
 
 
 _CODE_SPANS = re.compile(r"(```.*?(?:```|$)|`[^`\n]*`)", re.DOTALL)
+_HELP_REQUEST = re.compile(r"\b(?:hint|stuck|help|solution|answer|code)\b", re.IGNORECASE)
 _MARKER = r"\[\d+(?:,\s*\d+)*\]"
 _CITE_MARKERS = re.compile(rf"[ \t]*(?<![\w\])]){_MARKER}(?:{_MARKER})*")
 _CITE_LINE = re.compile(rf"[ \t]*(?:[-*][ \t]*)?{_MARKER}")
@@ -243,6 +260,7 @@ class _Job:
             tool_ctx = ToolContext(db=db, user_id=self.user_id, language=ctx.language,
                                    last_attempt=ctx.last_attempt, **self.tool_ctx_overrides)
             traces = tool_ctx.traces
+            ctx.passages = self._retrieve(db, rows[-1].content if rows else "", tool_ctx, emit)
             events = ToolEvents(tool_ctx, on_start=lambda name, args: emit(ToolStart(name, args)),
                                 on_end=lambda trace: emit(ToolEnd(trace)))
             graph = build_agent("aita", ctx, build_tools(tool_ctx), model, self._summary_model(),
@@ -279,6 +297,42 @@ class _Job:
             tokens=sum(m.usage_metadata.get("total_tokens", 0) for m in produced) or None,
         )
         return final, memory
+
+    def _retrieve(self, db: Session, message: str, tool_ctx: ToolContext, emit) -> list[dict]:
+        """Book passages for the student's message, fetched before the model runs so a
+        concept answer never depends on the model choosing to search. Recorded as an
+        automatic search_books call so the chip, citations and refs work as usual."""
+        if "```" in message:
+            return []
+        query = _clip(" ".join(message.split()), AUTO_QUERY_CHARS)
+        words = query.split()
+        if len(words) < AUTO_MIN_WORDS or (len(words) <= HELP_MAX_WORDS
+                                           and _HELP_REQUEST.search(query)):
+            return []
+        started = time.perf_counter()
+        try:
+            hits = [h for h in search(db, query, language=tool_ctx.language, k=AUTO_HITS,
+                                      embed=tool_ctx.embed)
+                    if h.score >= settings.RAG_MIN_SCORE]
+        except Exception:
+            logger.warning("automatic book search failed in thread %s", self.thread_id,
+                           exc_info=True)
+            _rollback(db)
+            return []
+        if not hits:
+            return []
+        args = {"query": _clip(query, ARG_CHARS), "auto": True}
+        emit(ToolStart("search_books", args))
+        cites = [{"title": h.source_title, "chapter": h.chapter, "section": h.section,
+                  "url": h.url} for h in hits]
+        citations = [c for i, c in enumerate(cites) if c not in cites[:i]]
+        trace = ToolTrace(name="search_books", args=args, summary=f"{len(citations)} sources",
+                          ok=True, ms=int((time.perf_counter() - started) * 1000),
+                          citations=citations)
+        tool_ctx.traces.append(trace)
+        emit(ToolEnd(trace_dict(trace)))
+        return [{"ref": citations.index(cite) + 1, **cite, "text": _clip(h.text, PASSAGE_CHARS)}
+                for h, cite in zip(hits, cites)]
 
     def _save(self, db: Session, text: str, started: float, *, traces: list[ToolTrace] = (),
               flag: str | None = None, citations: list[dict] | None = None,
@@ -331,6 +385,19 @@ class _Job:
             _rollback(db)
 
 
+def _drop_failed_attempt(db: Session, thread_id: int, content: str) -> None:
+    """Try again resends the same message after a busy or failed reply; that exchange is
+    replaced, not kept beside the new one."""
+    failed, asked = (db.query(ChatMessage).filter(ChatMessage.thread_id == thread_id)
+                     .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
+                     .limit(2).all() + [None, None])[:2]
+    if (failed is not None and asked is not None and failed.role == "assistant"
+            and failed.moderation_flag in (BUSY_FLAG, FAILED_FLAG)
+            and asked.role == "user" and asked.content.strip() == content.strip()):
+        db.delete(failed)
+        db.delete(asked)
+
+
 def run_turn(db: Session, user_id: int, thread_id: int, content: str,
              language: str | None = None, *, model: BaseChatModel | None = None,
              summary_model: BaseChatModel | None = None, tool_ctx_overrides: dict | None = None,
@@ -342,6 +409,7 @@ def run_turn(db: Session, user_id: int, thread_id: int, content: str,
         raise ThreadNotFound("Chat thread not found.")
     _claim(thread_id)
     try:
+        _drop_failed_attempt(db, thread_id, content)
         flag = moderation.check(content).category
         db.add(ChatMessage(thread_id=thread.id, user_id=user_id, role="user", content=content,
                            moderation_flag=flag))
