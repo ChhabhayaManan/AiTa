@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, EmailStr, Field, field_validator, validator
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
 from app.models.user import UserRole, SkillLevel
 
@@ -78,6 +78,7 @@ class UserProfileResponse(BaseModel):
     skill_level: SkillLevel
     years_of_experience: float
     preferred_languages: List[str]
+    preferred_language: Literal["c", "cpp", "python"] = "c"
     interested_topics: Optional[List[str]] = []
     learning_goals: List[str]
     interests: List[str]
@@ -104,9 +105,17 @@ class UpdateProfileRequest(BaseModel):
     skill_level: Optional[SkillLevel] = None
     years_of_experience: Optional[float] = Field(None, ge=0.0, le=50.0)
     preferred_languages: Optional[List[str]] = None
+    preferred_language: Optional[Literal["c", "cpp", "python"]] = None
     interested_topics: Optional[List[str]] = None
     learning_goals: Optional[List[str]] = None
     interests: Optional[List[str]] = None
+
+    @field_validator("preferred_language")
+    @classmethod
+    def preferred_language_not_null(cls, v):
+        if v is None:
+            raise ValueError("preferred_language cannot be null")
+        return v
 
     @validator("year_of_study", pre=True)
     def coerce_year_of_study(cls, v):

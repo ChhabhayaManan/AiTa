@@ -17,6 +17,11 @@ SPECS = {
         "compile_cmd": ["g++", "-O2", "-std=c++17", "{src}", "-o", "{bin}"],
         "run_cmd": ["{bin}"],
     },
+    "c": {
+        "extension": ".c",
+        "compile_cmd": ["gcc", "-O2", "-std=c17", "{src}", "-o", "{bin}", "-lm"],
+        "run_cmd": ["{bin}"],
+    },
 }
 
 

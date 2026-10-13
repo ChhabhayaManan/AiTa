@@ -48,6 +48,7 @@ class User(Base):
     skill_level = Column(Enum(SkillLevel), default=SkillLevel.BEGINNER)
     years_of_experience = Column(Float, default=0.0)
     preferred_languages = Column(JSON, default=list)
+    preferred_language = Column(String(10), nullable=False, server_default="c", default="c")
     interested_topics = Column(JSON, default=list)
     learning_goals = Column(JSON, default=list)
     interests = Column(JSON, default=list)

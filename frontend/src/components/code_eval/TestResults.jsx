@@ -2,7 +2,7 @@ import { CheckCircle2, XCircle, AlertTriangle, FlaskConical, Clock } from 'lucid
 
 const UNVERIFIED_REASON = {
   no_problem_statement:      'You did not give a problem statement, so there was nothing to test against.',
-  language_not_executable:   'Only Python and C++ can be run right now. Other languages get a code review instead.',
+  language_not_executable:   'Only C, C++ and Python can be run right now. Other languages get a code review instead.',
   executor_unavailable:      'The sandbox that runs your code was unreachable, so nothing could be executed.',
   reference_unvalidated:     'A reference solution could not be produced for this problem, so the tests could not be trusted.',
   insufficient_agreed_tests: 'Too few test cases could be verified for this problem to grade it honestly.',

@@ -14,8 +14,8 @@ def test_executable_set_is_derived_not_duplicated():
     )
 
 
-def test_only_python_and_cpp_are_executable():
-    assert EXECUTABLE_LANGUAGES == frozenset({Language.PYTHON, Language.CPP})
+def test_c_cpp_and_python_are_executable():
+    assert EXECUTABLE_LANGUAGES == frozenset({Language.C, Language.CPP, Language.PYTHON})
 
 
 def test_python_has_no_binary_placeholder():

@@ -34,8 +34,9 @@ export default function CodeEvalPage() {
   } = useCodeEval()
 
   // Editor state
-  const [code,           setCode]       = useState(TEMPLATES.cpp)
-  const [language,       setLanguage]   = useState('cpp')
+  const defaultLanguage = user?.preferred_language || 'c'
+  const [code,           setCode]       = useState(TEMPLATES[defaultLanguage])
+  const [language,       setLanguage]   = useState(defaultLanguage)
   const [title,          setTitle]      = useState('')
   const [problemContext, setProblemCtx] = useState('')
   const [expectedOutput, setExpectedOut]= useState('')
@@ -66,7 +67,7 @@ export default function CodeEvalPage() {
   useEffect(() => {
     if (activeSubmission) {
       setCode(activeSubmission.code || '')
-      setLanguage(activeSubmission.language || 'cpp')
+      setLanguage(activeSubmission.language || defaultLanguage)
       setTitle(activeSubmission.title || '')
       setProblemCtx(activeSubmission.problem_context || '')
       setExpectedOut(activeSubmission.expected_output || '')

@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast'
 import { assessmentAPI, codeEvalAPI, feedbackAPI, getErrorMessage } from '../utils/api'
 import { LANGUAGES, TEMPLATES } from '../components/code_eval/CodeEditor'
+import { useAuth } from '../hooks/useAuth'
 import MasteryPanel from '../components/learning/MasteryPanel'
 import RichText from '../components/learning/RichText'
 import { ITEM_TYPE_LABELS, misconceptionLabel, topicLabel } from '../components/learning/labels'
@@ -201,8 +202,10 @@ function HintLadder({ hints }) {
 }
 
 function CodingView({ item, onGraded }) {
-  const [language, setLanguage] = useState('python')
-  const [code, setCode] = useState(TEMPLATES.python)
+  const { user } = useAuth()
+  const defaultLanguage = user?.preferred_language || 'c'
+  const [language, setLanguage] = useState(defaultLanguage)
+  const [code, setCode] = useState(TEMPLATES[defaultLanguage])
   const [runResult, setRunResult] = useState(null)
   const [report, setReport] = useState(null)
   const [hints, setHints] = useState([])

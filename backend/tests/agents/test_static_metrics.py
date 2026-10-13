@@ -50,6 +50,13 @@ def test_measures_cpp():
     assert metrics.function_count == 1
 
 
+def test_measures_c_complexity():
+    code = "int sign(int x) {\n    if (x > 0) return 1;\n    if (x < 0) return -1;\n    return 0;\n}\n"
+    metrics = measure(code, Language.C)
+    assert metrics.function_count == 1
+    assert metrics.cyclomatic_complexity == 3
+
+
 def test_comment_ratio_counts_language_comment_prefix():
     python_metrics = measure("# a comment\nprint(1)\n", Language.PYTHON)
     assert python_metrics.comment_ratio > 0

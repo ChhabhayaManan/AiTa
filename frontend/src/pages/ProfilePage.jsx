@@ -6,6 +6,11 @@ import { userAPI } from '../utils/api'
 import toast from 'react-hot-toast'
 
 const LANGUAGES = ['Python', 'Java', 'JavaScript', 'C++', 'C', 'Go', 'Rust', 'TypeScript', 'Swift', 'Kotlin']
+const PREFERRED_LANGUAGES = [
+  { value: 'c', label: 'C' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'python', label: 'Python' },
+]
 const GOALS = ['Web Development', 'Machine Learning', 'Data Science', 'Mobile Apps', 'Competitive Programming', 'System Design', 'DevOps', 'Cybersecurity']
 const INTERESTS = ['Algorithms', 'AI/ML', 'Databases', 'Networking', 'Frontend', 'Backend', 'Open Source', 'Research']
 const TOPICS = [
@@ -30,6 +35,7 @@ export default function ProfilePage() {
     skill_level: user?.skill_level || 'beginner',
     years_of_experience: user?.years_of_experience || 0,
     preferred_languages: user?.preferred_languages || [],
+    preferred_language: user?.preferred_language || 'c',
     learning_goals: user?.learning_goals || [],
     interests: user?.interests || [],
     interested_topics: user?.interested_topics || [],
@@ -240,6 +246,16 @@ export default function ProfilePage() {
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
+              <label className="label" htmlFor="preferred-language"><Code2 size={12} className="inline mr-1" />Default Coding Language</label>
+              <select id="preferred-language" value={form.preferred_language}
+                onChange={e => setForm(f => ({ ...f, preferred_language: e.target.value }))}
+                className="input-field">
+                {PREFERRED_LANGUAGES.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="label"><Code2 size={12} className="inline mr-1" />Programming Languages</label>

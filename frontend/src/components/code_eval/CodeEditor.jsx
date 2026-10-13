@@ -4,6 +4,7 @@ import { Code2, ChevronDown, Play, X, Plus, Wand2 } from 'lucide-react'
 // Only the languages the sandbox can actually compile and run. Anything else
 // would be graded in review mode, with no correctness score at all.
 export const LANGUAGES = [
+  { value: 'c',      label: 'C',      ext: '.c'   },
   { value: 'cpp',    label: 'C++',    ext: '.cpp' },
   { value: 'python', label: 'Python', ext: '.py'  },
 ]
@@ -11,6 +12,19 @@ export const LANGUAGES = [
 // Starter code, not a placeholder: it already reads the test count and loops,
 // which is the part people get wrong. Edit or delete it freely.
 export const TEMPLATES = {
+  c: `#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);       // first line is the number of test cases
+    while (t--) {
+        // read one test case
+        // solve it
+        // print the answer on its own line
+    }
+    return 0;
+}
+`,
   cpp: `#include <bits/stdc++.h>
 using namespace std;
 

@@ -63,6 +63,20 @@ def test_cpp_compile_error():
     assert "error" in batch.compile_output.lower()
 
 
+def test_c_sums_two_ints():
+    src = ("#include <stdio.h>\n"
+           "int main(void){int a, b; scanf(\"%d %d\", &a, &b); printf(\"%d\\n\", a + b); return 0;}")
+    batch = run_batch("c", src, [{"id": 1, "stdin": "2 40\n"}], LIMITS)
+    assert batch.results[0].status == "ok"
+    assert batch.results[0].stdout.strip() == "42"
+
+
+def test_c_compile_error():
+    batch = run_batch("c", "int main(void){ return", [{"id": 1, "stdin": ""}], LIMITS)
+    assert batch.results[0].status == "compile_error"
+    assert "error" in batch.compile_output.lower()
+
+
 def test_unknown_language_is_internal_error():
     batch = run_batch("brainfuck", "+++", [{"id": 1, "stdin": ""}], LIMITS)
     assert batch.results[0].status == "internal_error"
