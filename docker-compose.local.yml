@@ -3,7 +3,7 @@
 # Host venv / Alembic: DATABASE_URL=postgresql://aita:aita@localhost:5433/aita_db
 services:
   db:
-    image: postgres:18
+    image: pgvector/pgvector:pg18
     environment:
       - POSTGRES_USER=aita
       - POSTGRES_PASSWORD=aita
@@ -22,9 +22,13 @@ services:
   backend:
     environment:
       - DATABASE_URL=postgresql://aita:aita@db:5432/aita_db
+      - HF_HOME=/hf-cache
+    volumes:
+      - hf_cache:/hf-cache
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   aita_pgdata:
+  hf_cache:
