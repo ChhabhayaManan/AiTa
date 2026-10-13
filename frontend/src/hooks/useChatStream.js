@@ -12,6 +12,7 @@ const BUSY_NOTICE = 'aiTA is still answering your previous message in this chat.
 const LOST_NOTICE = 'The reply is taking longer than usual. Reopen this chat in a minute to see it.'
 const OFFLINE_NOTICE = "Couldn't reach aiTA. Check your connection and try again."
 const FAILED_REPLY = 'Sorry — something went wrong. Please try again.'
+const RETRYABLE = new Set(['busy', 'error'])
 
 let seq = 0
 const localId = (kind) => `local-${kind}-${++seq}`
@@ -165,7 +166,14 @@ export default function useChatStream({ startFresh = false } = {}) {
     const userMsg = { id: localId('u'), role: 'user', content: text }
     setError(null)
     setStreaming(true)
-    setMessages(list => [...list.filter(m => !m.live), userMsg, liveReply()])
+    setMessages(list => {
+      const kept = list.filter(m => !m.live)
+      const [asked, failed] = kept.slice(-2)
+      // Same rule as the server: retrying a failed reply replaces that exchange.
+      const retry = failed?.role === 'assistant' && RETRYABLE.has(failed.moderation_flag)
+        && asked?.role === 'user' && asked.content === text
+      return [...(retry ? kept.slice(0, -2) : kept), userMsg, liveReply()]
+    })
 
     const withdraw = (notice) => {
       if (!current()) return { ok: false }

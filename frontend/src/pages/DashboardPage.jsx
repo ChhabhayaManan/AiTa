@@ -12,7 +12,6 @@ import toast from 'react-hot-toast'
 import ThemeToggle from '../components/ui/ThemeToggle'
 import { SkeletonStatCard, SkeletonCard } from '../components/ui/Skeleton'
 import { Sparkline } from '../components/ui/MiniChart'
-import FeedbackModal from '../components/ui/FeedbackModal'
 import MasteryPanel from '../components/learning/MasteryPanel'
 import ChatPanel from '../components/chat/ChatPanel'
 
@@ -106,7 +105,6 @@ export default function DashboardPage() {
   const [feedbackUnread, setFeedbackUnread] = useState(0)
   const [codeStats, setCodeStats]           = useState(null)
   const [statsLoading, setStatsLoading]     = useState(true)
-  const [showFeedback, setShowFeedback]     = useState(false)
   const [peerData, setPeerData]             = useState(null)
   const [peerLoading, setPeerLoading]       = useState(true)
 
@@ -124,14 +122,6 @@ export default function DashboardPage() {
       setPeerLoading(false)
     })
   }, [])
-
-  // Show feedback prompt after 30s if user has sessions
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if ((user?.total_sessions ?? 0) > 0) setShowFeedback(true)
-    }, 30000)
-    return () => clearTimeout(timer)
-  }, [user])
 
   const handleLogout = async () => {
     await logout()
@@ -538,18 +528,6 @@ export default function DashboardPage() {
         <ChatPanel initialPrompt={ask} className="h-full" />
       </aside>
       </div>
-
-      {/* ── Feedback modal (auto-prompt after 30s) ── */}
-      <FeedbackModal
-        open={showFeedback}
-        onClose={() => setShowFeedback(false)}
-        context="Learning Session"
-        onSubmit={async ({ rating, comment }) => {
-          // Fire-and-forget — don't block UI
-          try { await feedbackAPI.autoGenerate() } catch { /* silent */ }
-          toast.success('Thanks for your feedback!')
-        }}
-      />
     </div>
   )
 }

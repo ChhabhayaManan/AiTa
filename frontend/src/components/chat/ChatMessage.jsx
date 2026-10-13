@@ -30,8 +30,9 @@ const LIVE_LABELS = {
 
 const NO_CITATIONS = []
 
-// The lookbehind keeps indexing like arr[1] or grid[0][2] in prose from becoming a ref.
-const REF = /(?<![\w\])])\[(\d{1,2}(?:\s*,\s*\d{1,2})*)\]/
+// The character before "[" is captured so indexing like arr[1] or grid[0][2] in prose is
+// not taken for a ref; a lookbehind would break the whole module on Safari < 16.4.
+const REF = /(^|[^\w\])])\[(\d{1,2}(?:\s*,\s*\d{1,2})*)\]/
 
 const citationLabel = (c) => (c ? [c.title, c.chapter, c.section].filter(Boolean).join(' › ') : '')
 
@@ -54,15 +55,15 @@ function linkRefs(node, count) {
       next.push(child)
       continue
     }
-    parts.forEach((part, i) => {
-      if (i % 2 === 0) {
-        if (part) next.push({ type: 'text', value: part })
-        return
-      }
-      const refs = part.split(',').map(s => Number(s.trim()))
+    // split() with two groups yields text, the character before "[", the ref list, text...
+    for (let i = 0; i < parts.length; i += 3) {
+      if (parts[i]) next.push({ type: 'text', value: parts[i] })
+      if (i + 2 >= parts.length) break
+      if (parts[i + 1]) next.push({ type: 'text', value: parts[i + 1] })
+      const refs = parts[i + 2].split(',').map(s => Number(s.trim()))
       if (refs.every(n => n >= 1 && n <= count)) refs.forEach(n => next.push(refNode(n)))
-      else next.push({ type: 'text', value: `[${part}]` })
-    })
+      else next.push({ type: 'text', value: `[${parts[i + 2]}]` })
+    }
   }
   node.children = next
 }
