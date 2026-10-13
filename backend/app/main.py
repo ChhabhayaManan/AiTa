@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.models import code_eval as code_eval_models, problem as problem_models  # noqa: F401
-from app.api import auth, users, recommendations,content_player, code_eval,feedback, profile, assessment
+from app.api import auth, users, recommendations, problems, code_eval, feedback, profile, assessment, chat
+from app.services.rag import embedder
 
 
 @asynccontextmanager
@@ -15,6 +16,8 @@ async def lifespan(app: FastAPI):
     # database behind a migration starts up looking healthy and fails later on the
     # first write. Alembic owns the schema: run `alembic upgrade head`.
     print(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} is running.")
+    if not settings.SKIP_EMBED_WARMUP:
+        embedder.warm_up_in_background()
     yield
     print("👋 Shutting down aiTA backend.")
 
@@ -50,11 +53,12 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(recommendations.router, prefix="/api/v1")   
-app.include_router(content_player.router, prefix="/api/v1")
+app.include_router(problems.router, prefix="/api/v1")
 app.include_router(code_eval.router,prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")
 app.include_router(profile.router, prefix="/api/v1")
 app.include_router(assessment.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Health"])

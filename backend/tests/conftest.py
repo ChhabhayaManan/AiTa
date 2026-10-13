@@ -34,6 +34,28 @@ def no_live_llm_client():
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def hints_clear_the_fix_check():
+    """The fix check is an LLM judge; hint tests that are not about it see every hint
+    cleared. Its own tests call the real function, imported before this patch."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr("app.services.hints.guardrail.states_fix", lambda *a, **k: False)
+        yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def no_embedder_model():
+    """Startup warm-up is off, and loading the real sentence-transformers model fails
+    loudly: tests pass their own `embed`."""
+    def explode():
+        raise AssertionError("a test tried to load the real embedding model: pass embed=")
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr("app.core.config.settings.SKIP_EMBED_WARMUP", True)
+        patch.setattr("app.services.rag.embedder._load_model", explode)
+        yield
+
+
 @pytest.fixture
 def session():
     engine = create_engine("sqlite://")

@@ -18,14 +18,15 @@ class ProblemNotFound(AitaError):
     status_code = 404
 
 
-class SessionNotFound(AitaError):
-    """A Content Player session that does not exist, or is not this user's.
-
-    One exception for both so a caller cannot tell the two apart: answering
-    differently would let a student probe for other people's session ids.
-    """
+class ThreadNotFound(AitaError):
+    """A chat thread that does not exist or is not this user's: one answer for both,
+    so thread ids cannot be probed."""
 
     status_code = 404
+
+
+class TurnInProgress(AitaError):
+    status_code = 409
 
 
 class ExecutorUnavailable(AitaError):

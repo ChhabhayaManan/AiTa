@@ -5,10 +5,13 @@ mapper configuration time on relationships that name a class it never loaded.
 """
 
 from app.models import (  # noqa: F401
+    book,
+    chat,
     code_eval,
     content_player,
     feedback,
     learning,
+    llm_call,
     problem,
     recommendation,
     user,

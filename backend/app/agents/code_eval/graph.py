@@ -14,10 +14,15 @@ from app.agents.code_eval.nodes.route_mode import route_mode
 from app.agents.code_eval.nodes.score import score
 from app.agents.code_eval.schemas import EvalReport
 from app.agents.code_eval.state import EvalState
+from app.services.hints.service import HintSource
 
 
 def _after_execute(state: EvalState) -> str:
-    return "score" if state.halted else "explain"
+    clean_pass = (state.verification_status == "verified" and state.tests_total
+                  and state.tests_passed == state.tests_total)
+    if state.halted or (not clean_pass and not state.explain_failures):
+        return "score"
+    return "explain"
 
 
 @lru_cache(maxsize=1)
@@ -45,15 +50,19 @@ def build_eval_graph():
 
 
 def evaluate_submission(db, submission_id: int, user_id: int, *, provider=None,
-                        generator=None, explain_runnable=None) -> EvalReport:
+                        generator=None, explain_runnable=None, emit: bool = True,
+                        hint_source: HintSource = "practice",
+                        explain_failures: bool = True) -> EvalReport:
     started_ms = int(time.time() * 1000)
     state = EvalState(
         db=db, submission_id=submission_id, user_id=user_id, provider=provider,
         generator=generator, explain_runnable=explain_runnable,
+        explain_failures=explain_failures,
     )
     result = build_eval_graph().invoke(state)
     final = result if isinstance(result, EvalState) else EvalState(**result)
     persist(final, started_ms=started_ms)
-    emit_event(final)
-    log_l1(final)
+    if emit:
+        emit_event(final)
+    log_l1(final, source=hint_source)
     return final.report

@@ -22,6 +22,9 @@ class EvalState(BaseModel):
     provider: Any = None
     generator: Any = None
     explain_runnable: Any = None
+    # Chat shows a failing or unverified run as a bare result, so the LLM explanation
+    # would be thrown away there.
+    explain_failures: bool = True
 
     language: Optional[Language] = None
     code: str = ""
