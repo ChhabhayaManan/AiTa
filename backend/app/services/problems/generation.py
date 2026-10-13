@@ -10,8 +10,9 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from app.core import llm_gateway
 from app.core.exceptions import ExecutorUnavailable, LLMUnavailable
-from app.core.llm import get_chat_model, invoke_with_retry, structured
+from app.core.llm import invoke_with_retry
 from app.core.topics import normalise_topic
 from app.models.problem import Difficulty, Problem, ProblemSource
 from app.services.problems.picker import coerce_difficulty
@@ -55,10 +56,11 @@ class GeneratedProblem:
 
 
 def _draft(topic: str, difficulty: str, runnable) -> ProblemDraft:
-    runnable = runnable or structured(get_chat_model(temperature=0.7), ProblemDraft)
-    draft, _ = invoke_with_retry(
-        runnable, GENERATION_PROMPT.format(topic=topic, difficulty=difficulty)
-    )
+    prompt = GENERATION_PROMPT.format(topic=topic, difficulty=difficulty)
+    if runnable is None:
+        draft = llm_gateway.invoke("problem_gen", prompt, schema=ProblemDraft).value
+    else:
+        draft, _ = invoke_with_retry(runnable, prompt)
     if draft is None:
         # Structured output that failed to parse is the same situation as no call at
         # all, and the caller must hear about it the same way.

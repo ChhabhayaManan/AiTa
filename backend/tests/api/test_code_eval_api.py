@@ -9,7 +9,18 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.core.dependencies import get_current_active_user
+from app.core.llm_gateway import GatewayResult
 from app.models.user import User
+
+
+def fake_explain(monkeypatch):
+    from app.agents.code_eval.schemas import Explanation
+
+    explanation = Explanation(summary="ok", detailed_feedback="## ok")
+    monkeypatch.setattr(
+        "app.core.llm_gateway.invoke",
+        lambda purpose, payload, **kwargs: GatewayResult(explanation, "ok", "m", 0, 0, 0, 0),
+    )
 
 
 @pytest.fixture
@@ -156,19 +167,7 @@ def test_review_mode_evaluation_returns_null_correctness(client, monkeypatch):
         "app.services.execution.run_code.get_provider", lambda: provider
     )
 
-    class FakeExplain:
-        def invoke(self, prompt):
-            from app.agents.code_eval.schemas import Explanation
-            return {"parsed": Explanation(summary="ok", detailed_feedback="## ok"),
-                    "raw": None}
-
-    monkeypatch.setattr(
-        "app.agents.code_eval.nodes.explain.structured",
-        lambda model, schema: FakeExplain(),
-    )
-    monkeypatch.setattr(
-        "app.agents.code_eval.nodes.explain.get_chat_model", lambda **k: None
-    )
+    fake_explain(monkeypatch)
 
     submit = test_client.post("/api/v1/code-eval/submit",
                               json={"language": "python", "code": "print(1)"})
@@ -199,19 +198,7 @@ def test_response_payload_carries_no_answer_material(client, monkeypatch):
         "app.services.execution.run_code.get_provider", lambda: provider
     )
 
-    class FakeExplain:
-        def invoke(self, prompt):
-            from app.agents.code_eval.schemas import Explanation
-            return {"parsed": Explanation(summary="ok", detailed_feedback="## ok"),
-                    "raw": None}
-
-    monkeypatch.setattr(
-        "app.agents.code_eval.nodes.explain.structured",
-        lambda model, schema: FakeExplain(),
-    )
-    monkeypatch.setattr(
-        "app.agents.code_eval.nodes.explain.get_chat_model", lambda **k: None
-    )
+    fake_explain(monkeypatch)
 
     submit = test_client.post("/api/v1/code-eval/submit",
                               json={"language": "python", "code": "print(1)"})

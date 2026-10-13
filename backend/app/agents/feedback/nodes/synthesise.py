@@ -13,8 +13,9 @@ from app.agents.feedback.prompts import (
 )
 from app.agents.feedback.schemas import FeedbackNarrative
 from app.agents.feedback.state import FeedbackState
+from app.core import llm_gateway
 from app.core.exceptions import LLMUnavailable
-from app.core.llm import get_chat_model, invoke_with_retry, structured
+from app.core.llm import invoke_with_retry
 from app.models.code_eval import Language
 from app.services.hints import guardrail
 
@@ -149,22 +150,28 @@ def _fall_back(state: FeedbackState, step: str) -> FeedbackState:
     return state
 
 
+def _narrate(state: FeedbackState) -> tuple[FeedbackNarrative | None, int]:
+    payload = [("system", _system(state)), ("human", _context(state))]
+    if state.synthesise_runnable is not None:
+        narrative, usage = invoke_with_retry(state.synthesise_runnable, payload)
+        return narrative, usage.tokens
+    result = llm_gateway.invoke("feedback", payload, schema=FeedbackNarrative,
+                                user_id=state.user_id)
+    return result.value, result.tokens
+
+
 def synthesise(state: FeedbackState) -> FeedbackState:
     state.log("Synthesising personalised feedback.")
     try:
-        runnable = (state.synthesise_runnable
-                    or structured(get_chat_model(temperature=0.4), FeedbackNarrative))
         for attempt in range(2):
-            narrative, usage = invoke_with_retry(
-                runnable, [("system", _system(state)), ("human", _context(state))]
-            )
+            narrative, tokens = _narrate(state)
             if narrative is None:
                 # Structured output that failed to parse is the same situation as no
                 # call at all, and must be labelled the same way.
                 logger.warning("Feedback synthesis returned no parsed narrative for user %s",
                                state.user_id)
                 return _fall_back(state, PATTERN_ONLY_STEP)
-            state.tokens_used += usage.tokens
+            state.tokens_used += tokens
             leak = _leaks(state, narrative)
             if leak is None:
                 state.narrative = narrative

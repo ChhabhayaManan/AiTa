@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.agents.code_eval.multi_test import merge_cases
 from app.agents.code_eval.prompts import REFERENCE_RETRY_PROMPT, TEST_GENERATION_PROMPT
 from app.agents.code_eval.schemas import GeneratedTests
+from app.core import llm_gateway
 from app.core.config import settings
-from app.core.llm import get_codegen_model, invoke_with_retry, structured
 from app.core.text import normalize_output
 from app.models.code_eval import Language
 from app.models.problem import (
@@ -40,10 +40,7 @@ def _default_generator(**kwargs) -> GeneratedTests:
             constraints=kwargs.get("constraints") or "None stated.",
             count=kwargs["count"],
         )
-    runnable = structured(get_codegen_model(), GeneratedTests)
-    result, _ = invoke_with_retry(runnable, prompt,
-                                  model=settings.NVIDIA_CODEGEN_MODEL)
-    return result
+    return llm_gateway.invoke("test_gen", prompt, schema=GeneratedTests).value
 
 
 def _stdin_hash(stdin: str) -> str:

@@ -5,8 +5,9 @@ from typing import Dict, List
 
 from sqlalchemy.orm import Session
 
+from app.core import llm_gateway
 from app.core.exceptions import LLMUnavailable
-from app.core.llm import get_chat_model, invoke_with_retry, structured
+from app.core.llm import invoke_with_retry
 from app.models.recommendation import Content
 from app.services.recommendations.schemas import RankedRecommendations
 from app.services.recommendations.weights import (
@@ -197,10 +198,14 @@ Guidelines:
     user_prompt = f"Candidates:\n{json.dumps(summaries, indent=2)}"
 
     try:
-        runnable = runnable or structured(get_chat_model(temperature=0.3), RankedRecommendations)
-        parsed, usage = invoke_with_retry(
-            runnable, [("system", system_prompt), ("human", user_prompt)]
-        )
+        payload = [("system", system_prompt), ("human", user_prompt)]
+        if runnable is None:
+            result = llm_gateway.invoke("ranking", payload, schema=RankedRecommendations,
+                                        user_id=user_ctx.get("user_id"))
+            parsed, tokens, model = result.value, result.tokens, result.model
+        else:
+            parsed, usage = invoke_with_retry(runnable, payload)
+            tokens, model = usage.tokens, usage.model
     except LLMUnavailable as exc:
         logger.warning("Re-ranking unavailable, falling back to score order: %s",
                        exc.detail)
@@ -222,6 +227,6 @@ Guidelines:
         "descriptions": {str(item.id): item.description for item in parsed.ranked},
         "difficulties": {str(item.id): item.difficulty for item in parsed.ranked},
         "summary":      parsed.summary,
-        "tokens_used":  usage.tokens,
-        "model_used":   usage.model,
+        "tokens_used":  tokens,
+        "model_used":   model,
     }

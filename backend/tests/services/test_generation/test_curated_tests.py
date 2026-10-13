@@ -125,12 +125,12 @@ def test_the_validated_reference_is_recorded(session, problem):
 
 
 def test_no_llm_is_involved(session, problem, monkeypatch):
-    import app.core.llm as llm
+    from app.core import llm_gateway
 
     def explode(*args, **kwargs):
         raise AssertionError("curated ingest must not call the LLM")
 
-    monkeypatch.setattr(llm, "get_chat_model", explode)
+    monkeypatch.setattr(llm_gateway, "invoke", explode)
     provider = FakeExecutionProvider([ok("3"), ok("9"), ok("0")])
     suite = curated_tests(session, problem, REFERENCE, CASES, provider=provider)
 

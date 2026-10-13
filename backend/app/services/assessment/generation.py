@@ -9,7 +9,8 @@ from collections import Counter
 from sqlalchemy.orm import Session
 
 from app.agents.code_eval.multi_test import display_statement
-from app.core.llm import get_chat_model, invoke_with_retry
+from app.core import llm_gateway
+from app.core.llm import invoke_with_retry
 from app.core.topics import MISCONCEPTIONS, TOPIC_LABELS, TOPICS
 from app.models.problem import Problem
 from app.services.assessment.parsing import parse_debug, parse_mcqs
@@ -53,7 +54,10 @@ class RawCache:
 
 
 def _ask(runnable, prompt: str) -> str:
-    message, _ = invoke_with_retry(runnable, prompt)
+    if runnable is None:
+        message = llm_gateway.invoke("assessment_gen", prompt).value
+    else:
+        message, _ = invoke_with_retry(runnable, prompt)
     return getattr(message, "content", message) or ""
 
 
@@ -91,7 +95,6 @@ def _keep_mcqs(drafts: list[dict], topic: str, limit: int, provider, log: Counte
 
 
 def generate(db: Session, cache: RawCache, *, runnable=None, provider=None) -> dict:
-    runnable = runnable or get_chat_model(temperature=0.7)
     log: Counter = Counter()
 
     mcqs = []

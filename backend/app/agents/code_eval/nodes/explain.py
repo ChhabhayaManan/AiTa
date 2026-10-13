@@ -3,8 +3,9 @@ from app.agents.code_eval.prompts import (
 )
 from app.agents.code_eval.schemas import Explanation
 from app.agents.code_eval.state import EvalState
+from app.core import llm_gateway
 from app.core.exceptions import LLMUnavailable
-from app.core.llm import get_chat_model, invoke_with_retry, structured
+from app.core.llm import invoke_with_retry
 
 _CRASH_VERDICTS = ("Runtime error", "Time limit exceeded", "Memory limit exceeded")
 
@@ -74,15 +75,20 @@ def explain(state: EvalState, *, runnable=None) -> EvalState:
     )
 
     try:
-        runnable = (runnable or state.explain_runnable
-                    or structured(get_chat_model(temperature=0.3), Explanation))
-        explanation, usage = invoke_with_retry(runnable, prompt)
+        runnable = runnable or state.explain_runnable
+        if runnable is not None:
+            explanation, usage = invoke_with_retry(runnable, prompt)
+            tokens, model = usage.tokens, usage.model
+        else:
+            result = llm_gateway.invoke("explain", prompt, schema=Explanation,
+                                        user_id=state.user_id)
+            explanation, tokens, model = result.value, result.tokens, result.model
     except LLMUnavailable as exc:
         state.log(f"Explanation unavailable: {exc.detail}. Scores still returned.")
         return state
 
     state.explanation = explanation
-    state.tokens_used += usage.tokens
-    state.model_used = usage.model
-    state.log(f"Explanation generated ({usage.tokens} tokens).")
+    state.tokens_used += tokens
+    state.model_used = model
+    state.log(f"Explanation generated ({tokens} tokens).")
     return state

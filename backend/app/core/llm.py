@@ -25,17 +25,23 @@ class LLMUsage:
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 
-def _nvidia(model: str, temperature: float) -> ChatOpenAI:
+def _nvidia(model: str, temperature: float, *, api_key: str | None = None,
+            thinking: bool = False, max_tokens: int | None = None,
+            max_retries: int | None = None, timeout: float | None = None) -> ChatOpenAI:
+    transport = {key: value for key, value in
+                 (("max_retries", max_retries), ("timeout", timeout)) if value is not None}
     try:
         return ChatOpenAI(
+            **transport,
             model=model,
-            api_key=settings.NVIDIA_API_KEY,
+            api_key=settings.NVIDIA_API_KEY if api_key is None else api_key,
             base_url=NVIDIA_BASE_URL,
             temperature=temperature,
-            max_completion_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
+            max_completion_tokens=max_tokens or settings.LLM_MAX_OUTPUT_TOKENS,
             # These models reason before answering, and on a structured call they spend
-            # the entire budget thinking and return nothing to parse. Not optional.
-            extra_body={"chat_template_kwargs": {"thinking": False}},
+            # the entire budget thinking and return nothing to parse. Off unless a
+            # purpose has been shown to survive it.
+            extra_body={"chat_template_kwargs": {"thinking": thinking}},
         )
     except OpenAIError as exc:
         # The client refuses to be built at all — no credentials, unusable base URL.
