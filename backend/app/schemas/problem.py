@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -16,3 +16,25 @@ class ProblemSummary(BaseModel):
     # One worked example, so a student can see the exact shape of stdin and stdout.
     sample_input:  Optional[str] = None
     sample_output: Optional[str] = None
+
+
+class GenerateProblemRequest(BaseModel):
+    topic: str
+    difficulty: str = "medium"
+    language: str = "python"
+    exclude_titles: list = []   # titles already shown — don't repeat these
+    exclude_ids: List[int] = []  # problem ids already shown this session
+
+
+class GenerateProblemResponse(BaseModel):
+    problem_id: int
+    origin: Literal["bank", "generated"]
+    title: str
+    difficulty: str
+    description: str
+    examples: list = []
+    constraints: list = []
+    hints: list = []
+    starter_code: str = ""
+    solution_code: str = ""   # always empty: it is the reference, not the student's
+    explanation: str = ""

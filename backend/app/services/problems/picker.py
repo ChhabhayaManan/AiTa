@@ -9,8 +9,7 @@ from app.core.topics import normalise_topic
 from app.models.problem import Difficulty, Problem
 from app.services.problems.listing import CURATED_SOURCES
 
-# The UI offers four difficulty buttons and content_player.signals' DIFFICULTY_LEVELS
-# escalates into the fourth, but the bank and the Difficulty column stop at "hard".
+# The UI offers four difficulty buttons, but the bank and the Difficulty column stop at "hard".
 # A request for "expert" is a request for the hardest thing that exists, not a typo.
 _ALIASES = {"expert": Difficulty.HARD}
 

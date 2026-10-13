@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './hooks/useAuth'
@@ -6,15 +7,23 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import ErrorBoundary from './components/ui/ErrorBoundary'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import OnboardingPage from './pages/OnboardingPage'
 import DashboardPage from './pages/DashboardPage'
-import ProfilePage from './pages/ProfilePage'
-import RecommendationPage from './pages/RecommendationPage'
-import ContentPlayerPage from './pages/ContentPlayerPage'
-import CodeEvalPage from './pages/CodeEvalPage'
-import FeedbackPage from './pages/FeedbackPage'
-import CodeHelpPage from './pages/CodeHelpPage'
-import PracticePage from './pages/PracticePage'
+
+const OnboardingPage     = lazy(() => import('./pages/OnboardingPage'))
+const ProfilePage        = lazy(() => import('./pages/ProfilePage'))
+const RecommendationPage = lazy(() => import('./pages/RecommendationPage'))
+const CodeEvalPage       = lazy(() => import('./pages/CodeEvalPage'))
+const FeedbackPage       = lazy(() => import('./pages/FeedbackPage'))
+const CodeHelpPage       = lazy(() => import('./pages/CodeHelpPage'))
+const PracticePage       = lazy(() => import('./pages/PracticePage'))
+
+function PageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-white/20 border-t-brand-400 rounded-full animate-spin" />
+    </div>
+  )
+}
 
 export default function App() {
   return (
@@ -37,6 +46,7 @@ export default function App() {
             }}
           />
           <ErrorBoundary>
+          <Suspense fallback={<PageLoading />}>
           <Routes>
             <Route path="/"                element={<Navigate to="/dashboard" replace />} />
             <Route path="/login"           element={<LoginPage />} />
@@ -45,13 +55,13 @@ export default function App() {
             <Route path="/dashboard"       element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/profile"         element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/recommendations" element={<ProtectedRoute><RecommendationPage /></ProtectedRoute>} />
-            <Route path="/learn"           element={<ProtectedRoute><ContentPlayerPage /></ProtectedRoute>} />
             <Route path="/code-eval"       element={<ProtectedRoute><CodeEvalPage /></ProtectedRoute>} />
             <Route path="/feedback"        element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
             <Route path="/code-help"       element={<ProtectedRoute><CodeHelpPage /></ProtectedRoute>} />
             <Route path="/practice"        element={<ProtectedRoute><PracticePage /></ProtectedRoute>} />
             <Route path="*"               element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          </Suspense>
           </ErrorBoundary>
         </AuthProvider>
       </ThemeProvider>

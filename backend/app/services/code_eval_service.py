@@ -42,8 +42,8 @@ class CodeEvalService:
 
     @staticmethod
     def submit(db: Session, user_id: int, req: SubmitCodeRequest) -> CodeSubmission:
-        # A problem_id no longer implies the bank: the content player sends the id of
-        # whatever /generate-problem served, which is curated or generated. Only the
+        # A problem_id no longer implies the bank: Code Help sends the id of
+        # whatever /problems/generate served, which is curated or generated. Only the
         # row itself can say which, so load it.
         problem = (
             db.query(Problem).filter(Problem.id == req.problem_id).first()
