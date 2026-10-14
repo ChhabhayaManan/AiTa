@@ -75,6 +75,11 @@ class Settings(BaseSettings):
     TEST_CASES_TARGET: int = 8
     REFERENCE_MAX_ATTEMPTS: int = 3
 
+    # ── Gamification ──────────────────────────────────────────────────────
+    # off: nothing computed · silent: computed, shown only behind the Dashboard
+    # reveal (the study setting) · live: also toasted on each graded answer.
+    GAMIFICATION_MODE: str = "silent"
+
     # ── Email (SMTP) for OTP delivery ─────────────────────────────────────
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587

@@ -10,6 +10,7 @@ from app.models import (  # noqa: F401
     code_eval,
     content_player,
     feedback,
+    gamification,
     learning,
     llm_call,
     problem,

@@ -7,6 +7,7 @@ from sqlalchemy import delete, func
 from sqlalchemy.orm import Session
 
 from app.models.code_eval import CodeEvaluation
+from app.models.gamification import GamificationAward
 from app.models.learning import (
     DebugAttempt,
     HintEvent,
@@ -19,8 +20,8 @@ from app.schemas.user import RegisterRequest
 from app.services.auth_service import AuthService
 from app.services.hints.service import leak_rate
 
-_LEARNER_TABLES = (LearningEvent, TopicMastery, HintEvent, McqAttempt, DebugAttempt,
-                   LearningProfile)
+_LEARNER_TABLES = (GamificationAward, LearningEvent, TopicMastery, HintEvent, McqAttempt,
+                   DebugAttempt, LearningProfile)
 
 
 def reset_account(db: Session, email: str, username: str, password: str,

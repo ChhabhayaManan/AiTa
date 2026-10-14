@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from typing import Any, Optional
 
@@ -5,8 +6,11 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, ConfigDict
 
 from app.models.learning import LearningEvent
+from app.services.gamification import service as gamification
 from app.services.profiling import service
 from app.services.profiling.service import EventInput
+
+logger = logging.getLogger(__name__)
 
 
 class ProfilingState(BaseModel):
@@ -27,6 +31,16 @@ def update_mastery(state: ProfilingState) -> ProfilingState:
     return state
 
 
+def gamify(state: ProfilingState) -> ProfilingState:
+    """Awards ride in a savepoint: a failure here costs the awards, never the evidence."""
+    try:
+        with state.db.begin_nested():
+            gamification.apply(state.db, state.event)
+    except Exception:
+        logger.exception("gamification failed for event %s", state.event.id)
+    return state
+
+
 def derive_profile(state: ProfilingState) -> ProfilingState:
     service.derive_profile(state.db, state.event_in.user_id)
     state.db.commit()
@@ -38,10 +52,12 @@ def build_profiling_graph():
     graph = StateGraph(ProfilingState)
     graph.add_node("record_event", record_event)
     graph.add_node("update_mastery", update_mastery)
+    graph.add_node("gamify", gamify)
     graph.add_node("derive_profile", derive_profile)
     graph.add_edge(START, "record_event")
     graph.add_edge("record_event", "update_mastery")
-    graph.add_edge("update_mastery", "derive_profile")
+    graph.add_edge("update_mastery", "gamify")
+    graph.add_edge("gamify", "derive_profile")
     graph.add_edge("derive_profile", END)
     return graph.compile()
 
