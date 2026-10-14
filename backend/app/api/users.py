@@ -115,12 +115,12 @@ def peer_comparison(
 ):
     """
     Returns anonymized comparison stats:
-    - Your rank by points among all consenting users
     - Your avg code score vs platform average
     - Your sessions vs platform average
     - Your accuracy vs platform average
-    - Percentile position
-    Only users who have given data_sharing_consent=True are included.
+    Only users who have given data_sharing_consent=True are included. There is no
+    points rank: low ranks demotivate beginners, so progress is compared only with
+    the student's own past (GET /gamification/me).
     """
     # Pool: only consenting users (anonymized)
     pool = db.query(User).filter(
@@ -135,12 +135,6 @@ def peer_comparison(
             "total_peers": 0,
             "message": "No comparison data yet. Be the first to enable data sharing.",
         }
-
-    # ── Points rank ───────────────────────────────────────────────────────────
-    points_list  = sorted([u.points for u in pool], reverse=True)
-    user_points  = current_user.points
-    points_rank  = next((i + 1 for i, p in enumerate(points_list) if p <= user_points), total_users)
-    points_pct   = round((1 - (points_rank - 1) / total_users) * 100, 1)
 
     # ── Sessions comparison ───────────────────────────────────────────────────
     sessions_list = [u.total_sessions for u in pool]
@@ -177,21 +171,14 @@ def peer_comparison(
         "consent_required": not current_user.data_sharing_consent,
         "total_peers": total_users,
         "your_stats": {
-            "points":       user_points,
             "sessions":     current_user.total_sessions,
             "accuracy_pct": my_accuracy,
             "avg_code_score": my_avg_score,
         },
         "platform_averages": {
-            "points":         round(sum(points_list) / total_users, 1),
             "sessions":       avg_sessions,
             "accuracy_pct":   avg_accuracy,
             "avg_code_score": round(platform_avg_score, 1),
-        },
-        "your_rank": {
-            "points_rank":      points_rank,
-            "out_of":           total_users,
-            "top_percentile":   points_pct,
         },
         "skill_distribution": skill_dist,
     }

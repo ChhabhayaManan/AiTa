@@ -7,12 +7,13 @@ import {
   MessageSquare, Trophy, Activity, Layers, Zap,
   Target, BarChart2, CheckCircle2, Users, Shield
 } from 'lucide-react'
-import { feedbackAPI, codeEvalAPI, userAPI } from '../utils/api'
+import { feedbackAPI, codeEvalAPI, userAPI, gamificationAPI } from '../utils/api'
 import toast from 'react-hot-toast'
 import ThemeToggle from '../components/ui/ThemeToggle'
 import { SkeletonStatCard, SkeletonCard } from '../components/ui/Skeleton'
 import { Sparkline } from '../components/ui/MiniChart'
 import MasteryPanel from '../components/learning/MasteryPanel'
+import ProgressCard from '../components/learning/ProgressCard'
 import ChatPanel from '../components/chat/ChatPanel'
 
 const ROLE_LABELS = {
@@ -107,16 +108,19 @@ export default function DashboardPage() {
   const [statsLoading, setStatsLoading]     = useState(true)
   const [peerData, setPeerData]             = useState(null)
   const [peerLoading, setPeerLoading]       = useState(true)
+  const [progress, setProgress]             = useState(null)
 
   useEffect(() => {
     Promise.all([
       feedbackAPI.unreadCount().catch(() => ({ data: { unread: 0 } })),
       codeEvalAPI.getStats().catch(() => ({ data: null })),
       userAPI.getPeerComparison().catch(() => ({ data: null })),
-    ]).then(([fb, stats, peer]) => {
+      gamificationAPI.me().catch(() => ({ data: null })),
+    ]).then(([fb, stats, peer, gam]) => {
       setFeedbackUnread(fb.data.unread ?? 0)
       setCodeStats(stats.data)
       setPeerData(peer.data)
+      setProgress(gam.data)
     }).finally(() => {
       setStatsLoading(false)
       setPeerLoading(false)
@@ -218,8 +222,10 @@ export default function DashboardPage() {
 
         {/* ── Stats row ── */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-          <StatCard icon={Trophy}       label="Points"   value={user?.points ?? 0}          sub="Keep learning to earn more"  color="text-yellow-400" trend={scoreTrend}   loading={statsLoading} />
-          <StatCard icon={Zap}          label="Level"    value={`Level ${user?.level ?? 1}`} sub={skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1)} color="text-brand-400" loading={statsLoading} />
+          {progress?.mode === 'live' && <>
+            <StatCard icon={Trophy}     label="Points"   value={progress.points}           sub="From verified solves"        color="text-yellow-400" trend={scoreTrend}   loading={statsLoading} />
+            <StatCard icon={Zap}        label="Level"    value={`Level ${progress.level}`} sub={skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1)} color="text-brand-400" loading={statsLoading} />
+          </>}
           <StatCard icon={Clock}        label="Sessions" value={user?.total_sessions ?? 0}   sub="Total learning sessions"     color="text-teal-400"  loading={statsLoading} />
           <StatCard icon={MessageSquare} label="Feedback" value={feedbackUnread > 0 ? feedbackUnread : '—'} sub={feedbackUnread > 0 ? 'Unread reports' : 'All caught up'} color="text-pink-400" loading={statsLoading} />
         </div>
@@ -240,6 +246,8 @@ export default function DashboardPage() {
           </div>
           <ArrowRight size={18} className="text-brand-400 shrink-0" />
         </button>
+
+        <ProgressCard data={progress} />
 
         {/* ── Learner model ── */}
         <div className="mb-8">
@@ -310,9 +318,9 @@ export default function DashboardPage() {
                 <Shield size={28} className="text-violet-400" />
               </div>
               <div className="flex-1 text-center sm:text-left">
-                <h3 className="font-display font-700 text-white text-lg mb-1">See how you rank against other learners</h3>
+                <h3 className="font-display font-700 text-white text-lg mb-1">Compare with platform averages</h3>
                 <p className="text-white/40 text-sm leading-relaxed max-w-lg">
-                  Enable anonymous data sharing to unlock your percentile rank, score benchmarks,
+                  Enable anonymous data sharing to unlock score benchmarks
                   and insights on where you stand. Your name and email are <span className="text-white/60">never</span> shared.
                 </p>
                 <button
@@ -330,48 +338,6 @@ export default function DashboardPage() {
           ) : (
             /* ── Full comparison card ── */
             <div className="glass-card overflow-hidden border-violet-500/15">
-
-              {/* Top banner — rank + percentile */}
-              <div className="bg-gradient-to-r from-violet-600/15 via-violet-500/8 to-transparent px-6 py-5 flex flex-col sm:flex-row items-center gap-6 border-b border-white/[0.06]">
-
-                {/* Percentile ring */}
-                <div className="relative shrink-0 w-24 h-24">
-                  <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#7c3aed" strokeWidth="10"
-                      strokeDasharray={`${2 * Math.PI * 40}`}
-                      strokeDashoffset={`${2 * Math.PI * 40 * (1 - (peerData.your_rank?.top_percentile ?? 0) / 100)}`}
-                      strokeLinecap="round"
-                      style={{ transition: 'stroke-dashoffset 1s ease' }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-display font-800 text-xl text-white leading-none">
-                      {peerData.your_rank?.top_percentile ?? 0}%
-                    </span>
-                    <span className="text-white/30 text-xs font-mono">top</span>
-                  </div>
-                </div>
-
-                {/* Rank text */}
-                <div>
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-display font-800 text-3xl text-white">
-                      #{peerData.your_rank?.points_rank}
-                    </span>
-                    <span className="text-white/30 text-sm font-body">
-                      out of {peerData.your_rank?.out_of} learners
-                    </span>
-                  </div>
-                  <p className="text-violet-300 text-sm font-body leading-relaxed max-w-sm">
-                    {peerData.your_rank?.top_percentile >= 75
-                      ? `You're in the top ${100 - peerData.your_rank.top_percentile}% — outstanding performance. Keep pushing.`
-                      : peerData.your_rank?.top_percentile >= 50
-                      ? `You're above average. A few more sessions and you'll break into the top 25%.`
-                      : `You're building momentum. Consistent practice will move you up fast.`}
-                  </p>
-                </div>
-              </div>
 
               {/* Metric insights */}
               <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06]">

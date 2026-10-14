@@ -204,4 +204,8 @@ export const assessmentAPI = {
   submitDebug: (id, code)       => api.post(`/assessment/debug/${id}/submit`, { code }, { timeout: EVAL_TIMEOUT }),
 }
 
+export const gamificationAPI = {
+  me: () => api.get('/gamification/me'),
+}
+
 export default api

@@ -1,6 +1,8 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
+
+from app.schemas.gamification import AwardOut
 
 
 class NextItemResponse(BaseModel):
@@ -22,6 +24,7 @@ class McqAnswerResponse(BaseModel):
     misconception: Optional[str] = None
     explanation: Optional[str] = None
     mastery_after: Optional[float] = None
+    awards: List[AwardOut] = []
 
 
 class DebugSubmitRequest(BaseModel):
@@ -37,3 +40,4 @@ class DebugSubmitResponse(BaseModel):
     failing_expected: Optional[str] = None
     failing_actual: Optional[str] = None
     mastery_after: Optional[float] = None
+    awards: List[AwardOut] = []

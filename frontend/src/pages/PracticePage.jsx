@@ -62,6 +62,11 @@ function MasteryDelta({ after }) {
   return <span className="text-xs font-mono text-white/40">topic mastery now {Math.round(after * 100)}%</span>
 }
 
+// Empty unless GAMIFICATION_MODE is live.
+function toastAwards(data) {
+  (data.awards || []).forEach(a => toast.success(a.points ? `+${a.points} · ${a.title}` : a.title))
+}
+
 // ── Multiple choice / diagnostic ─────────────────────────────────────────────
 function McqView({ item, onGraded }) {
   const [chosen, setChosen] = useState(null)
@@ -73,6 +78,7 @@ function McqView({ item, onGraded }) {
     try {
       const { data } = await assessmentAPI.answerMcq(item.id, chosen)
       setResult(data)
+      toastAwards(data)
       onGraded()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Could not submit the answer.'))
@@ -134,6 +140,7 @@ function DebugView({ item, onGraded }) {
     try {
       const { data } = await assessmentAPI.submitDebug(item.id, code)
       setResult(data)
+      toastAwards(data)
       onGraded()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Could not run your fix.'))
@@ -236,6 +243,7 @@ function CodingView({ item, onGraded }) {
       })
       setReport(data)
       setHints(data.hint ? [data.hint] : [])
+      toastAwards(data)
       onGraded()
     } catch (err) {
       toast.error(getErrorMessage(err, 'Evaluation failed.'))

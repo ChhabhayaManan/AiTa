@@ -1,7 +1,8 @@
 """Graders for the non-coding items. Neither calls an LLM; both hand their evidence to
 the Profiling Agent. The answer key and the fixed program only leave after grading."""
 
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
 
@@ -12,8 +13,11 @@ from app.models.code_eval import Language
 from app.models.learning import DebugAttempt, DebugChallenge, McqAttempt, McqQuestion
 from app.models.problem import Problem
 from app.services.execution.judge import judge
+from app.services.gamification.service import awards_for_event
 from app.services.profiling.mastery import debug_score
 from app.services.profiling.service import EventInput
+
+logger = logging.getLogger(__name__)
 
 
 class ItemNotFound(AitaError):
@@ -32,6 +36,7 @@ class McqResult:
     misconception: str | None
     explanation: str | None
     mastery_after: float | None
+    awards: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -44,6 +49,7 @@ class DebugResult:
     failing_expected: str | None
     failing_actual: str | None
     mastery_after: float | None
+    awards: list[dict] = field(default_factory=list)
 
 
 def grade_mcq(db: Session, user_id: int, question_id: int, chosen_index: int) -> McqResult:
@@ -71,7 +77,8 @@ def grade_mcq(db: Session, user_id: int, question_id: int, chosen_index: int) ->
     ))
     explanations = question.explanations or []
     return McqResult(correct, chosen_index, question.answer_index, misconception,
-                     explanations[0] if explanations else None, event.mastery_after)
+                     explanations[0] if explanations else None, event.mastery_after,
+                     _awards(db, event.id))
 
 
 def grade_debug(db: Session, user_id: int, challenge_id: int, code: str,
@@ -110,4 +117,14 @@ def grade_debug(db: Session, user_id: int, challenge_id: int, code: str,
         failing_expected=failing.expected_stdout if failing else None,
         failing_actual=failing.actual_stdout if failing else None,
         mastery_after=event.mastery_after,
+        awards=_awards(db, event.id),
     )
+
+
+def _awards(db: Session, event_id: int) -> list[dict]:
+    """The answer is already graded and committed; a toast must never turn it into a 500."""
+    try:
+        return [a.model_dump() for a in awards_for_event(db, event_id)]
+    except Exception:
+        logger.exception("award lookup failed for event %s", event_id)
+        return []

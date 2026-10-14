@@ -4,6 +4,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 from app.models.code_eval import Language
+from app.schemas.gamification import AwardOut
 
 
 class GeneratedCase(BaseModel):
@@ -128,6 +129,7 @@ class EvalReport(BaseModel):
     suggested_resources: list[str] = []
     misconceptions: list[str] = []
     hint: Optional[HintReport] = None
+    awards: list[AwardOut] = []
 
     agent_steps: list[str] = []
     tokens_used: int = 0

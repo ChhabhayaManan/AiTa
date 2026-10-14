@@ -3,6 +3,7 @@ import logging
 from app.agents.code_eval.state import EvalState
 from app.agents.profiling.graph import ingest
 from app.models.problem import Problem
+from app.services.gamification.service import awards_for_event
 from app.services.hints.service import highest_level
 from app.services.profiling.mastery import code_score
 from app.services.profiling.service import EventInput
@@ -25,7 +26,7 @@ def emit_event(state: EvalState) -> EvalState:
     try:
         hint_level = highest_level(state.db, state.user_id, state.problem_id,
                                    before=report.evaluation_id, sources=("practice",))
-        ingest(state.db, EventInput(
+        event = ingest(state.db, EventInput(
             user_id=state.user_id,
             kind="code",
             score=code_score(report.tests_passed, report.tests_total, hint_level),
@@ -35,6 +36,7 @@ def emit_event(state: EvalState) -> EvalState:
             misconceptions=report.misconceptions,
             source_ref=f"evaluation:{report.evaluation_id}",
         ))
+        report.awards = awards_for_event(state.db, event.id)
     except Exception:
         # The evaluation is already committed and returned; a profiling failure must
         # not turn a graded submission into a 500.
