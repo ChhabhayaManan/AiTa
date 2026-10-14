@@ -1,6 +1,8 @@
 """Chat-facing hint paths: level override, approach hints, and ladder isolation."""
 
-from app.models.code_eval import Language
+from app.agents.code_eval.graph import evaluate_submission
+from app.agents.code_eval.schemas import Explanation
+from app.models.code_eval import CodeSubmission, Language
 from app.models.learning import HintEvent, LearningEvent
 from app.services.hints.prompts import APPROACH_TEMPLATES
 from app.services.hints.service import (
@@ -9,6 +11,7 @@ from app.services.hints.service import (
     next_level,
     request_hint,
 )
+from tests.agents.test_graph import FakeExplainRunnable, merged
 from tests.conftest import FakeExecutionProvider, ok
 from tests.services.hints import test_hints as base
 from tests.services.hints.test_hints import SOLUTION, FakeHintLLM, attempt
@@ -51,6 +54,26 @@ def test_approach_hint_blocks_a_full_solution_twice_then_uses_the_template(
     assert len(llm.prompts) == 2
     assert (hint.source, hint.text, hint.was_blocked) == ("template", APPROACH_TEMPLATES[3], True)
     assert session.query(HintEvent).one().was_blocked is True
+
+
+def test_a_chat_pass_does_not_wipe_the_practice_hint_discount(session, user, problem):
+    attempt(session, user, problem, "3\n0\n")
+    request_hint(session, user.id, problem.id, level=4,
+                 runnable=FakeHintLLM("Look at the negative case."))
+
+    chat = CodeSubmission(user_id=user.id, language=Language.PYTHON, code="print(0)",
+                          problem_id=problem.id, title="t")
+    session.add(chat)
+    session.commit()
+    evaluate_submission(session, chat.id, user.id, emit=False, hint_source="chat",
+                        explain_failures=False,
+                        provider=FakeExecutionProvider(merged("3\n-4\n")),
+                        explain_runnable=FakeExplainRunnable(
+                            Explanation(summary="s", detailed_feedback="f")))
+
+    attempt(session, user, problem, "3\n-4\n")
+    latest = session.query(LearningEvent).order_by(LearningEvent.id.desc()).first()
+    assert latest.hint_level_used == 4
 
 
 def test_chat_hints_move_neither_the_practice_ladder_nor_mastery(session, user, problem):

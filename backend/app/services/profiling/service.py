@@ -16,6 +16,7 @@ from app.services.profiling.mastery import (
     WEIGHTS,
     band,
     confidence,
+    is_solved,
     updated_mastery,
 )
 
@@ -56,6 +57,21 @@ def record_event(db: Session, event_in: EventInput) -> LearningEvent:
     return event
 
 
+def no_new_evidence(db: Session, event: LearningEvent) -> bool:
+    """Any attempt on an item already solved, and any retry of a multiple-choice item
+    (a wrong answer reveals the key), is logged but says nothing new about the topic.
+    Counting it would let a student pump mastery by resubmitting one answer."""
+    if event.item_id is None:
+        return False
+    earlier = (db.query(LearningEvent.score, LearningEvent.hint_level_used)
+               .filter(LearningEvent.user_id == event.user_id, LearningEvent.kind == event.kind,
+                       LearningEvent.item_id == event.item_id, LearningEvent.id < event.id)
+               .all())
+    if event.kind in ("mcq", "diagnostic"):
+        return bool(earlier)
+    return any(is_solved(score, hint) for score, hint in earlier)
+
+
 def update_mastery(db: Session, event: LearningEvent) -> TopicMastery | None:
     if event.topic is None:
         return None
@@ -65,6 +81,10 @@ def update_mastery(db: Session, event: LearningEvent) -> TopicMastery | None:
                            mastery=PRIOR, evidence_count=0)
         db.add(row)
     event.mastery_before = row.mastery
+    if no_new_evidence(db, event):
+        event.mastery_after = row.mastery
+        db.flush()
+        return row
     row.mastery = updated_mastery(row.mastery, event.weight, event.score)
     row.evidence_count += 1
     row.last_event_at = datetime.now(timezone.utc)

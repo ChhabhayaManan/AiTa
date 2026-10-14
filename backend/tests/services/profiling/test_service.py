@@ -49,6 +49,29 @@ def test_off_list_topic_is_logged_but_moves_nothing(session, user):
     assert session.query(TopicMastery).count() == 0
 
 
+def test_resolving_a_solved_item_is_logged_but_moves_nothing(session, user):
+    first = ingest(session, code_event(user, 1.0, item_id=9))
+    again = ingest(session, code_event(user, 1.0, item_id=9))
+    assert again.mastery_before == pytest.approx(first.mastery_after)
+    assert again.mastery_after == pytest.approx(first.mastery_after)
+    assert session.get(TopicMastery, (user.id, "loops")).evidence_count == 1
+
+    broke = ingest(session, code_event(user, 0.0, item_id=9))
+    assert broke.mastery_after == pytest.approx(first.mastery_after)
+
+    other = ingest(session, code_event(user, 1.0, item_id=10))
+    assert other.mastery_after > first.mastery_after
+
+
+def test_retrying_an_mcq_after_its_key_was_revealed_moves_nothing(session, user):
+    def answer(score):
+        return ingest(session, EventInput(user_id=user.id, kind="mcq", score=score,
+                                          raw_topic="loops", item_id=3))
+    wrong = answer(0.0)
+    retry = answer(1.0)
+    assert retry.mastery_after == pytest.approx(wrong.mastery_after)
+
+
 def test_mcq_weight_is_half_a_coding_attempt(session, user):
     ingest(session, EventInput(user_id=user.id, kind="mcq", score=0.0, raw_topic="loops"))
     row = session.get(TopicMastery, (user.id, "loops"))

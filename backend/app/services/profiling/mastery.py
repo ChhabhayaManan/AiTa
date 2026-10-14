@@ -9,6 +9,7 @@ WEIGHTS = {"code": 1.0, "debug": 0.8, "mcq": 0.5, "diagnostic": 0.5}
 HINT_MULTIPLIER = {0: 1.0, 1: 0.9, 2: 0.75, 3: 0.6, 4: 0.5}
 
 WEAK_BELOW = 0.4
+MISS_BELOW = 0.5
 MASTERED_FROM = 0.75
 MASTERED_MIN_CONFIDENCE = 0.6
 FULL_CONFIDENCE_AT = 5
@@ -16,6 +17,10 @@ FULL_CONFIDENCE_AT = 5
 
 def hint_multiplier(level: int) -> float:
     return HINT_MULTIPLIER[max(0, min(4, level))]
+
+
+def is_solved(score: float, hint_level: int) -> bool:
+    return score / hint_multiplier(hint_level) >= 0.999
 
 
 def code_score(tests_passed: int, tests_total: int, hint_level: int = 0) -> float:

@@ -19,7 +19,7 @@ from app.models.learning import (
 from app.models.problem import Difficulty, Problem
 from app.services.problems.generation import generate_problem
 from app.services.problems.listing import CURATED_SOURCES, to_summary
-from app.services.profiling.mastery import MASTERED_FROM, PRIOR, WEAK_BELOW
+from app.services.profiling.mastery import MASTERED_FROM, MISS_BELOW, PRIOR, WEAK_BELOW
 
 DIFFICULTY_ORDER = ("easy", "medium", "hard")
 TYPE_LABELS = {"mcq": "multiple-choice question", "diagnostic": "diagnostic question",
@@ -87,7 +87,6 @@ def ranked_topics(plan: Plan) -> list[str]:
 
 
 STUCK_AFTER = 3
-MISS_BELOW = 0.5
 
 
 def stuck_topic(db: Session, user_id: int) -> str | None:

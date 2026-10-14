@@ -6,14 +6,14 @@ the evaluation it was about, and a fully passing evaluation resets the ladder.""
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import String, and_, cast, func, literal, or_
 from sqlalchemy.orm import Session
 
 from app.core import llm_gateway
 from app.core.exceptions import AitaError, LLMUnavailable, ProblemNotFound
 from app.core.llm import invoke_with_retry
 from app.models.code_eval import CodeEvaluation, CodeSubmission, Language
-from app.models.learning import HintEvent
+from app.models.learning import HintEvent, LearningEvent
 from app.models.problem import (
     ExecRole,
     ExecutionResult,
@@ -76,9 +76,16 @@ def _passed(evaluation: CodeEvaluation) -> bool:
 
 
 def last_pass_id(db: Session, user_id: int, problem_id: int, before: int | None = None) -> int:
+    """Only a Practice pass (one that reached Profiling) resets the ladder; a chat run
+    of the same code must not wipe the hint discount."""
+    emitted = db.query(LearningEvent.id).filter(
+        LearningEvent.user_id == user_id,
+        LearningEvent.source_ref == literal("evaluation:") + cast(CodeEvaluation.id, String),
+    ).exists()
     query = _evaluations(db, user_id, problem_id).filter(
         CodeEvaluation.tests_total > 0,
         CodeEvaluation.tests_passed == CodeEvaluation.tests_total,
+        emitted,
     )
     if before is not None:
         query = query.filter(CodeEvaluation.id < before)
