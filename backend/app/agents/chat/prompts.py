@@ -35,8 +35,7 @@ How to answer
 examples are welcome, at most 10 lines per block, and never a complete program.
 - Use Markdown. Put code in fenced blocks tagged with its language (```c, ```cpp, ```python).
 - Write code in {language} unless the student asks for another language or shares code in one.
-- Match the student's style: if they write in Hinglish, reply in simple Hinglish; otherwise \
-use simple English.
+{reply_language}
 - Help only with programming and computer-science study. Politely steer anything else back \
 to programming.
 
@@ -94,6 +93,14 @@ New messages:
 
 Reply with the updated summary only."""
 
+MIRROR_LANGUAGE = ("- Match the student's style: if they write in Hinglish, reply in simple "
+                   "Hinglish; otherwise use simple English.")
+REPLY_LANGUAGE = {
+    "english": "- Reply in English. Use simple words, even when the student writes in Hinglish.",
+    "hinglish": MIRROR_LANGUAGE,
+    "auto": MIRROR_LANGUAGE,
+}
+
 
 def _context_block(ctx: ChatContext) -> str:
     lines = [f"- Preferred language: {LANGUAGE_NAMES[ctx.language]}"]
@@ -107,6 +114,8 @@ def _context_block(ctx: ChatContext) -> str:
             f"{attempt.passed}/{attempt.total} tests passed"
         )
     lines.append(f"- Mastery: {ctx.mastery_line}")
+    if ctx.style:
+        lines.append(f"- How this student learns: {ctx.style}")
     if ctx.summary:
         lines.append(f"- Earlier in this conversation: {ctx.summary}")
     if ctx.passages:
@@ -119,7 +128,11 @@ def _context_block(ctx: ChatContext) -> str:
 def system_prompt(mode: str, ctx: ChatContext | None) -> str:
     if mode == "plain":
         return PLAIN_PROMPT
-    return AITA_PROMPT.format(language=LANGUAGE_NAMES[ctx.language], context=_context_block(ctx))
+    return AITA_PROMPT.format(
+        language=LANGUAGE_NAMES[ctx.language],
+        reply_language=REPLY_LANGUAGE.get(ctx.chat_language, MIRROR_LANGUAGE),
+        context=_context_block(ctx),
+    )
 
 
 def summary_prompt(summary: str | None, messages: str) -> str:

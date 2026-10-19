@@ -16,6 +16,7 @@ rich, personalised feedback.
 
 Student: {username} | Skill: {skill}
 Languages: {languages}
+Learner preferences: {style}
 Known weak areas: {weak_areas}
 Tone: {tone_instruction}
 

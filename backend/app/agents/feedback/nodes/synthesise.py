@@ -47,6 +47,7 @@ def _system(state: FeedbackState) -> str:
         username=ctx["username"],
         skill=ctx["skill"],
         languages=", ".join(ctx["languages"]) or "general",
+        style=ctx.get("style") or "not recorded",
         weak_areas=", ".join(ctx["weak_areas"]) or "none yet",
         tone_instruction=TONE_INSTRUCTIONS[state.tone],
     )

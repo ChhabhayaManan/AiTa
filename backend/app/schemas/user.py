@@ -90,6 +90,7 @@ class UserProfileResponse(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     learning_profile: Optional[LearningProfileSchema]
+    onboarding_done: bool = False
 
     class Config:
         from_attributes = True

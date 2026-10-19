@@ -32,13 +32,13 @@ def no_generation(monkeypatch):
     monkeypatch.setattr(policy, "generate_problem", refuse)
 
 
-def add_mcq(session, topic, difficulty="easy", diagnostic=False):
+def add_mcq(session, topic, difficulty="easy"):
     n = next(_ids)
     q = McqQuestion(external_id=f"q{n}", topic=topic, difficulty=difficulty, stem=f"stem {n}",
                     options=[{"text": "1", "misconception": None},
                              {"text": "2", "misconception": "off_by_one"}],
                     answer_index=0, verify_code="print(1)", explanations=["why"],
-                    is_diagnostic=diagnostic, reviewed=True)
+                    reviewed=True)
     session.add(q)
     session.commit()
     return q
@@ -71,22 +71,7 @@ def practise(session, user, topic, score, times=1, kind="code"):
         ingest(session, EventInput(user_id=user.id, kind=kind, score=score, raw_topic=topic))
 
 
-def test_diagnostic_comes_first_one_question_at_a_time(session, user):
-    first = add_mcq(session, "basics_io", diagnostic=True)
-    second = add_mcq(session, "loops", diagnostic=True)
-    add_mcq(session, "basics_io")
-
-    item = next_item(session, user.id)
-    assert (item.item_type, item.item["id"]) == ("diagnostic", first.id)
-    assert item.reason.startswith("Diagnostic question 1 of 2")
-
-    grade_mcq(session, user.id, first.id, 1)
-    item = next_item(session, user.id)
-    assert (item.item_type, item.item["id"]) == ("diagnostic", second.id)
-    assert "2 of 2" in item.reason
-
-
-def test_after_diagnostic_the_weakest_unlocked_topic_gets_an_mcq(session, user):
+def test_weakest_unlocked_topic_gets_an_mcq(session, user):
     q = add_mcq(session, "basics_io")
     add_mcq(session, "conditionals")
 
@@ -213,11 +198,11 @@ def test_nothing_left_anywhere_raises(session, user):
 def test_payloads_never_carry_answers(session, user):
     problem = add_problem(session, "basics_io")
     add_debug(session, problem, "basics_io")
-    add_mcq(session, "basics_io", diagnostic=True)
+    add_mcq(session, "basics_io")
 
-    diag = next_item(session, user.id)
-    assert set(diag.item) == {"id", "stem", "options", "topic", "difficulty", "is_diagnostic"}
-    assert diag.item["options"] == ["1", "2"]
+    mcq = next_item(session, user.id)
+    assert set(mcq.item) == {"id", "stem", "options", "topic", "difficulty", "is_diagnostic"}
+    assert mcq.item["options"] == ["1", "2"]
 
     debug = policy._debug_payload(session.query(DebugChallenge).one())
     assert "SECRET_FIX" not in str(debug)

@@ -19,7 +19,13 @@ from app.models.learning import (
 from app.models.problem import Difficulty, Problem
 from app.services.problems.generation import generate_problem
 from app.services.problems.listing import CURATED_SOURCES, to_summary
-from app.services.profiling.mastery import MASTERED_FROM, MISS_BELOW, PRIOR, WEAK_BELOW
+from app.services.profiling.mastery import (
+    MASTERED_FROM,
+    MISS_BELOW,
+    PRIOR,
+    SEED_KINDS,
+    WEAK_BELOW,
+)
 
 DIFFICULTY_ORDER = ("easy", "medium", "hard")
 TYPE_LABELS = {"mcq": "multiple-choice question", "diagnostic": "diagnostic question",
@@ -93,7 +99,7 @@ def stuck_topic(db: Session, user_id: int) -> str | None:
     """The topic of the last STUCK_AFTER events when every one of them was a miss.
     Serving it again would only dig the hole deeper; one item elsewhere breaks the run."""
     recent = (db.query(LearningEvent.topic, LearningEvent.score)
-              .filter(LearningEvent.user_id == user_id)
+              .filter(LearningEvent.user_id == user_id, LearningEvent.kind.notin_(SEED_KINDS))
               .order_by(LearningEvent.id.desc()).limit(STUCK_AFTER).all())
     if len(recent) < STUCK_AFTER:
         return None
@@ -146,18 +152,6 @@ def _debug_payload(c: DebugChallenge) -> dict:
 
 def _coding_payload(problem: Problem) -> dict:
     return to_summary(problem).model_dump()
-
-
-def next_diagnostic(db: Session, user_id: int) -> tuple[McqQuestion, int, int] | None:
-    questions = (db.query(McqQuestion)
-                 .filter(McqQuestion.is_diagnostic.is_(True), McqQuestion.reviewed.is_(True))
-                 .order_by(McqQuestion.id).all())
-    answered = {qid for (qid,) in db.query(McqAttempt.question_id)
-                .filter(McqAttempt.user_id == user_id)}
-    pending = [q for q in questions if q.id not in answered]
-    if not pending:
-        return None
-    return pending[0], len(questions) - len(pending) + 1, len(questions)
 
 
 def _pick_mcq(db, user_id, topic, difficulty):
@@ -269,11 +263,6 @@ def _reason(plan: Plan, item_type: str, difficulty: str) -> str:
     return reason + "."
 
 
-def diagnostic_item(db: Session, user_id: int) -> NextItem | None:
-    found = next_diagnostic(db, user_id)
-    if found is None:
-        return None
-    question, number, total = found
-    return NextItem("diagnostic", question.topic, question.difficulty, _mcq_payload(question),
-                    f"Diagnostic question {number} of {total}: a quick check of "
-                    f"{TOPIC_LABELS[question.topic]} before practice starts.")
+def start_topic(db: Session, user_id: int) -> str:
+    """The topic Practice opens with, from the same ranking, without picking an item."""
+    return ranked_topics(load_profile(db, user_id))[0]

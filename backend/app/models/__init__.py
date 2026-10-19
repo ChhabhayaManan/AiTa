@@ -13,6 +13,7 @@ from app.models import (  # noqa: F401
     gamification,
     learning,
     llm_call,
+    onboarding,
     problem,
     recommendation,
     user,

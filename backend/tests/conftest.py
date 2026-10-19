@@ -56,6 +56,15 @@ def no_embedder_model():
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def no_onboarding_sweep():
+    """The theory sweep loop opens real database sessions; an app started in a test
+    must not run it."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr("app.core.config.settings.SKIP_ONBOARDING_SWEEP", True)
+        yield
+
+
 @pytest.fixture
 def session():
     engine = create_engine("sqlite://")

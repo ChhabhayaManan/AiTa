@@ -47,6 +47,8 @@ export const EVENT_KIND_LABELS = {
   mcq: 'MCQ',
   diagnostic: 'Diagnostic',
   debug: 'Debug',
+  diagnostic_seed: 'Starting check',
+  diagnostic_theory: 'Starting check (theory)',
 }
 
 export const topicLabel = t => TOPIC_LABELS[t] || t || 'Unclassified'

@@ -18,6 +18,7 @@ their program printed:
 {actual}
 
 MISTAKES THIS STUDENT HAS MADE BEFORE: {misconceptions}
+HOW THIS STUDENT LIKES TO LEARN: {style}
 
 {level_instruction}
 
@@ -95,6 +96,7 @@ PROBLEM:
 THE STUDENT'S LANGUAGE: {language}
 {code_block}
 MISTAKES THIS STUDENT HAS MADE BEFORE: {misconceptions}
+HOW THIS STUDENT LIKES TO LEARN: {style}
 
 {level_instruction}
 

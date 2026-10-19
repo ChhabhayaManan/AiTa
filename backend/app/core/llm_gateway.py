@@ -59,6 +59,7 @@ PURPOSES: dict[str, Purpose] = {p.name: p for p in (
     _purpose("chat_summary", 0.0, max_tokens=1024),
     _purpose("chat_plain", 0.3, deadline_s=45),
     _purpose("eval", 0.0, deadline_s=120),
+    _purpose("onboarding_judge", 0.0, max_tokens=1024, deadline_s=45),
 )}
 
 

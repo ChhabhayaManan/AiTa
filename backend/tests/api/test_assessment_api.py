@@ -8,6 +8,7 @@ from app.core.database import Base, get_db
 from app.core.dependencies import get_current_active_user
 from app.models.learning import McqQuestion
 from app.models.user import User
+from app.services.profiling.service import record_diagnostic_seed
 
 
 @pytest.fixture
@@ -18,13 +19,12 @@ def client():
     db = sessionmaker(bind=engine)()
     user = User(email="api-a@example.com", username="apia", hashed_password="x")
     db.add(user)
-    db.add(McqQuestion(external_id="diag-loops", topic="loops", difficulty="easy",
-                       stem="What does print(len(range(1, 5))) print?",
-                       options=[{"text": "5", "misconception": "off_by_one"},
-                                {"text": "4", "misconception": None}],
-                       answer_index=1, verify_code="print(len(range(1, 5)))",
-                       explanations=["range stops before its end"],
-                       is_diagnostic=True, reviewed=True))
+    db.add(McqQuestion(external_id="q-basics", topic="basics_io", difficulty="easy",
+                       stem="What does print(7 // 2) print?",
+                       options=[{"text": "3.5", "misconception": "integer_division"},
+                                {"text": "3", "misconception": None}],
+                       answer_index=1, verify_code="print(7 // 2)",
+                       explanations=["// is floor division"], reviewed=True))
     db.commit()
 
     from app.main import app
@@ -40,7 +40,7 @@ def test_next_then_answer_round_trip(client):
     nxt = http.get("/api/v1/assessment/next")
     assert nxt.status_code == 200
     body = nxt.json()
-    assert body["item_type"] == "diagnostic"
+    assert body["item_type"] == "mcq"
     assert "answer_index" not in body["item"] and "verify_code" not in nxt.text
 
     answer = http.post(f"/api/v1/assessment/mcq/{body['item']['id']}/answer",
@@ -48,12 +48,35 @@ def test_next_then_answer_round_trip(client):
     assert answer.status_code == 200
     result = answer.json()
     assert result["correct"] is False
-    assert result["misconception"] == "off_by_one"
+    assert result["misconception"] == "integer_division"
     assert result["answer_index"] == 1
 
     mastery = http.get("/api/v1/profile/mastery").json()
-    loops = next(t for t in mastery["topics"] if t["topic"] == "loops")
-    assert loops["evidence_count"] == 1
+    basics = next(t for t in mastery["topics"] if t["topic"] == "basics_io")
+    assert basics["evidence_count"] == 1
+
+
+def test_first_item_follows_seeds(client):
+    http, db = client
+    user = db.query(User).one()
+    loops_q = McqQuestion(external_id="q-loops", topic="loops", difficulty="easy",
+                          stem="What does print(len(range(1, 5))) print?",
+                          options=[{"text": "5", "misconception": "off_by_one"},
+                                   {"text": "4", "misconception": None}],
+                          answer_index=1, verify_code="print(len(range(1, 5)))",
+                          explanations=["range stops before its end"], reviewed=True)
+    db.add(McqQuestion(external_id="diag-old", topic="loops", difficulty="easy", stem="old",
+                       options=[{"text": "a", "misconception": None}], answer_index=0,
+                       verify_code="print(1)", explanations=["x"], is_diagnostic=True,
+                       reviewed=True))
+    db.add(loops_q)
+    db.commit()
+    record_diagnostic_seed(db, user.id, {"basics_io": 0.7, "conditionals": 0.7, "loops": 0.25})
+
+    body = http.get("/api/v1/assessment/next").json()
+
+    assert (body["item_type"], body["topic"], body["item"]["id"]) == ("mcq", "loops", loops_q.id)
+    assert "Loops" in body["reason"]
 
 
 def test_unknown_question_is_404_and_bad_index_422(client):

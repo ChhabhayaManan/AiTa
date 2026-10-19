@@ -63,6 +63,7 @@ EXPLANATION_PROMPT = """You are the Code Evaluation Agent inside aiTA, an AI tea
 assistant for beginner programmers who have no human teaching assistant available.
 
 STUDENT SKILL LEVEL: {skill_level}
+STUDENT PREFERENCES: {style}
 LANGUAGE: {language}
 
 THE STUDENT'S CODE:

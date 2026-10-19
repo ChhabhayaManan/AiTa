@@ -11,6 +11,8 @@ from app.models.learning import LearningEvent, TopicMastery
 from app.models.problem import ExecRole, ExecutionResult, Problem
 from app.models.user import LearningProfile, User
 from app.services.hints.service import failing_case, highest_level, reference_sources
+from app.services.personalisation import style_line
+from app.services.profiling.mastery import SEED_KINDS
 from app.services.profiling.service import top_misconceptions
 
 
@@ -25,6 +27,7 @@ def _user_context(db: Session, user_id: int) -> Dict:
         "weak_areas": p.weak_areas or [] if p else [],
         "error_patterns": p.error_patterns or [] if p else [],
         "accuracy": p.accuracy_rate or 0.0 if p else 0.0,
+        "style": style_line(db, user_id),
     }
 
 
@@ -39,7 +42,8 @@ def _learning_context(db: Session, user_id: int, ev: CodeEvaluation, sub) -> Dic
                 .filter(ExecutionResult.evaluation_id == ev.id,
                         ExecutionResult.role == ExecRole.STUDENT)
                 .order_by(ExecutionResult.id)]
-    recent = (db.query(LearningEvent).filter(LearningEvent.user_id == user_id)
+    recent = (db.query(LearningEvent)
+              .filter(LearningEvent.user_id == user_id, LearningEvent.kind.notin_(SEED_KINDS))
               .order_by(LearningEvent.id.desc()).limit(5).all())
     return {
         "problem_id": problem.id if problem else None,
@@ -52,7 +56,8 @@ def _learning_context(db: Session, user_id: int, ev: CodeEvaluation, sub) -> Dic
         "misconception_counts": dict(top_misconceptions(db, user_id)),
         "this_attempt_misconceptions": next(
             (e.misconceptions or [] for e in db.query(LearningEvent).filter(
-                LearningEvent.source_ref == f"evaluation:{ev.id}")), []),
+                LearningEvent.source_ref == f"evaluation:{ev.id}",
+                LearningEvent.kind.notin_(SEED_KINDS))), []),
         "hint_level": (highest_level(db, user_id, problem.id) if problem else 0),
         "recent_events": [
             {"kind": e.kind, "topic": e.topic, "score": round(e.score, 2),

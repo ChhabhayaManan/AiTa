@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, User, Building, MapPin, Code2, Target, Sparkles, Lock, Shield } from 'lucide-react'
+import { ArrowLeft, Save, User, Building, MapPin, Code2, Target, Sparkles, Lock, Shield, Award, Lightbulb } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { userAPI } from '../utils/api'
+import { userAPI, onboardingAPI, getErrorMessage } from '../utils/api'
 import toast from 'react-hot-toast'
+import BandSummary, { conceptLine } from '../components/onboarding/BandSummary'
+import {
+  AboutFields, LearningFields, aboutForm, aboutPayload, aboutComplete, learningForm, learningComplete,
+} from '../components/onboarding/BackgroundFields'
+import { YEARS } from '../components/onboarding/options'
 
-const LANGUAGES = ['Python', 'Java', 'JavaScript', 'C++', 'C', 'Go', 'Rust', 'TypeScript', 'Swift', 'Kotlin']
 const PREFERRED_LANGUAGES = [
   { value: 'c', label: 'C' },
   { value: 'cpp', label: 'C++' },
@@ -22,7 +26,7 @@ const TOPICS = [
 ]
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUser, refreshUser } = useAuth()
   const navigate = useNavigate()
 
   const [form, setForm] = useState({
@@ -32,9 +36,7 @@ export default function ProfilePage() {
     year_of_study: user?.year_of_study || '',
     city: user?.city || '',
     state: user?.state || '',
-    skill_level: user?.skill_level || 'beginner',
     years_of_experience: user?.years_of_experience || 0,
-    preferred_languages: user?.preferred_languages || [],
     preferred_language: user?.preferred_language || 'c',
     learning_goals: user?.learning_goals || [],
     interests: user?.interests || [],
@@ -47,6 +49,52 @@ export default function ProfilePage() {
   const [savingConsent, setSavingConsent] = useState(false)
   const [consent, setConsent] = useState(user?.data_sharing_consent ?? false)
   const [activeTab, setActiveTab] = useState('profile')
+  const [card, setCard] = useState(null)
+  const [aboutPrefs, setAboutPrefs] = useState(null)
+  const [learningPrefs, setLearningPrefs] = useState(null)
+  const [aboutDirty, setAboutDirty] = useState(false)
+  const [savingPrefs, setSavingPrefs] = useState(false)
+
+  useEffect(() => {
+    onboardingAPI.state()
+      .then(({ data }) => {
+        if (data.current_step !== 'done' || !data.card) return
+        setCard(data.card)
+        setAboutPrefs(aboutForm(data.answers?.about, user))
+        setLearningPrefs(learningForm(data.answers?.learning))
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleSavePrefs = async () => {
+    setSavingPrefs(true)
+    try {
+      const body = { learning: learningPrefs }
+      if (aboutDirty) {
+        const about = aboutPayload(aboutPrefs)
+        body.about = { ...about, year_of_study: YEARS.some(y => y.value === about.year_of_study) ? about.year_of_study : null }
+      }
+      const { data } = await onboardingAPI.editProfile(body)
+      setCard(data)
+      setAboutPrefs(aboutForm(data.preferences?.about, user))
+      setLearningPrefs(learningForm(data.preferences?.learning))
+      setAboutDirty(false)
+      toast.success('Preferences saved.')
+      try {
+        const me = await refreshUser()
+        setForm(f => ({
+          ...f,
+          years_of_experience: me.years_of_experience || 0,
+          year_of_study: me.year_of_study || '',
+          institution: me.institution || '',
+        }))
+      } catch { /* ignore */ }
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not save your preferences.'))
+    } finally {
+      setSavingPrefs(false)
+    }
+  }
 
   const toggleArray = (field, value) => {
     setForm(f => ({
@@ -68,6 +116,7 @@ export default function ProfilePage() {
       }
       const { data } = await userAPI.updateProfile(payload)
       updateUser(data)
+      setAboutPrefs(a => a && { ...a, year_of_study: data.year_of_study ?? null, institution: data.institution ?? '' })
       toast.success('Profile updated! ✅')
     } catch (err) {
       const detail = err.response?.data?.detail
@@ -200,7 +249,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label className="label">Year of Study</label>
-                <input type="number" min="1" max="10" value={form.year_of_study}
+                <input type="number" min="1" max="6" value={form.year_of_study}
                   onChange={e => setForm(f => ({ ...f, year_of_study: e.target.value }))}
                   placeholder="e.g. 2" className="input-field" />
               </div>
@@ -234,18 +283,12 @@ export default function ProfilePage() {
 
         {/* ── Learning Tab ── */}
         {activeTab === 'learning' && (
+          <div className="space-y-6">
           <div className="glass-card p-6 space-y-6 animate-fade-in">
             <div>
-              <label className="label">Skill Level</label>
-              <div className="grid grid-cols-3 gap-3">
-                {['beginner', 'intermediate', 'advanced'].map(s => (
-                  <button key={s} type="button"
-                    onClick={() => setForm(f => ({ ...f, skill_level: s }))}
-                    className={`py-3 rounded-xl border text-sm font-display font-600 capitalize transition-all ${form.skill_level === s ? 'border-brand-500/60 bg-brand-600/10 text-brand-300' : 'border-white/10 bg-surface-700/30 text-white/40 hover:border-white/20'}`}>
-                    {s}
-                  </button>
-                ))}
-              </div>
+              <p className="label">Skill Level</p>
+              <p className="text-sm font-display font-600 capitalize text-brand-300">{user?.skill_level || 'beginner'}</p>
+              <p className="text-xs text-white/40 mt-1">From your starting check.</p>
             </div>
             <div>
               <label className="label" htmlFor="preferred-language"><Code2 size={12} className="inline mr-1" />Default Coding Language</label>
@@ -256,17 +299,6 @@ export default function ProfilePage() {
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="label"><Code2 size={12} className="inline mr-1" />Programming Languages</label>
-              <div className="flex flex-wrap gap-2">
-                {LANGUAGES.map(lang => (
-                  <button key={lang} type="button" onClick={() => toggleArray('preferred_languages', lang)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-500 border transition-all ${form.preferred_languages.includes(lang) ? 'border-brand-500/60 bg-brand-600/10 text-brand-300' : 'border-white/10 bg-surface-700/30 text-white/40 hover:border-white/20'}`}>
-                    {lang}
-                  </button>
-                ))}
-              </div>
             </div>
             <div>
               <label className="label"><Sparkles size={12} className="inline mr-1" />Topics <span className="text-white/30 font-normal">(used by recommendation agent)</span></label>
@@ -305,6 +337,41 @@ export default function ProfilePage() {
               {saving ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />Saving...</span>
                 : <span className="flex items-center justify-center gap-2"><Save size={16} /> Save Learning Profile</span>}
             </button>
+          </div>
+
+          {learningPrefs && (
+            <section className="glass-card p-6 space-y-6 animate-fade-in">
+              <div>
+                <h3 className="font-display font-600 text-white mb-1">Background and preferences</h3>
+                <p className="text-white/30 text-sm">Hints, feedback and chat follow these.</p>
+              </div>
+              <LearningFields form={learningPrefs} onChange={setLearningPrefs} />
+              <AboutFields form={aboutPrefs} withSchool={false}
+                onChange={f => { setAboutPrefs(f); setAboutDirty(true) }} />
+              <button onClick={handleSavePrefs}
+                disabled={savingPrefs || !learningComplete(learningPrefs) || (aboutDirty && !aboutComplete(aboutPrefs))}
+                className="btn-primary">
+                {savingPrefs ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />Saving...</span>
+                  : <span className="flex items-center justify-center gap-2"><Save size={16} /> Save Preferences</span>}
+              </button>
+            </section>
+          )}
+
+          {card && (
+            <section className="glass-card p-6 space-y-5 animate-fade-in">
+              <div>
+                <h3 className="font-display font-600 text-white mb-1">Starting check</h3>
+                <p className="text-white/30 text-sm">Your result from onboarding. It can't be edited; practice updates your topic progress from here on.</p>
+              </div>
+              <p className="flex items-center gap-2 font-display font-600 text-lg text-white">
+                <Award size={18} className="text-brand-400" aria-hidden="true" /> {card.title}
+              </p>
+              <BandSummary card={card} headingLevel={4} />
+              <p className="flex items-center gap-2 text-sm text-white/70">
+                <Lightbulb size={16} className="text-brand-400 shrink-0" aria-hidden="true" /> {conceptLine(card)}
+              </p>
+            </section>
+          )}
           </div>
         )}
 

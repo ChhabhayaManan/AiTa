@@ -21,7 +21,6 @@ class AssessmentState(BaseModel):
 
 
 def load_profile(state: AssessmentState) -> AssessmentState:
-    state.result = policy.diagnostic_item(state.db, state.user_id)
     state.plan = policy.load_profile(state.db, state.user_id)
     return state
 
@@ -55,10 +54,6 @@ def pick_item(state: AssessmentState) -> AssessmentState:
     raise NothingToServe("Every item in the bank has been completed.")
 
 
-def _after_profile(state: AssessmentState) -> str:
-    return "done" if state.result is not None else "choose_topic"
-
-
 @lru_cache(maxsize=1)
 def build_assessment_graph():
     graph = StateGraph(AssessmentState)
@@ -66,8 +61,7 @@ def build_assessment_graph():
     graph.add_node("choose_topic", choose_topic)
     graph.add_node("pick_item", pick_item)
     graph.add_edge(START, "load_profile")
-    graph.add_conditional_edges("load_profile", _after_profile,
-                                {"done": END, "choose_topic": "choose_topic"})
+    graph.add_edge("load_profile", "choose_topic")
     graph.add_edge("choose_topic", "pick_item")
     graph.add_edge("pick_item", END)
     return graph.compile()

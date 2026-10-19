@@ -33,6 +33,7 @@ from app.services.hints.prompts import (
     LEVEL_INSTRUCTIONS,
     TEMPLATES,
 )
+from app.services.personalisation import style_line
 from app.services.profiling.service import top_misconceptions
 
 MAX_LEVEL = 4
@@ -225,6 +226,10 @@ def _misconceptions(db: Session, user_id: int) -> str:
     return ", ".join(seen) or "none recorded"
 
 
+def _style(db: Session, user_id: int) -> str:
+    return style_line(db, user_id) or "not recorded"
+
+
 def _clamp(level: int) -> int:
     return max(1, min(MAX_LEVEL, int(level)))
 
@@ -265,6 +270,7 @@ def _ladder_hint(db, level, problem, submission, case, user_id, evaluation_id,
         expected=case.expected.rstrip() or "(nothing)",
         actual=case.actual.rstrip() or "(nothing)",
         misconceptions=_misconceptions(db, user_id),
+        style=_style(db, user_id),
     )
     return _guarded_hint(level, prompt, TEMPLATES[level], problem=problem,
                          language=submission.language, student_code=submission.code,
@@ -297,6 +303,7 @@ def approach_hint(db: Session, user_id: int, problem_id: int, *, level: int,
         statement=problem.statement,
         language=language.value,
         misconceptions=_misconceptions(db, user_id),
+        style=_style(db, user_id),
     )
     hint = _guarded_hint(level, prompt, APPROACH_TEMPLATES[level], problem=problem,
                          language=language, student_code=code, evaluation_id=None,

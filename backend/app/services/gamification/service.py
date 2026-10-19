@@ -17,7 +17,7 @@ from app.schemas.gamification import (
     Window,
 )
 from app.services.gamification import rules
-from app.services.profiling.mastery import MASTERED_FROM, WEAK_BELOW, band
+from app.services.profiling.mastery import MASTERED_FROM, SEED_KINDS, WEAK_BELOW, band
 
 RECENT_AWARDS = 10
 
@@ -25,12 +25,13 @@ RECENT_AWARDS = 10
 def snapshot(event: LearningEvent) -> rules.Ev:
     return rules.Ev(id=event.id, kind=event.kind, item_id=event.item_id, topic=event.topic,
                     score=event.score, hint_level_used=event.hint_level_used or 0,
-                    mastery_after=event.mastery_after)
+                    mastery_after=event.mastery_after, mastery_before=event.mastery_before)
 
 
 def _history(db: Session, user_id: int, before_id: int) -> list[rules.Ev]:
     rows = (db.query(LearningEvent)
-            .filter(LearningEvent.user_id == user_id, LearningEvent.id < before_id)
+            .filter(LearningEvent.user_id == user_id, LearningEvent.id < before_id,
+                    LearningEvent.kind.notin_(SEED_KINDS))
             .order_by(LearningEvent.id).all())
     return [snapshot(r) for r in rows]
 
@@ -73,7 +74,7 @@ def refresh_mirrors(db: Session, user_id: int) -> None:
 
 
 def apply(db: Session, event: LearningEvent) -> list[GamificationAward]:
-    if settings.GAMIFICATION_MODE == "off":
+    if settings.GAMIFICATION_MODE == "off" or event.kind in SEED_KINDS:
         return []
     _lock_user(db, event.user_id)
     new = rules.evaluate(snapshot(event), _history(db, event.user_id, event.id),
@@ -88,7 +89,8 @@ def rebuild(db: Session, user_id: int) -> int:
     how the ledger is audited, and how legacy mirror values are cleared."""
     _lock_user(db, user_id)
     db.query(GamificationAward).filter(GamificationAward.user_id == user_id).delete()
-    rows = (db.query(LearningEvent).filter(LearningEvent.user_id == user_id)
+    rows = (db.query(LearningEvent)
+            .filter(LearningEvent.user_id == user_id, LearningEvent.kind.notin_(SEED_KINDS))
             .order_by(LearningEvent.id).all())
     events = [snapshot(e) for e in rows]
     keys: set[str] = set()

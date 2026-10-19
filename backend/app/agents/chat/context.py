@@ -9,6 +9,7 @@ from app.models.chat import ChatThread
 from app.models.code_eval import CodeEvaluation, CodeSubmission
 from app.models.problem import ExecRole, ExecutionResult, Problem
 from app.models.user import User
+from app.services.personalisation import chat_language, style_line
 from app.services.profiling.service import mastery_snapshot
 
 DEFAULT_LANGUAGE = "c"
@@ -24,6 +25,8 @@ class ChatContext:
     mastery_line: str
     summary: str | None
     passages: list[dict] = field(default_factory=list)
+    style: str = ""
+    chat_language: str = "auto"
 
 
 def _clip(text: str, limit: int) -> str:
@@ -90,4 +93,6 @@ def load(db: Session, user_id: int, thread: ChatThread, *,
         last_attempt=last_attempt(db, user_id),
         mastery_line=mastery_line(db, user_id),
         summary=thread.summary,
+        style=style_line(db, user_id),
+        chat_language=chat_language(db, user_id),
     )

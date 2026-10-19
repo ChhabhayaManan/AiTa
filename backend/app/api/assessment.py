@@ -24,8 +24,8 @@ def get_next(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Diagnostic first; then the weakest unlocked topic, with the item type and
-    difficulty set by its measured mastery. Coding problems are submitted through
+    """The weakest unlocked topic, with the item type and difficulty set by its measured
+    mastery. Coding problems are submitted through
     `/code-eval/evaluate` with their `id` as `problem_id`."""
     return asdict(next_item(db, current_user.id))
 

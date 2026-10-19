@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     # Startup loads the book-search embedder in the background so the first chat
     # question does not wait for it. Tests and quick local runs can skip it.
     SKIP_EMBED_WARMUP: bool = False
+    # Startup runs a loop that retries pending onboarding theory grades every 2 minutes.
+    SKIP_ONBOARDING_SWEEP: bool = False
     # Cosine similarity a book passage needs before it is retrieved automatically for a
     # chat message. Live bge-small scores: on-topic passages ~0.72-0.80, loosely related
     # ones (hint requests, code reviews) just below.

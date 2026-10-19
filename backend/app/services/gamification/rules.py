@@ -34,6 +34,7 @@ class Ev:
     score: float
     hint_level_used: int
     mastery_after: float | None
+    mastery_before: float | None = None
 
 
 @dataclass(frozen=True)
@@ -70,10 +71,13 @@ def _rank(mastery: float | None, evidence: int) -> int:
 
 
 def level_up(ev: Ev, history: list[Ev]) -> list[Award]:
+    """The band the event started from counts as reached: a diagnostic seed can place a
+    student in a band without any history event to show for it."""
     if ev.kind == "diagnostic" or not ev.topic or ev.mastery_after is None:
         return []
     same = [h for h in history if h.topic == ev.topic]
-    best_before = max((_rank(h.mastery_after, i + 1) for i, h in enumerate(same)), default=0)
+    best_before = max([_rank(h.mastery_after, i + 1) for i, h in enumerate(same)]
+                      + [_rank(ev.mastery_before, max(len(same), 1))])
     reached = band(ev.mastery_after, len(same) + 1)
     if BAND_RANK.get(reached, 0) <= best_before:
         return []

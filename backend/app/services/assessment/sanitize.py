@@ -4,7 +4,7 @@ from every line the bug touched, and any that still talk about the bug are rejec
 
 import re
 
-_COMMENT_MARKER = {"python": "#", "cpp": "//"}
+_COMMENT_MARKER = {"python": "#", "cpp": "//", "c": "//"}
 _REVEALING = re.compile(r"\b(bug|buggy|fix|fixed|should|changed|wrong|incorrect|error|"
                         r"off[- ]by[- ]one|planted)\b", re.IGNORECASE)
 

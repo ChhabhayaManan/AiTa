@@ -208,4 +208,15 @@ export const gamificationAPI = {
   me: () => api.get('/gamification/me'),
 }
 
+export const onboardingAPI = {
+  state:       ()                          => api.get('/onboarding/state'),
+  saveStep:    (step, data)                => api.put(`/onboarding/steps/${step}`, data),
+  next:        ()                          => api.post('/onboarding/diagnostic/next'),
+  // Code answers run in the sandbox and theory answers may call the LLM
+  answer:      (itemId, answer, msTaken)   => api.post('/onboarding/diagnostic/answer',
+    { item_id: itemId, answer, ms_taken: msTaken }, { timeout: EVAL_TIMEOUT }),
+  finish:      ()                          => api.post('/onboarding/finish', null, { timeout: EVAL_TIMEOUT }),
+  editProfile: (data)                      => api.patch('/onboarding/profile', data),
+}
+
 export default api

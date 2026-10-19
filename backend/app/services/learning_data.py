@@ -19,6 +19,7 @@ from app.models.learning import (
     McqQuestion,
 )
 from app.models.problem import Problem
+from app.services.profiling.mastery import SEED_KINDS
 from app.services.profiling.service import (
     MISCONCEPTION_WINDOW,
     hint_reliance,
@@ -256,7 +257,8 @@ def _hints(db, user_id, since, topic) -> dict:
 
 
 def _events_query(db, user_id, since, topic, item_type):
-    query = db.query(LearningEvent).filter(LearningEvent.user_id == user_id)
+    query = db.query(LearningEvent).filter(LearningEvent.user_id == user_id,
+                                           LearningEvent.kind.notin_(SEED_KINDS))
     if since:
         query = query.filter(LearningEvent.created_at >= since)
     if topic:

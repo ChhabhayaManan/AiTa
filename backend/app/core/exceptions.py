@@ -29,6 +29,14 @@ class TurnInProgress(AitaError):
     status_code = 409
 
 
+class OnboardingConflict(AitaError):
+    status_code = 409
+
+
+class InvalidAnswer(AitaError):
+    status_code = 422
+
+
 class ExecutorUnavailable(AitaError):
     status_code = 503
 

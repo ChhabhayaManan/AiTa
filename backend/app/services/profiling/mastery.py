@@ -4,7 +4,10 @@ the learning_events rows."""
 PRIOR = 0.3
 LEARNING_RATE = 0.3
 
-WEIGHTS = {"code": 1.0, "debug": 0.8, "mcq": 0.5, "diagnostic": 0.5}
+SEED_KINDS = ("diagnostic_seed", "diagnostic_theory")
+
+WEIGHTS = {"code": 1.0, "debug": 0.8, "mcq": 0.5, "diagnostic": 0.5,
+           "diagnostic_seed": 0.0, "diagnostic_theory": 0.0}
 
 HINT_MULTIPLIER = {0: 1.0, 1: 0.9, 2: 0.75, 3: 0.6, 4: 0.5}
 

@@ -6,6 +6,7 @@ from app.agents.code_eval.state import EvalState
 from app.core import llm_gateway
 from app.core.exceptions import LLMUnavailable
 from app.core.llm import invoke_with_retry
+from app.services.personalisation import style_line
 
 _CRASH_VERDICTS = ("Runtime error", "Time limit exceeded", "Memory limit exceeded")
 
@@ -66,6 +67,7 @@ def explain(state: EvalState, *, runnable=None) -> EvalState:
 
     prompt = EXPLANATION_PROMPT.format(
         skill_level=state.skill_level,
+        style=style_line(state.db, state.user_id) or "not recorded",
         language=state.language.value,
         code=state.code,
         tests_passed=state.tests_passed,

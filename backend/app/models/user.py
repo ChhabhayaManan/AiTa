@@ -81,6 +81,17 @@ class User(Base):
     learning_profile = relationship("LearningProfile", back_populates="user", uselist=False)
     sessions = relationship("UserSession", back_populates="user")
     otp_records = relationship("OTPRecord", back_populates="user", cascade="all, delete-orphan")
+    onboarding_record = relationship(
+        "OnboardingRecord", uselist=False, cascade="all, delete-orphan", passive_deletes=True,
+    )
+    preferences = relationship(
+        "LearnerPreferences", uselist=False, cascade="all, delete-orphan", passive_deletes=True,
+    )
+
+    @property
+    def onboarding_done(self) -> bool:
+        record = self.onboarding_record
+        return record is not None and record.finished_at is not None
 
     def __repr__(self):
         return f"<User id={self.id} username={self.username} role={self.role}>"

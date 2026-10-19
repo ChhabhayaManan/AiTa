@@ -12,6 +12,7 @@ from app.models.learning import LearningEvent, TopicMastery
 from app.models.user import LearningProfile
 from app.services.profiling.mastery import (
     PRIOR,
+    SEED_KINDS,
     WEAK_BELOW,
     WEIGHTS,
     band,
@@ -123,11 +124,76 @@ def derive_profile(db: Session, user_id: int) -> LearningProfile:
     profile.error_patterns = [tag for tag, _ in top_misconceptions(db, user_id)[:5]]
 
     scores = [s for (s,) in db.query(LearningEvent.score)
-              .filter(LearningEvent.user_id == user_id).all()]
+              .filter(LearningEvent.user_id == user_id,
+                      LearningEvent.kind.notin_(SEED_KINDS)).all()]
     profile.accuracy_rate = round(sum(scores) / len(scores), 3) if scores else 0.0
     profile.last_updated_by_agent = datetime.now(timezone.utc)
     db.flush()
     return profile
+
+
+def _mastery_row(db: Session, user_id: int, topic: str) -> TopicMastery:
+    row = db.get(TopicMastery, (user_id, topic))
+    if row is None:
+        row = TopicMastery(user_id=user_id, topic=topic, mastery=PRIOR, evidence_count=0)
+        db.add(row)
+    return row
+
+
+def _seed_event(db: Session, user_id: int, kind: str, topic: str,
+                value: float) -> LearningEvent | None:
+    """A one-time diagnostic reading sets mastery outright instead of nudging it, and
+    never goes through ingest, so it awards nothing."""
+    if normalise_topic(topic) is None:
+        return None
+    event = record_event(db, EventInput(user_id, kind, score=value, raw_topic=topic))
+    row = _mastery_row(db, user_id, event.topic)
+    event.mastery_before = row.mastery
+    row.mastery = event.score
+    row.evidence_count = max(row.evidence_count, 1)
+    row.last_event_at = datetime.now(timezone.utc)
+    event.mastery_after = row.mastery
+    db.flush()
+    return event
+
+
+def record_diagnostic_seed(db: Session, user_id: int,
+                           seeds: dict[str, float]) -> list[LearningEvent]:
+    seeded = (db.query(LearningEvent.id)
+              .filter(LearningEvent.user_id == user_id, LearningEvent.kind == "diagnostic_seed")
+              .first())
+    if seeded:
+        return []
+    events = []
+    for topic in TOPICS:
+        if topic in seeds:
+            event = _seed_event(db, user_id, "diagnostic_seed", topic, seeds[topic])
+            if event is not None:
+                events.append(event)
+    derive_profile(db, user_id)
+    db.commit()
+    return events
+
+
+def has_practice_on(db: Session, user_id: int, topic: str) -> bool:
+    return (db.query(LearningEvent.id)
+            .filter(LearningEvent.user_id == user_id, LearningEvent.topic == topic,
+                    LearningEvent.kind.notin_(SEED_KINDS))
+            .first()) is not None
+
+
+def apply_theory_adjustment(db: Session, user_id: int, topic: str,
+                            new_seed: float) -> LearningEvent | None:
+    topic = normalise_topic(topic)
+    if topic is None or has_practice_on(db, user_id, topic):
+        return None
+    current = db.get(TopicMastery, (user_id, topic))
+    if current is not None and abs(current.mastery - new_seed) < 1e-9:
+        return None
+    event = _seed_event(db, user_id, "diagnostic_theory", topic, new_seed)
+    derive_profile(db, user_id)
+    db.commit()
+    return event
 
 
 def _recent_events(db: Session, user_id: int, limit: int, kinds=None) -> list[LearningEvent]:

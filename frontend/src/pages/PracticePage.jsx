@@ -10,6 +10,7 @@ import { LANGUAGES, TEMPLATES } from '../components/code_eval/CodeEditor'
 import { useAuth } from '../hooks/useAuth'
 import MasteryPanel from '../components/learning/MasteryPanel'
 import RichText from '../components/learning/RichText'
+import Editor from '../components/learning/CodeArea'
 import { ITEM_TYPE_LABELS, misconceptionLabel, topicLabel } from '../components/learning/labels'
 
 const TYPE_ICON = { diagnostic: ListChecks, mcq: HelpCircle, coding: Code2, debug: Bug }
@@ -47,13 +48,6 @@ function CaseBlock({ input, expected, actual }) {
       {row('Expected', expected, 'text-green-300')}
       {row('Got', actual || '(nothing)', 'text-red-300')}
     </div>
-  )
-}
-
-function Editor({ value, onChange }) {
-  return (
-    <textarea value={value} onChange={e => onChange(e.target.value)} spellCheck={false}
-      className="w-full h-72 p-4 rounded-xl bg-black/40 border border-white/10 text-sky-100 font-mono text-sm leading-relaxed focus:outline-none focus:border-brand-500/50 resize-y" />
   )
 }
 
