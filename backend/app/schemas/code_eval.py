@@ -1,14 +1,21 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.agents.code_eval.schemas import EvalReport
+from app.core.languages import EXECUTABLE_LANGUAGES
 from app.models.code_eval import Language
 
 # The evaluation response and the Month 2 chatbot tool return are the same model.
 # One definition means one place a field can leak from, and one place to test.
 EvaluationResult = EvalReport
+
+
+def _study_language(value: Language) -> Language:
+    if value not in EXECUTABLE_LANGUAGES:
+        raise ValueError("language must be c, cpp or python")
+    return value
 
 
 class SubmitCodeRequest(BaseModel):
@@ -22,11 +29,15 @@ class SubmitCodeRequest(BaseModel):
     # stored one does not, so a round trip through the fingerprint would duplicate it.
     problem_id:      Optional[int] = None
 
+    _language = field_validator("language")(_study_language)
+
 
 class RunCodeRequest(BaseModel):
     problem_id: int
     language:   Language
     code:       str = Field(..., min_length=1, max_length=50000)
+
+    _language = field_validator("language")(_study_language)
 
 
 class RunCase(BaseModel):

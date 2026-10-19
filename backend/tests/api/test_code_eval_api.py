@@ -77,6 +77,13 @@ def test_submit_generates_a_title_when_missing(client):
     assert "Add Two" in response.json()["title"]
 
 
+def test_submit_accepts_only_c_cpp_python(client):
+    test_client, _, _ = client
+    for path in ("/api/v1/code-eval/submit", "/api/v1/code-eval/evaluate"):
+        response = test_client.post(path, json={"language": "java", "code": "class A{}"})
+        assert response.status_code == 422
+
+
 def test_list_submissions(client):
     test_client, _, _ = client
     test_client.post("/api/v1/code-eval/submit",

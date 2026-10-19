@@ -249,7 +249,6 @@ def test_executor_outage_is_a_plain_503_not_infrastructure_text(client, monkeypa
     ("python", "import sys"),
     ("cpp", "#include <bits/stdc++.h>"),
     ("c", "#include <stdio.h>"),
-    ("haskell", "import sys"),
 ])
 def test_starter_code_follows_the_requested_language(client, monkeypatch, language, marker):
     test_client, db = client

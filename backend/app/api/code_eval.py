@@ -80,7 +80,7 @@ def submit_code(
 ):
     """
     Submit code for multi-dimensional AI evaluation.
-    Supports: python | javascript | java | cpp | c | typescript | go | rust | sql
+    Supports: c | cpp | python
     """
     return CodeEvalService.submit(db, current_user.id, req)
 

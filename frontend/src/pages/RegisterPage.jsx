@@ -18,7 +18,7 @@ const TOPIC_OPTIONS = [
   { id: "math", label: "Math & Number Theory", icon: "∑", color: "#6366f1" },
 ];
 
-const LANGUAGE_OPTIONS = ["Python", "JavaScript", "Java", "C++", "C", "Go", "Rust"];
+const LANGUAGE_OPTIONS = ["C", "C++", "Python"];
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
 export default function RegisterPage() {
@@ -35,7 +35,7 @@ export default function RegisterPage() {
     confirmPassword: "",
     full_name: "",
     skill_level: "Beginner",
-    preferred_languages: ["Python"],
+    preferred_languages: ["C"],
     interested_topics: [],
   });
 

@@ -21,7 +21,7 @@ class ProblemSummary(BaseModel):
 class GenerateProblemRequest(BaseModel):
     topic: str
     difficulty: str = "medium"
-    language: str = "python"
+    language: Literal["c", "cpp", "python"] = "python"
     exclude_titles: list = []   # titles already shown — don't repeat these
     exclude_ids: List[int] = []  # problem ids already shown this session
 
