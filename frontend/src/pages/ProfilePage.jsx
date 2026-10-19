@@ -15,6 +15,7 @@ const PREFERRED_LANGUAGES = [
   { value: 'cpp', label: 'C++' },
   { value: 'python', label: 'Python' },
 ]
+const languageLabel = value => PREFERRED_LANGUAGES.find(l => l.value === value)?.label || value
 const GOALS = ['Web Development', 'Machine Learning', 'Data Science', 'Mobile Apps', 'Competitive Programming', 'System Design', 'DevOps', 'Cybersecurity']
 const INTERESTS = ['Algorithms', 'AI/ML', 'Databases', 'Networking', 'Frontend', 'Backend', 'Open Source', 'Research']
 const TOPICS = [
@@ -54,6 +55,29 @@ export default function ProfilePage() {
   const [learningPrefs, setLearningPrefs] = useState(null)
   const [aboutDirty, setAboutDirty] = useState(false)
   const [savingPrefs, setSavingPrefs] = useState(false)
+  const [switchTo, setSwitchTo] = useState(null)
+  const [switching, setSwitching] = useState(false)
+
+  const handleSwitchLanguage = async () => {
+    setSwitching(true)
+    try {
+      const { data } = await onboardingAPI.switchLanguage(switchTo)
+      updateUser({ preferred_language: data.language })
+      setForm(f => ({ ...f, preferred_language: data.language }))
+      setSwitchTo(null)
+      if (data.needs_check) {
+        navigate('/language-check')
+        return
+      }
+      toast.success(`Switched to ${languageLabel(data.language)}.`)
+      const { data: state } = await onboardingAPI.state()
+      if (state.card) setCard(state.card)
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not switch language.'))
+    } finally {
+      setSwitching(false)
+    }
+  }
 
   useEffect(() => {
     onboardingAPI.state()
@@ -108,6 +132,8 @@ export default function ProfilePage() {
     try {
       const payload = {
         ...form,
+        // The study language only changes through the switch above.
+        preferred_language: undefined,
         // coerce year_of_study: empty string → null, otherwise parse as int
         year_of_study: form.year_of_study === '' || form.year_of_study === null
           ? null
@@ -291,14 +317,37 @@ export default function ProfilePage() {
               <p className="text-xs text-white/40 mt-1">From your starting check.</p>
             </div>
             <div>
-              <label className="label" htmlFor="preferred-language"><Code2 size={12} className="inline mr-1" />Default Coding Language</label>
-              <select id="preferred-language" value={form.preferred_language}
-                onChange={e => setForm(f => ({ ...f, preferred_language: e.target.value }))}
-                className="input-field">
+              <label className="label" htmlFor="preferred-language"><Code2 size={12} className="inline mr-1" />Study Language</label>
+              <select id="preferred-language" value={switchTo || form.preferred_language}
+                onChange={e => setSwitchTo(e.target.value === form.preferred_language ? null : e.target.value)}
+                disabled={!card || switching} className="input-field">
                 {PREFERRED_LANGUAGES.map(({ value, label }) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
+              <p className="text-xs text-white/40 mt-1">
+                {card ? 'Practice questions, debugging challenges and your progress follow this language.'
+                  : 'You can switch once your starting check is done.'}
+              </p>
+              {switchTo && (
+                <div className="mt-3 p-4 rounded-xl border border-brand-500/30 bg-brand-600/10 space-y-3" role="alert">
+                  <p className="text-sm text-white/80">
+                    Switch to {languageLabel(switchTo)}? Your {languageLabel(form.preferred_language)} progress is kept
+                    and comes back when you switch back.
+                  </p>
+                  <p className="text-xs text-white/55">
+                    If you haven't studied {languageLabel(switchTo)} here before, you'll take a short code check in it first (about 4 minutes).
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleSwitchLanguage} disabled={switching} className="btn-primary !w-auto">
+                      {switching ? 'Switching...' : `Switch to ${languageLabel(switchTo)}`}
+                    </button>
+                    <button type="button" onClick={() => setSwitchTo(null)} disabled={switching} className="btn-secondary !w-auto">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="label"><Sparkles size={12} className="inline mr-1" />Topics <span className="text-white/30 font-normal">(used by recommendation agent)</span></label>

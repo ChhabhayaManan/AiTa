@@ -4,7 +4,12 @@ from pathlib import Path
 import pytest
 
 from app.core.topics import TOPICS
-from app.models.onboarding import DiagnosticItem, DiagnosticResponse, OnboardingRecord
+from app.models.onboarding import (
+    DiagnosticItem,
+    DiagnosticResponse,
+    LanguageCheck,
+    OnboardingRecord,
+)
 from app.models.user import User
 from scripts import export_w1
 
@@ -30,7 +35,8 @@ def _item(db, tag: str, kind: str, topic: str) -> DiagnosticItem:
 
 def _answer(db, user, item, order, phase, graded_by, score=None):
     db.add(DiagnosticResponse(user_id=user.id, item_id=item.id, order=order, phase=phase,
-                              answer={}, score=score, graded_by=graded_by, ms_taken=order * 1000))
+                              language=user.preferred_language, answer={}, score=score,
+                              graded_by=graded_by, ms_taken=order * 1000))
 
 
 def test_one_row_per_record_with_drop_off_and_calibration(session):
@@ -55,10 +61,21 @@ def test_one_row_per_record_with_drop_off_and_calibration(session):
     _answer(session, finished, theory[1], 4, "theory", "pending")
     _answer(session, finished, theory[2], 5, "theory", "saved")
     finished.preferred_language = "cpp"
+    session.add(LanguageCheck(user_id=finished.id, language="cpp", started_at=START,
+                              diagnostic_started_at=START, finished_at=START + timedelta(minutes=3),
+                              seeds={"loops": [0.25, "asked"]}, title="Fresh Starter"))
+    _answer(session, finished, _item(session, "p1", "predict_output", "loops"), 1, "warmup",
+            "key", 0.0)
     session.commit()
 
-    rows = {row["user_id"]: row for row in export_w1.rows(session)}
+    exported = export_w1.rows(session)
+    recheck = next(row for row in exported if row["check"] == "recheck")
+    rows = {row["user_id"]: row for row in exported if row["check"] == "onboarding"}
 
+    assert (recheck["user_id"], recheck["language"], recheck["items_asked"]) == (finished.id,
+                                                                                "cpp", 1)
+    assert (recheck["seed_loops"], recheck["step_diagnostic_s"]) == (0.25, 180.0)
+    assert recheck["self_rating"] == recheck["step_about_s"] == ""
     assert len(rows) == 2
     done, gone = rows[finished.id], rows[dropped.id]
     assert done["language"] == "c" and done["drop_off_step"] == ""

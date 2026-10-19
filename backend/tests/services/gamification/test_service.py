@@ -58,7 +58,7 @@ def test_gamify_failure_keeps_event_and_mastery(session, user, mode, monkeypatch
     event = ingest(session, solve(user))
     assert event.id is not None
     assert session.query(LearningEvent).count() == 1
-    assert session.get(TopicMastery, (user.id, "loops")) is not None
+    assert session.get(TopicMastery, (user.id, "loops", event.language)) is not None
     assert session.query(GamificationAward).count() == 0
 
 

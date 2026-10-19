@@ -35,6 +35,7 @@ def emit_event(state: EvalState) -> EvalState:
             hint_level=hint_level,
             misconceptions=report.misconceptions,
             source_ref=f"evaluation:{report.evaluation_id}",
+            language=getattr(state.language, "value", state.language),
         ))
         report.awards = awards_for_event(state.db, event.id)
     except Exception:

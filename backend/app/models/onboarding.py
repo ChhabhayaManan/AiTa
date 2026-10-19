@@ -52,7 +52,27 @@ class OnboardingRecord(Base):
     title                 = Column(String(80), nullable=True)
     concept_level         = Column(String(10), nullable=False, default="unknown")
     language_locked_at    = Column(DateTime(timezone=True), nullable=True)
+    # The language the onboarding check ran in; preferred_language can change later.
+    language              = Column(String(10), nullable=True)
     seeds                 = Column(JSON, default=dict)
+
+
+class LanguageCheck(Base):
+    """The code-only check taken on switching to a language never used before. Its
+    fields mirror the matching OnboardingRecord ones so the same walk drives both."""
+    __tablename__ = "language_checks"
+
+    user_id               = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
+                                   primary_key=True)
+    language              = Column(String(10), primary_key=True)
+    started_at            = Column(DateTime(timezone=True), server_default=func.now())
+    diagnostic_started_at = Column(DateTime(timezone=True), nullable=True)
+    current_item_id       = Column(Integer,
+                                   ForeignKey("diagnostic_items.id", ondelete="SET NULL"),
+                                   nullable=True)
+    finished_at           = Column(DateTime(timezone=True), nullable=True)
+    seeds                 = Column(JSON, default=dict)
+    title                 = Column(String(80), nullable=True)
 
 
 class DiagnosticItem(Base):
@@ -88,6 +108,8 @@ class DiagnosticResponse(Base):
                         nullable=False)
     order      = Column(Integer, nullable=False)
     phase      = Column(String(12), nullable=False)
+    # The check this answer belongs to: the onboarding language or a re-check's.
+    language   = Column(String(10), nullable=False)
     answer     = Column(JSON, nullable=False)
     score      = Column(Float, nullable=True)
     graded_by  = Column(String(10), nullable=False)

@@ -25,10 +25,12 @@ SWEEP_INTERVAL_S = 120
 RETRY_DELAYS = (2, 4, 8)
 
 
-def responses_for(db: Session, user_id: int) -> list[Resp]:
+def responses_for(db: Session, user_id: int, language: str | None) -> list[Resp]:
+    """One check's responses: the onboarding check's or a re-check's."""
     rows = (db.query(DiagnosticResponse, DiagnosticItem)
             .join(DiagnosticItem, DiagnosticItem.id == DiagnosticResponse.item_id)
-            .filter(DiagnosticResponse.user_id == user_id)
+            .filter(DiagnosticResponse.user_id == user_id,
+                    DiagnosticResponse.language == language)
             .order_by(DiagnosticResponse.order)
             .all())
     return [Resp(ItemRef(item.topic, item.kind, item.difficulty, resp.phase),
@@ -81,7 +83,7 @@ def after_regrade(db: Session, user_id: int, topics: Iterable[str] | None = None
     record = db.get(OnboardingRecord, user_id)
     if record is None:
         return
-    responses = responses_for(db, user_id)
+    responses = responses_for(db, user_id, record.language)
     theory_scores = [r.score for r in responses if r.ref.phase == "theory"]
     record.concept_level = seeding.concept_level(theory_scores)
     db.commit()
@@ -93,7 +95,8 @@ def after_regrade(db: Session, user_id: int, topics: Iterable[str] | None = None
     current = seeding.seeds(responses)
     adjusted = {}
     for topic in dict.fromkeys(topics):
-        if topic in current and apply_theory_adjustment(db, user_id, topic, current[topic].value):
+        if topic in current and apply_theory_adjustment(db, user_id, topic, current[topic].value,
+                                                         record.language):
             adjusted[topic] = [current[topic].value, current[topic].source]
     if adjusted:
         record.seeds = {**(record.seeds or {}), **adjusted}

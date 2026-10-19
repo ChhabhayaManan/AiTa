@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.topics import PREREQUISITES, TOPIC_LABELS, TOPICS, clean_misconceptions, normalise_topic
 from app.models.learning import LearningEvent, TopicMastery
-from app.models.user import LearningProfile
+from app.models.user import LearningProfile, User
 from app.services.profiling.mastery import (
     PRIOR,
     SEED_KINDS,
@@ -36,12 +36,23 @@ class EventInput:
     hint_level: int = 0
     misconceptions: list[str] = field(default_factory=list)
     source_ref: str | None = None
+    # The language the evidence happened in; None means the student's current one.
+    language: str | None = None
+
+
+DEFAULT_LANGUAGE = "c"
+
+
+def current_language(db: Session, user_id: int) -> str:
+    user = db.get(User, user_id)
+    return (user.preferred_language if user else None) or DEFAULT_LANGUAGE
 
 
 def record_event(db: Session, event_in: EventInput) -> LearningEvent:
     if event_in.kind not in WEIGHTS:
         raise ValueError(f"unknown event kind: {event_in.kind}")
     event = LearningEvent(
+        language=event_in.language or current_language(db, event_in.user_id),
         user_id=event_in.user_id,
         kind=event_in.kind,
         item_id=event_in.item_id,
@@ -76,11 +87,7 @@ def no_new_evidence(db: Session, event: LearningEvent) -> bool:
 def update_mastery(db: Session, event: LearningEvent) -> TopicMastery | None:
     if event.topic is None:
         return None
-    row = db.get(TopicMastery, (event.user_id, event.topic))
-    if row is None:
-        row = TopicMastery(user_id=event.user_id, topic=event.topic,
-                           mastery=PRIOR, evidence_count=0)
-        db.add(row)
+    row = _mastery_row(db, event.user_id, event.topic, event.language)
     event.mastery_before = row.mastery
     if no_new_evidence(db, event):
         event.mastery_after = row.mastery
@@ -95,7 +102,9 @@ def update_mastery(db: Session, event: LearningEvent) -> TopicMastery | None:
 
 
 def _mastery_rows(db: Session, user_id: int) -> dict[str, TopicMastery]:
-    rows = db.query(TopicMastery).filter(TopicMastery.user_id == user_id).all()
+    rows = (db.query(TopicMastery)
+            .filter(TopicMastery.user_id == user_id,
+                    TopicMastery.language == current_language(db, user_id)).all())
     return {r.topic: r for r in rows}
 
 
@@ -125,6 +134,7 @@ def derive_profile(db: Session, user_id: int) -> LearningProfile:
 
     scores = [s for (s,) in db.query(LearningEvent.score)
               .filter(LearningEvent.user_id == user_id,
+                      LearningEvent.language == current_language(db, user_id),
                       LearningEvent.kind.notin_(SEED_KINDS)).all()]
     profile.accuracy_rate = round(sum(scores) / len(scores), 3) if scores else 0.0
     profile.last_updated_by_agent = datetime.now(timezone.utc)
@@ -132,22 +142,24 @@ def derive_profile(db: Session, user_id: int) -> LearningProfile:
     return profile
 
 
-def _mastery_row(db: Session, user_id: int, topic: str) -> TopicMastery:
-    row = db.get(TopicMastery, (user_id, topic))
+def _mastery_row(db: Session, user_id: int, topic: str, language: str) -> TopicMastery:
+    row = db.get(TopicMastery, (user_id, topic, language))
     if row is None:
-        row = TopicMastery(user_id=user_id, topic=topic, mastery=PRIOR, evidence_count=0)
+        row = TopicMastery(user_id=user_id, topic=topic, language=language,
+                           mastery=PRIOR, evidence_count=0)
         db.add(row)
     return row
 
 
-def _seed_event(db: Session, user_id: int, kind: str, topic: str,
-                value: float) -> LearningEvent | None:
+def _seed_event(db: Session, user_id: int, kind: str, topic: str, value: float,
+                language: str) -> LearningEvent | None:
     """A one-time diagnostic reading sets mastery outright instead of nudging it, and
     never goes through ingest, so it awards nothing."""
     if normalise_topic(topic) is None:
         return None
-    event = record_event(db, EventInput(user_id, kind, score=value, raw_topic=topic))
-    row = _mastery_row(db, user_id, event.topic)
+    event = record_event(db, EventInput(user_id, kind, score=value, raw_topic=topic,
+                                        language=language))
+    row = _mastery_row(db, user_id, event.topic, language)
     event.mastery_before = row.mastery
     row.mastery = event.score
     row.evidence_count = max(row.evidence_count, 1)
@@ -157,17 +169,18 @@ def _seed_event(db: Session, user_id: int, kind: str, topic: str,
     return event
 
 
-def record_diagnostic_seed(db: Session, user_id: int,
-                           seeds: dict[str, float]) -> list[LearningEvent]:
+def record_diagnostic_seed(db: Session, user_id: int, seeds: dict[str, float],
+                           language: str) -> list[LearningEvent]:
     seeded = (db.query(LearningEvent.id)
-              .filter(LearningEvent.user_id == user_id, LearningEvent.kind == "diagnostic_seed")
+              .filter(LearningEvent.user_id == user_id, LearningEvent.kind == "diagnostic_seed",
+                      LearningEvent.language == language)
               .first())
     if seeded:
         return []
     events = []
     for topic in TOPICS:
         if topic in seeds:
-            event = _seed_event(db, user_id, "diagnostic_seed", topic, seeds[topic])
+            event = _seed_event(db, user_id, "diagnostic_seed", topic, seeds[topic], language)
             if event is not None:
                 events.append(event)
     derive_profile(db, user_id)
@@ -175,22 +188,23 @@ def record_diagnostic_seed(db: Session, user_id: int,
     return events
 
 
-def has_practice_on(db: Session, user_id: int, topic: str) -> bool:
+def has_practice_on(db: Session, user_id: int, topic: str, language: str) -> bool:
     return (db.query(LearningEvent.id)
             .filter(LearningEvent.user_id == user_id, LearningEvent.topic == topic,
+                    LearningEvent.language == language,
                     LearningEvent.kind.notin_(SEED_KINDS))
             .first()) is not None
 
 
-def apply_theory_adjustment(db: Session, user_id: int, topic: str,
-                            new_seed: float) -> LearningEvent | None:
+def apply_theory_adjustment(db: Session, user_id: int, topic: str, new_seed: float,
+                            language: str) -> LearningEvent | None:
     topic = normalise_topic(topic)
-    if topic is None or has_practice_on(db, user_id, topic):
+    if topic is None or has_practice_on(db, user_id, topic, language):
         return None
-    current = db.get(TopicMastery, (user_id, topic))
+    current = db.get(TopicMastery, (user_id, topic, language))
     if current is not None and abs(current.mastery - new_seed) < 1e-9:
         return None
-    event = _seed_event(db, user_id, "diagnostic_theory", topic, new_seed)
+    event = _seed_event(db, user_id, "diagnostic_theory", topic, new_seed, language)
     derive_profile(db, user_id)
     db.commit()
     return event

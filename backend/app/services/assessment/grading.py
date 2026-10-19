@@ -74,6 +74,7 @@ def grade_mcq(db: Session, user_id: int, question_id: int, chosen_index: int) ->
         item_id=question.id,
         misconceptions=[misconception] if misconception else [],
         source_ref=f"mcq_attempt:{attempt.id}",
+        language=None if question.language == "any" else question.language,
     ))
     explanations = question.explanations or []
     return McqResult(correct, chosen_index, question.answer_index, misconception,
@@ -106,6 +107,7 @@ def grade_debug(db: Session, user_id: int, challenge_id: int, code: str,
         item_id=challenge.id,
         misconceptions=[] if fixed else [challenge.bug_type],
         source_ref=f"debug_attempt:{attempt.id}",
+        language=challenge.language,
     ))
 
     return DebugResult(

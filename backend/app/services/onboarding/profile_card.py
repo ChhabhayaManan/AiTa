@@ -17,7 +17,7 @@ START_REASONS = {
 }
 
 
-def _band(seed: Seed | None) -> str:
+def band_of(seed: Seed | None) -> str:
     if seed is None:
         return NOT_CHECKED
     if seed.source == "inferred":
@@ -39,7 +39,7 @@ def title_for(seeds: dict[str, Seed]) -> str:
 
 def build(seeds: dict[str, Seed], concept: str, prefs: dict, start_topic: str) -> Card:
     inferred = [t for t in TOPICS if t in seeds and seeds[t].source == "inferred"]
-    bands = {t: _band(seeds.get(t)) for t in TOPICS}
+    bands = {t: band_of(seeds.get(t)) for t in TOPICS}
     return Card(
         bands=bands,
         inferred=inferred,

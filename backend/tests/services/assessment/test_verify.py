@@ -1,5 +1,7 @@
 import pytest
 
+from app.models.code_eval import Language
+from app.services.assessment.parsing import parse_authored
 from app.services.assessment.verify import verify_debug, verify_mcq
 from tests.services.assessment.conftest import (
     BUGGY,
@@ -82,6 +84,103 @@ def test_debug_rejected_when_the_bug_is_harmless(bank_problem):
 def test_debug_rejects_unknown_language_and_tag(bank_problem):
     provider = standard_provider()
     assert verify_debug(debug_item(language="java"), bank_problem.test_cases, provider).reason \
-        == "language must be python or cpp"
+        == "language must be python, c or cpp"
     assert verify_debug(debug_item(bug_type="typo"), bank_problem.test_cases, provider).reason \
         == "unknown bug_type"
+
+
+C_PROGRAM = '#include <stdio.h>\nint main(void) { printf("3\\n"); return 0; }\n'
+AUTHORED = f"""=== PROBLEM ===
+ID: aita-sum
+DIFFICULTY: easy
+STATEMENT: Read two integers
+and print their sum.
+CONSTRAINTS: small.
+REFERENCE:
+```python
+print(1)
+```
+TESTS:
+### input
+1 2
+### output
+3
+### input
+0
+
+### output
+0
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: c
+DIFFICULTY: easy
+STEM:
+What does this program print?
+```c
+{C_PROGRAM}```
+OPTIONS:
+A) 4 || off_by_one
+B) 3 || correct
+C) 5 || none
+EXPLANATION: It prints 3.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: any
+DIFFICULTY: easy
+STEM:
+How many times does a loop from 0 while less than 3 run?
+OPTIONS:
+A) 3 times || correct
+B) 2 times || off_by_one
+C) 4 times || off_by_one
+EXPLANATION: 0, 1 and 2.
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sum
+LANGUAGE: c
+BUG: off_by_one
+CORRECT:
+```c
+good
+```
+BUGGY:
+```c
+bad
+```
+=== END ===
+"""
+
+
+class LanguageProvider(ScriptedProvider):
+    def run_batch(self, language, source, stdins, limits):
+        self.calls.append(language)
+        return super().run_batch(language, source, stdins, limits)
+
+
+def test_authored_bank_runs_c_stems_as_c_and_keeps_concepts_code_free():
+    bank = parse_authored(AUTHORED, "loops")
+    c_item, concept = bank["mcqs"]
+
+    assert [p["external_id"] for p in bank["problems"]] == ["aita-sum"]
+    assert bank["problems"][0]["statement"] == "Read two integers and print their sum."
+    assert bank["problems"][0]["tests"][1]["stdin"] == "0\n"
+    assert (c_item["external_id"], c_item["answer_index"]) == ("mcq-c-loops-1", 1)
+    assert concept["external_id"] == "concept-loops-1"
+    assert bank["debug"] == [{
+        "external_id": "debug-c-aita-sum", "problem_external_id": "aita-sum", "language": "c",
+        "bug_type": "off_by_one", "fixed_code": "good\n", "buggy_code": "bad\n"}]
+
+    provider = LanguageProvider({C_PROGRAM: "3\n"})
+    assert verify_mcq(c_item, provider).ok
+    assert Language.C in provider.calls
+    assert verify_mcq(concept, None).ok
+    assert verify_mcq({**concept, "stem": c_item["stem"]}, None).reason == \
+        "a concept question has no code"
+    assert verify_mcq({**c_item, "stem": "What does it print?"}, None).reason == \
+        "stem needs the whole program"
+    python_fence = c_item["stem"].replace("```c", "```python")
+    assert verify_mcq({**c_item, "stem": python_fence}, None).reason == \
+        "stem code is fenced as 'python', not c"

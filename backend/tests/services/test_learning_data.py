@@ -58,12 +58,13 @@ def seed(session, user, marker, *, topic="dynamic_programming", when=NOW, tag="o
         HintEvent(user_id=user.id, problem_id=problem.id, evaluation_id=evaluation.id,
                   level=1, source=source, created_at=when),
         LearningEvent(user_id=user.id, kind="code", topic=topic, score=1.0, weight=1.0,
-                      hint_level_used=1, misconceptions=[tag], created_at=when),
+                      hint_level_used=1, misconceptions=[tag], created_at=when,
+                      language=user.preferred_language),
         FeedbackReport(user_id=user.id, headline=f"{marker} report", created_at=when),
     ])
-    if session.get(TopicMastery, (user.id, topic)) is None:
-        session.add(TopicMastery(user_id=user.id, topic=topic, mastery=0.6,
-                                 evidence_count=evidence))
+    if session.get(TopicMastery, (user.id, topic, user.preferred_language)) is None:
+        session.add(TopicMastery(user_id=user.id, topic=topic, language=user.preferred_language,
+                                 mastery=0.6, evidence_count=evidence))
     session.commit()
 
 

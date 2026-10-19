@@ -72,7 +72,7 @@ def respond(db, user, item, text="It repeats work.", phase="theory", graded_by="
             score=None):
     order = db.query(DiagnosticResponse).filter_by(user_id=user.id).count() + 1
     row = DiagnosticResponse(user_id=user.id, item_id=item.id, order=order, phase=phase,
-                             answer={"text": text}, score=score, graded_by=graded_by,
+                             language="c", answer={"text": text}, score=score, graded_by=graded_by,
                              ms_taken=1000)
     db.add(row)
     db.commit()
@@ -229,14 +229,15 @@ def test_sweep_grades_and_adjusts(session, judge):
     respond(session, me, make_item(session, "loops", kind="predict_output"), phase="code",
             graded_by="key", score=0.5)
     row = respond(session, me, make_item(session, "loops"))
-    written = seeding.seeds(pending.responses_for(session, me.id))
-    record_diagnostic_seed(session, me.id, {t: s.value for t, s in written.items()})
+    written = seeding.seeds(pending.responses_for(session, me.id, "c"))
+    record_diagnostic_seed(session, me.id, {t: s.value for t, s in written.items()}, "c")
     session.add(OnboardingRecord(user_id=me.id, finished_at=datetime.now(timezone.utc),
+                                 language="c",
                                  seeds={t: [s.value, s.source] for t, s in written.items()},
                                  title="Loop Wrangler"))
     me.skill_level = SkillLevel.INTERMEDIATE
     session.commit()
-    assert session.get(TopicMastery, (me.id, "loops")).mastery == pytest.approx(0.50)
+    assert session.get(TopicMastery, (me.id, "loops", "c")).mastery == pytest.approx(0.50)
     judge(points=(False, False, False))
 
     assert pending.sweep_once(session) == 1
@@ -247,7 +248,7 @@ def test_sweep_grades_and_adjusts(session, judge):
     assert record.seeds["loops"] == [0.25, "asked"]
     assert record.seeds["basics_io"] == [0.60, "inferred"]
     assert (record.title, me.skill_level) == ("Fresh Starter", SkillLevel.BEGINNER)
-    assert session.get(TopicMastery, (me.id, "loops")).mastery == pytest.approx(0.25)
+    assert session.get(TopicMastery, (me.id, "loops", "c")).mastery == pytest.approx(0.25)
     event = session.query(LearningEvent).filter_by(kind="diagnostic_theory").one()
     assert event.topic == "loops"
 

@@ -22,7 +22,7 @@ def test_two_events_move_mastery_exactly_as_the_formula_says(session, user):
     ingest(session, code_event(user, 4 / 6))
     ingest(session, code_event(user, 1.0))
 
-    row = session.get(TopicMastery, (user.id, "loops"))
+    row = session.get(TopicMastery, (user.id, "loops", "c"))
     first = 0.3 + 0.3 * 1.0 * (4 / 6 - 0.3)
     second = first + 0.3 * 1.0 * (1.0 - first)
     assert row.mastery == pytest.approx(second)
@@ -38,7 +38,7 @@ def test_raw_bank_tags_are_normalised(session, user):
     event = ingest(session, code_event(user, 1.0, topic="two pointers"))
     assert event.topic == "arrays"
     assert event.raw_topic == "two pointers"
-    assert session.get(TopicMastery, (user.id, "arrays")) is not None
+    assert session.get(TopicMastery, (user.id, "arrays", "c")) is not None
 
 
 def test_off_list_topic_is_logged_but_moves_nothing(session, user):
@@ -54,7 +54,7 @@ def test_resolving_a_solved_item_is_logged_but_moves_nothing(session, user):
     again = ingest(session, code_event(user, 1.0, item_id=9))
     assert again.mastery_before == pytest.approx(first.mastery_after)
     assert again.mastery_after == pytest.approx(first.mastery_after)
-    assert session.get(TopicMastery, (user.id, "loops")).evidence_count == 1
+    assert session.get(TopicMastery, (user.id, "loops", "c")).evidence_count == 1
 
     broke = ingest(session, code_event(user, 0.0, item_id=9))
     assert broke.mastery_after == pytest.approx(first.mastery_after)
@@ -74,7 +74,7 @@ def test_retrying_an_mcq_after_its_key_was_revealed_moves_nothing(session, user)
 
 def test_mcq_weight_is_half_a_coding_attempt(session, user):
     ingest(session, EventInput(user_id=user.id, kind="mcq", score=0.0, raw_topic="loops"))
-    row = session.get(TopicMastery, (user.id, "loops"))
+    row = session.get(TopicMastery, (user.id, "loops", "c"))
     assert row.mastery == pytest.approx(0.3 + 0.3 * 0.5 * (0.0 - 0.3))
 
 

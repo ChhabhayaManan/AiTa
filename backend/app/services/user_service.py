@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
+from app.models.onboarding import OnboardingRecord
 from app.models.user import User, LearningProfile
 from app.schemas.user import UpdateProfileRequest, ChangePasswordRequest
 from app.core.security import verify_password, hash_password
@@ -27,6 +28,13 @@ class UserService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
         update_data = data.model_dump(exclude_unset=True)
+        language = update_data.get("preferred_language", user.preferred_language)
+        record = db.get(OnboardingRecord, user.id)
+        if language != user.preferred_language and record and record.language_locked_at:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Use the language switch on your profile to change language."
+            )
         for field, value in update_data.items():
             setattr(user, field, value)
 

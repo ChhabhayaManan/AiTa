@@ -95,7 +95,8 @@ def test_fixed_debug_attempt_scores_full_credit(session, bank_problem, user):
     assert result.failing_input is None
     event = session.query(LearningEvent).one()
     assert (event.kind, event.score, event.weight, event.misconceptions) == ("debug", 1.0, 0.8, [])
-    assert session.get(TopicMastery, (user.id, "arrays")).mastery == pytest.approx(0.3 + 0.24 * 0.7)
+    key = (user.id, "arrays", challenge.language)
+    assert session.get(TopicMastery, key).mastery == pytest.approx(0.3 + 0.24 * 0.7)
 
 
 def test_unfixed_debug_attempt_gets_half_partial_credit_and_the_bug_tag(session, bank_problem, user):

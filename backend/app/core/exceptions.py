@@ -49,6 +49,10 @@ class LanguageNotExecutable(AitaError):
     status_code = 422
 
 
+class LanguageCheckRequired(AitaError):
+    status_code = 428
+
+
 class UnverifiableSubmission(AitaError):
     def __init__(self, reason: str):
         super().__init__(reason)

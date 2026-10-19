@@ -73,8 +73,9 @@ def test_verified_submission_emits_one_event_and_moves_mastery(session, user, pr
     assert event.item_id == problem.id
     assert event.misconceptions == ["wrong_initial_value"]
     assert event.source_ref == f"evaluation:{report.evaluation_id}"
+    assert event.language == "python"
 
-    row = session.get(TopicMastery, (user.id, "dynamic_programming"))
+    row = session.get(TopicMastery, (user.id, "dynamic_programming", "python"))
     assert row.mastery == pytest.approx(0.3 + 0.3 * (0.5 - 0.3))
 
 

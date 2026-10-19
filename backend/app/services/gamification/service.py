@@ -18,6 +18,7 @@ from app.schemas.gamification import (
 )
 from app.services.gamification import rules
 from app.services.profiling.mastery import MASTERED_FROM, SEED_KINDS, WEAK_BELOW, band
+from app.services.profiling.service import current_language
 
 RECENT_AWARDS = 10
 
@@ -25,7 +26,8 @@ RECENT_AWARDS = 10
 def snapshot(event: LearningEvent) -> rules.Ev:
     return rules.Ev(id=event.id, kind=event.kind, item_id=event.item_id, topic=event.topic,
                     score=event.score, hint_level_used=event.hint_level_used or 0,
-                    mastery_after=event.mastery_after, mastery_before=event.mastery_before)
+                    mastery_after=event.mastery_after, mastery_before=event.mastery_before,
+                    language=event.language)
 
 
 def _history(db: Session, user_id: int, before_id: int) -> list[rules.Ev]:
@@ -158,7 +160,9 @@ def summary(db: Session, user_id: int) -> GamificationSummary:
     awards = (db.query(GamificationAward).filter(GamificationAward.user_id == user_id)
               .order_by(GamificationAward.id).all())
     points, level = _totals(awards)
-    topics = (db.query(TopicMastery).filter(TopicMastery.user_id == user_id)
+    topics = (db.query(TopicMastery)
+              .filter(TopicMastery.user_id == user_id,
+                      TopicMastery.language == current_language(db, user_id))
               .order_by(TopicMastery.topic).all())
 
     now = datetime.now(timezone.utc)

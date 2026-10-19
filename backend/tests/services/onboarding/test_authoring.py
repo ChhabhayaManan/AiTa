@@ -333,7 +333,7 @@ def test_reject_deletes_only_unreviewed_unanswered(session):
     rows = {r.language: r for r in session.query(DiagnosticItem)}
     rows["python"].reviewed = True
     session.add(DiagnosticResponse(user_id=1, item_id=rows["c"].id, order=1, phase="theory",
-                                   answer={}, graded_by="llm", ms_taken=1))
+                                   language="c", answer={}, graded_by="llm", ms_taken=1))
     session.commit()
     ids = [rows["python"].id, rows["c"].id, rows["cpp"].id]
 

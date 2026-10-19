@@ -17,7 +17,8 @@ def client():
                            poolclass=StaticPool)
     Base.metadata.create_all(engine)
     db = sessionmaker(bind=engine)()
-    user = User(email="api-a@example.com", username="apia", hashed_password="x")
+    user = User(email="api-a@example.com", username="apia", hashed_password="x",
+                preferred_language="python")
     db.add(user)
     db.add(McqQuestion(external_id="q-basics", topic="basics_io", difficulty="easy",
                        stem="What does print(7 // 2) print?",
@@ -71,7 +72,8 @@ def test_first_item_follows_seeds(client):
                        reviewed=True))
     db.add(loops_q)
     db.commit()
-    record_diagnostic_seed(db, user.id, {"basics_io": 0.7, "conditionals": 0.7, "loops": 0.25})
+    record_diagnostic_seed(db, user.id, {"basics_io": 0.7, "conditionals": 0.7, "loops": 0.25},
+                           "python")
 
     body = http.get("/api/v1/assessment/next").json()
 

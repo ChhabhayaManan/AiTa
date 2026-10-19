@@ -36,6 +36,7 @@ def parse_mcqs(text: str) -> list[dict]:
 
         fenced = _FENCE.search(verify_block)
         items.append({
+            "language": _section(block, "LANGUAGE", ("DIFFICULTY",)).lower() or "python",
             "difficulty": difficulty[0].lower() if difficulty else "",
             "stem": stem,
             "options": options,
@@ -44,6 +45,72 @@ def parse_mcqs(text: str) -> list[dict]:
             "explanation": explanation,
         })
     return items
+
+
+_DEBUG = re.compile(r"=== DEBUG ===(.*?)=== END ===", re.DOTALL)
+_PROBLEM = re.compile(r"=== PROBLEM ===(.*?)=== END ===", re.DOTALL)
+_TEST_MARKER = re.compile(r"^###\s*(input|output)\s*$")
+
+
+def _tests(text: str) -> list[dict]:
+    cases, field = [], None
+    for line in text.split("\n"):
+        marker = _TEST_MARKER.match(line.strip())
+        if marker and marker.group(1) == "input":
+            cases.append({"stdin": [], "expected_stdout": []})
+            field = "stdin"
+        elif marker and cases:
+            field = "expected_stdout"
+        elif cases and field:
+            cases[-1][field].append(line)
+    return [{"kind": "sample" if n == 0 else "normal",
+             "stdin": "\n".join(case["stdin"]).strip("\n") + "\n",
+             "expected_stdout": "\n".join(case["expected_stdout"]).strip("\n")}
+            for n, case in enumerate(cases)]
+
+
+def _problems(text: str, topic: str) -> list[dict]:
+    problems = []
+    for block in _PROBLEM.findall(text or ""):
+        reference = _FENCE.search(_section(block, "REFERENCE", ("TESTS",)))
+        problems.append({
+            "external_id": _section(block, "ID", ("DIFFICULTY",)),
+            "topic": topic,
+            "difficulty": _section(block, "DIFFICULTY", ("STATEMENT",)).lower(),
+            "statement": " ".join(_section(block, "STATEMENT", ("CONSTRAINTS",)).split()),
+            "constraints": " ".join(_section(block, "CONSTRAINTS", ("REFERENCE",)).split()),
+            "reference": reference.group(1) if reference else "",
+            "tests": _tests(_section(block, "TESTS", ())),
+        })
+    return problems
+
+
+def parse_authored(text: str, topic: str) -> dict:
+    """A hand-written practice file for one topic: QUESTION blocks as above, each with a
+    LANGUAGE line (c, cpp, python, or any for a concept question); PROBLEM blocks with a
+    statement, a Python reference and tests; and DEBUG blocks that name a problem, a
+    language and a bug type. MCQ external ids follow the order of the blocks."""
+    mcqs, numbers = [], {}
+    for item in parse_mcqs(text):
+        language = item["language"]
+        numbers[language] = numbers.get(language, 0) + 1
+        prefix = f"concept-{topic}" if language == "any" else f"mcq-{language}-{topic}"
+        mcqs.append({**item, "topic": topic, "external_id": f"{prefix}-{numbers[language]}",
+                     "explanations": [item["explanation"]] if item["explanation"] else []})
+    debug = []
+    for block in _DEBUG.findall(text or ""):
+        problem = _section(block, "PROBLEM", ("LANGUAGE",))
+        language = _section(block, "LANGUAGE", ("BUG",)).lower()
+        programs = parse_debug(block)
+        debug.append({
+            "external_id": f"debug-{language}-{problem}",
+            "problem_external_id": problem,
+            "language": language,
+            "bug_type": _section(block, "BUG", ("CORRECT",)),
+            "fixed_code": programs[0] if programs else "",
+            "buggy_code": programs[1] if programs else "",
+        })
+    return {"problems": _problems(text, topic), "mcqs": mcqs, "debug": debug}
 
 
 def parse_debug(text: str) -> tuple[str, str] | None:

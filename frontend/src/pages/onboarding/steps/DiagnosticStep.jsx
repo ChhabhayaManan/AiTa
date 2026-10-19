@@ -31,7 +31,7 @@ const KIND_LABEL = {
 const MS_CAP = 3_600_000
 const THEORY_COUNT = 3
 
-export default function DiagnosticStep({ initial, onSaved, onConflict, onProgress }) {
+export default function DiagnosticStep({ initial, onSaved, onConflict, onProgress, api = onboardingAPI, intro }) {
   const [started, setStarted] = useState(!!initial)
   const [diag, setDiag] = useState(null)
   const [map, setMap] = useState(initial?.topic_map || {})
@@ -77,7 +77,7 @@ export default function DiagnosticStep({ initial, onSaved, onConflict, onProgres
   const fetchNext = async () => {
     setLoadError(null)
     try {
-      const { data } = await onboardingAPI.next()
+      const { data } = await api.next()
       show(data)
     } catch (err) {
       if (err?.response?.status === 409) {
@@ -97,7 +97,7 @@ export default function DiagnosticStep({ initial, onSaved, onConflict, onProgres
     const item = diag.item
     const ms = Math.min(MS_CAP, Math.max(0, Date.now() - shownAt.current))
     try {
-      const { data } = await onboardingAPI.answer(item.id, answer, ms)
+      const { data } = await api.answer(item.id, answer, ms)
       if (data.saved_only) {
         toast.success('Saved — reviewed at the end of this block')
         moveFocus.current = true
@@ -132,14 +132,18 @@ export default function DiagnosticStep({ initial, onSaved, onConflict, onProgres
   if (!started) {
     return (
       <div>
-        <StepTitle title="A short check"
-          subtitle="Up to 12 questions in your language, about 5 minutes. It starts easy and adapts to your answers." />
-        <ul className="space-y-2 text-sm text-white/60 mb-8 list-disc pl-5">
-          <li>Code questions: predict the output, find a bug, fill a blank.</li>
-          <li>After each one you'll see the right answer and why.</li>
-          <li>The last few are short written answers, reviewed together at the end.</li>
-          <li>Not sure? Press "I don't know" — it simply counts as not known yet.</li>
-        </ul>
+        {intro || (
+          <>
+            <StepTitle title="A short check"
+              subtitle="Up to 12 questions in your language, about 5 minutes. It starts easy and adapts to your answers." />
+            <ul className="space-y-2 text-sm text-white/60 mb-8 list-disc pl-5">
+              <li>Code questions: predict the output, find a bug, fill a blank.</li>
+              <li>After each one you'll see the right answer and why.</li>
+              <li>The last few are short written answers, reviewed together at the end.</li>
+              <li>Not sure? Press "I don't know" — it simply counts as not known yet.</li>
+            </ul>
+          </>
+        )}
         <button type="button" onClick={() => setStarted(true)} className="btn-primary !w-auto flex items-center gap-2">
           <Play size={16} /> Start the check
         </button>

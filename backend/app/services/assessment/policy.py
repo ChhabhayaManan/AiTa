@@ -17,6 +17,7 @@ from app.models.learning import (
     TopicMastery,
 )
 from app.models.problem import Difficulty, Problem
+from app.services.assessment.verify import CONCEPT
 from app.services.problems.generation import generate_problem
 from app.services.problems.listing import CURATED_SOURCES, to_summary
 from app.services.profiling.mastery import (
@@ -26,6 +27,7 @@ from app.services.profiling.mastery import (
     SEED_KINDS,
     WEAK_BELOW,
 )
+from app.services.profiling.service import current_language
 
 DIFFICULTY_ORDER = ("easy", "medium", "hard")
 TYPE_LABELS = {"mcq": "multiple-choice question", "diagnostic": "diagnostic question",
@@ -47,6 +49,7 @@ class TopicState:
 @dataclass
 class Plan:
     user_id: int
+    language: str = "c"
     topics: dict[str, TopicState] = field(default_factory=dict)
     topic: str | None = None
     item_type: str | None = None
@@ -64,8 +67,10 @@ class NextItem:
 
 
 def load_profile(db: Session, user_id: int) -> Plan:
-    rows = {r.topic: r for r in db.query(TopicMastery).filter(TopicMastery.user_id == user_id)}
-    plan = Plan(user_id=user_id)
+    language = current_language(db, user_id)
+    rows = {r.topic: r for r in db.query(TopicMastery)
+            .filter(TopicMastery.user_id == user_id, TopicMastery.language == language)}
+    plan = Plan(user_id=user_id, language=language)
     for topic in TOPICS:
         row = rows.get(topic)
         plan.topics[topic] = TopicState(topic, row.mastery if row else PRIOR,
@@ -99,7 +104,8 @@ def stuck_topic(db: Session, user_id: int) -> str | None:
     """The topic of the last STUCK_AFTER events when every one of them was a miss.
     Serving it again would only dig the hole deeper; one item elsewhere breaks the run."""
     recent = (db.query(LearningEvent.topic, LearningEvent.score)
-              .filter(LearningEvent.user_id == user_id, LearningEvent.kind.notin_(SEED_KINDS))
+              .filter(LearningEvent.user_id == user_id, LearningEvent.kind.notin_(SEED_KINDS),
+                      LearningEvent.language == current_language(db, user_id))
               .order_by(LearningEvent.id.desc()).limit(STUCK_AFTER).all())
     if len(recent) < STUCK_AFTER:
         return None
@@ -116,6 +122,7 @@ def choose_type(db: Session, plan: Plan, topic: str) -> str:
     if mastery < MASTERED_FROM:
         last = (db.query(LearningEvent.kind)
                 .filter(LearningEvent.user_id == plan.user_id, LearningEvent.topic == topic,
+                        LearningEvent.language == plan.language,
                         LearningEvent.kind.in_(("code", "debug")))
                 .order_by(LearningEvent.id.desc()).first())
         return "debug" if last and last[0] == "code" else "coding"
@@ -142,7 +149,8 @@ def _steps(difficulty: str) -> list[str]:
 
 def _mcq_payload(q: McqQuestion) -> dict:
     return {"id": q.id, "stem": q.stem, "options": [o["text"] for o in q.options],
-            "topic": q.topic, "difficulty": q.difficulty, "is_diagnostic": q.is_diagnostic}
+            "topic": q.topic, "difficulty": q.difficulty, "language": q.language,
+            "is_diagnostic": q.is_diagnostic}
 
 
 def _debug_payload(c: DebugChallenge) -> dict:
@@ -154,7 +162,7 @@ def _coding_payload(problem: Problem) -> dict:
     return to_summary(problem).model_dump()
 
 
-def _pick_mcq(db, user_id, topic, difficulty):
+def _pick_mcq(db, user_id, topic, difficulty, language):
     solved = {qid for (qid,) in db.query(McqAttempt.question_id)
               .filter(McqAttempt.user_id == user_id, McqAttempt.correct.is_(True))}
     tried = {qid for (qid,) in db.query(McqAttempt.question_id)
@@ -162,6 +170,7 @@ def _pick_mcq(db, user_id, topic, difficulty):
     for level in _steps(difficulty):
         pool = [q for q in db.query(McqQuestion)
                 .filter(McqQuestion.topic == topic, McqQuestion.difficulty == level,
+                        McqQuestion.language.in_((language, CONCEPT)),
                         McqQuestion.reviewed.is_(True), McqQuestion.is_diagnostic.is_(False))
                 .order_by(McqQuestion.id)
                 if q.id not in solved]
@@ -171,12 +180,13 @@ def _pick_mcq(db, user_id, topic, difficulty):
     return None, None
 
 
-def _pick_debug(db, user_id, topic, difficulty):
+def _pick_debug(db, user_id, topic, difficulty, language):
     fixed = {cid for (cid,) in db.query(DebugAttempt.challenge_id)
              .filter(DebugAttempt.user_id == user_id, DebugAttempt.fixed.is_(True))}
     for level in _steps(difficulty):
         pool = [c for c in db.query(DebugChallenge)
                 .filter(DebugChallenge.topic == topic, DebugChallenge.difficulty == level,
+                        DebugChallenge.language == language,
                         DebugChallenge.reviewed.is_(True))
                 .order_by(DebugChallenge.id)
                 if c.id not in fixed]
@@ -224,10 +234,12 @@ _FALLBACKS = {"mcq": ("mcq", "debug", "coding"), "debug": ("debug", "coding", "m
 def pick_item(db: Session, plan: Plan) -> NextItem | None:
     for item_type in _FALLBACKS[plan.item_type]:
         if item_type == "mcq":
-            found, level = _pick_mcq(db, plan.user_id, plan.topic, plan.difficulty)
+            found, level = _pick_mcq(db, plan.user_id, plan.topic, plan.difficulty,
+                                     plan.language)
             payload = _mcq_payload if found else None
         elif item_type == "debug":
-            found, level = _pick_debug(db, plan.user_id, plan.topic, plan.difficulty)
+            found, level = _pick_debug(db, plan.user_id, plan.topic, plan.difficulty,
+                                       plan.language)
             payload = _debug_payload if found else None
         else:
             found, level = _pick_coding(db, plan.user_id, plan.topic, plan.difficulty)

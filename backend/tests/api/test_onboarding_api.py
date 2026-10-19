@@ -119,7 +119,7 @@ def make_bank(db, theory_only=False):
                            stem="Pick one.", answer_index=0, verify_code="print('a')",
                            options=[{"text": "a", "misconception": None},
                                     {"text": "b", "misconception": None}],
-                           reviewed=True))
+                           reviewed=True, language="any"))
     db.commit()
 
 
@@ -381,7 +381,7 @@ def test_finish_seeds_and_card(client, db, user, judge):
     card = client.post(f"{API}/finish").json()
 
     db.expire_all()
-    assert db.get(TopicMastery, (user.id, "loops")).mastery == pytest.approx(0.70)
+    assert db.get(TopicMastery, (user.id, "loops", "c")).mastery == pytest.approx(0.70)
     assert user.skill_level.value == "advanced"
     record = db.get(OnboardingRecord, user.id)
     assert record.title == card["title"] == "Recursion Ranger"
@@ -421,3 +421,60 @@ def test_time_cap_uses_server_clock(client, db, user, monkeypatch):
     out = submit(client, warmup["id"], right_answer(db, warmup["id"]), ms_taken=1).json()
 
     assert out["next"]["item"]["kind"] == "theory"
+
+
+def finish_onboarding_in_c(client, db, judge):
+    make_bank(db)
+    for topic in TOPICS:
+        for kind in CODE_KINDS:
+            for difficulty in ("easy", "medium"):
+                add_item(db, topic, kind, difficulty, language="python")
+    db.commit()
+    judge()
+    run_all(client, db)
+    client.post(f"{API}/finish")
+
+
+def test_switch_to_new_language_requires_check_then_seeds_only_it(client, db, user, judge):
+    finish_onboarding_in_c(client, db, judge)
+    c_loops = db.get(TopicMastery, (user.id, "loops", "c")).mastery
+
+    assert client.post(f"{API}/language", json={"language": "python"}).json() == {
+        "language": "python", "needs_check": True}
+    assert client.get("/api/v1/assessment/next").status_code == 428
+
+    step, kinds = client.post(f"{API}/recheck/next").json(), []
+    while not step["done"]:
+        assert step["item"]["language"] == "python"
+        kinds.append(step["item"]["kind"])
+        out = client.post(f"{API}/recheck/answer", json={
+            "item_id": step["item"]["id"], "ms_taken": 1000,
+            "answer": right_answer(db, step["item"]["id"])})
+        assert out.status_code == 200, out.text
+        step = out.json()["next"]
+    assert kinds and "theory" not in kinds
+
+    result = client.post(f"{API}/recheck/finish").json()
+    assert result["language"] == "python" and result["bands"]["basics_io"] == "strong"
+
+    db.expire_all()
+    assert db.get(TopicMastery, (user.id, "basics_io", "python")).mastery == pytest.approx(0.70)
+    assert db.get(TopicMastery, (user.id, "loops", "c")).mastery == c_loops
+    assert client.get("/api/v1/assessment/next").status_code == 200
+
+    assert client.post(f"{API}/language", json={"language": "c"}).json()["needs_check"] is False
+    mastery = client.get("/api/v1/profile/mastery").json()
+    loops = next(t for t in mastery["topics"] if t["topic"] == "loops")
+    assert loops["mastery"] == pytest.approx(c_loops, abs=1e-3)
+    assert client.post(f"{API}/language", json={"language": "python"}).json()[
+        "needs_check"] is False
+
+
+def test_profile_patch_cannot_change_language_after_lock(client, db, user, judge):
+    finish_onboarding_in_c(client, db, judge)
+
+    out = client.patch("/api/v1/users/profile", json={"preferred_language": "python"})
+
+    assert out.status_code == 409
+    db.expire_all()
+    assert user.preferred_language == "c"

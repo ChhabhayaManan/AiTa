@@ -353,11 +353,15 @@ export default function PracticePage() {
       const { data } = await assessmentAPI.next()
       setNext(data)
     } catch (err) {
+      if (err?.response?.status === 428) {
+        navigate('/language-check', { replace: true })
+        return
+      }
       setError(getErrorMessage(err, 'Could not load the next item.'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [navigate])
 
   useEffect(() => { load() }, [load])
 

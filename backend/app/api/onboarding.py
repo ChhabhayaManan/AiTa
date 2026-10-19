@@ -15,11 +15,14 @@ from app.schemas.onboarding import (
     AnswerOut,
     CardOut,
     DiagOut,
+    LanguageIn,
     ProfilePatch,
+    RecheckOut,
     StateOut,
     Step,
+    SwitchOut,
 )
-from app.services.onboarding import service
+from app.services.onboarding import recheck, service
 
 router = APIRouter(prefix="/onboarding", tags=["Onboarding"])
 
@@ -59,6 +62,32 @@ def finish(background_tasks: BackgroundTasks,
            current_user: User = Depends(get_current_active_user),
            db: Session = Depends(get_db)):
     return service.finish(db, current_user, background_tasks)
+
+
+@router.post("/language", response_model=SwitchOut, summary="Switch the study language")
+def switch_language(req: LanguageIn, current_user: User = Depends(get_current_active_user),
+                    db: Session = Depends(get_db)):
+    return recheck.switch_language(db, current_user, req.language)
+
+
+@router.post("/recheck/next", response_model=DiagOut, summary="The current language-check item")
+def recheck_next(current_user: User = Depends(get_current_active_user),
+                 db: Session = Depends(get_db)):
+    return recheck.next_item(db, current_user)
+
+
+@router.post("/recheck/answer", response_model=AnswerOut, summary="Answer a language-check item")
+def recheck_answer(req: AnswerIn, background_tasks: BackgroundTasks,
+                   current_user: User = Depends(get_current_active_user),
+                   db: Session = Depends(get_db)):
+    return recheck.answer(db, current_user, req, background_tasks)
+
+
+@router.post("/recheck/finish", response_model=RecheckOut,
+             summary="Seed the new language from its check")
+def recheck_finish(current_user: User = Depends(get_current_active_user),
+                   db: Session = Depends(get_db)):
+    return recheck.finish(db, current_user)
 
 
 @router.patch("/profile", response_model=CardOut, summary="Edit background answers")

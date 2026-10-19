@@ -22,11 +22,19 @@ def user(session):
     return u
 
 
+def seed(session, user, seeds):
+    return record_diagnostic_seed(session, user.id, seeds, "c")
+
+
+def loops(session, user):
+    return session.get(TopicMastery, (user.id, "loops", "c")).mastery
+
+
 def test_seed_sets_mastery_and_evidence_one(session, user):
-    record_diagnostic_seed(session, user.id, {"loops": 0.7, "arrays": 0.25})
+    seed(session, user, {"loops": 0.7, "arrays": 0.25})
 
     for topic, value in (("loops", 0.7), ("arrays", 0.25)):
-        row = session.get(TopicMastery, (user.id, topic))
+        row = session.get(TopicMastery, (user.id, topic, "c"))
         assert row.mastery == pytest.approx(value)
         assert row.evidence_count == 1
     events = session.query(LearningEvent).filter_by(kind="diagnostic_seed").all()
@@ -37,7 +45,7 @@ def test_seed_sets_mastery_and_evidence_one(session, user):
 
 
 def test_seed_awards_nothing(session, user):
-    record_diagnostic_seed(session, user.id, {"loops": 0.7, "arrays": 0.25})
+    seed(session, user, {"loops": 0.7, "arrays": 0.25})
 
     board = gamification.summary(session, user.id)
     assert board.points == 0
@@ -47,14 +55,14 @@ def test_seed_awards_nothing(session, user):
 
 
 def test_seed_does_not_trigger_stuck_rule(session, user):
-    record_diagnostic_seed(session, user.id, {"loops": 0.25})
+    seed(session, user, {"loops": 0.25})
     ingest(session, EventInput(user.id, "code", 0.0, raw_topic="loops", item_id=1))
     ingest(session, EventInput(user.id, "code", 0.0, raw_topic="loops", item_id=2))
     assert policy.stuck_topic(session, user.id) is None
 
 
 def test_seed_band_is_not_a_level_up_but_mastery_still_is(session, user):
-    record_diagnostic_seed(session, user.id, {"loops": 0.7})
+    seed(session, user, {"loops": 0.7})
 
     def level_ups():
         return [a.code for a in session.query(GamificationAward).filter_by(kind="level_up")]
@@ -68,28 +76,28 @@ def test_seed_band_is_not_a_level_up_but_mastery_still_is(session, user):
 
 
 def test_seed_excluded_from_accuracy(session, user):
-    record_diagnostic_seed(session, user.id, {"loops": 0.7, "arrays": 0.5})
+    seed(session, user, {"loops": 0.7, "arrays": 0.5})
     assert derive_profile(session, user.id).accuracy_rate == 0.0
 
 
 def test_theory_adjustment_only_without_practice(session, user):
-    record_diagnostic_seed(session, user.id, {"loops": 0.5})
+    seed(session, user, {"loops": 0.5})
 
-    event = apply_theory_adjustment(session, user.id, "loops", 0.7)
+    event = apply_theory_adjustment(session, user.id, "loops", 0.7, "c")
     assert event.kind == "diagnostic_theory"
-    assert session.get(TopicMastery, (user.id, "loops")).mastery == pytest.approx(0.7)
+    assert loops(session, user) == pytest.approx(0.7)
     assert session.query(LearningEvent).filter_by(kind="diagnostic_theory").count() == 1
 
     ingest(session, EventInput(user.id, "code", 1.0, raw_topic="loops", item_id=1))
-    after_practice = session.get(TopicMastery, (user.id, "loops")).mastery
+    after_practice = loops(session, user)
 
-    assert apply_theory_adjustment(session, user.id, "loops", 0.2) is None
-    assert session.get(TopicMastery, (user.id, "loops")).mastery == pytest.approx(after_practice)
+    assert apply_theory_adjustment(session, user.id, "loops", 0.2, "c") is None
+    assert loops(session, user) == pytest.approx(after_practice)
     assert session.query(LearningEvent).filter_by(kind="diagnostic_theory").count() == 1
 
 
 def test_seed_twice_is_noop(session, user):
-    assert len(record_diagnostic_seed(session, user.id, {"loops": 0.7})) == 1
-    assert record_diagnostic_seed(session, user.id, {"loops": 0.25}) == []
+    assert len(seed(session, user, {"loops": 0.7})) == 1
+    assert seed(session, user, {"loops": 0.25}) == []
     assert session.query(LearningEvent).filter_by(kind="diagnostic_seed").count() == 1
-    assert session.get(TopicMastery, (user.id, "loops")).mastery == pytest.approx(0.7)
+    assert loops(session, user) == pytest.approx(0.7)

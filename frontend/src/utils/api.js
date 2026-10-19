@@ -217,6 +217,15 @@ export const onboardingAPI = {
     { item_id: itemId, answer, ms_taken: msTaken }, { timeout: EVAL_TIMEOUT }),
   finish:      ()                          => api.post('/onboarding/finish', null, { timeout: EVAL_TIMEOUT }),
   editProfile: (data)                      => api.patch('/onboarding/profile', data),
+  switchLanguage: (language)               => api.post('/onboarding/language', { language }),
+}
+
+// The short code-only check taken on switching to a language never used before
+export const recheckAPI = {
+  next:   ()                        => api.post('/onboarding/recheck/next'),
+  answer: (itemId, answer, msTaken) => api.post('/onboarding/recheck/answer',
+    { item_id: itemId, answer, ms_taken: msTaken }, { timeout: EVAL_TIMEOUT }),
+  finish: ()                        => api.post('/onboarding/recheck/finish'),
 }
 
 export default api

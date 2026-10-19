@@ -25,6 +25,17 @@ class LanguageIn(_Closed):
     language: Literal["c", "cpp", "python"]
 
 
+class SwitchOut(BaseModel):
+    language: str
+    needs_check: bool
+
+
+class RecheckOut(BaseModel):
+    language: str
+    bands: dict[str, str]
+    title: str
+
+
 class AboutIn(_Closed):
     year_of_study: int | None = Field(None, ge=1, le=6)
     program: str | None = Field(None, max_length=100)

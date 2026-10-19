@@ -7,8 +7,8 @@ from app.models.problem import Problem
 from app.services.assessment.sanitize import strip_bug_annotations
 from app.services.assessment.verify import verify_debug, verify_mcq
 
-_MCQ_FIELDS = ("topic", "difficulty", "stem", "options", "answer_index", "verify_code",
-               "explanations")
+_MCQ_FIELDS = ("topic", "difficulty", "language", "stem", "options", "answer_index",
+               "verify_code", "explanations")
 _DEBUG_FIELDS = ("topic", "difficulty", "language", "statement", "buggy_code", "fixed_code",
                  "bug_type")
 
@@ -35,6 +35,8 @@ def seed(db: Session, bank: dict, provider=None) -> Counter:
             report["mcq rejected"] += 1
             continue
         values = {k: item.get(k) for k in _MCQ_FIELDS}
+        values["language"] = values["language"] or "python"
+        values["verify_code"] = values["verify_code"] or ""
         values["explanations"] = values["explanations"] or []
         values["is_diagnostic"] = bool(item.get("is_diagnostic"))
         values["reviewed"] = True

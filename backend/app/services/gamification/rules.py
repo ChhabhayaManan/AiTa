@@ -35,6 +35,7 @@ class Ev:
     hint_level_used: int
     mastery_after: float | None
     mastery_before: float | None = None
+    language: str | None = None
 
 
 @dataclass(frozen=True)
@@ -75,7 +76,7 @@ def level_up(ev: Ev, history: list[Ev]) -> list[Award]:
     student in a band without any history event to show for it."""
     if ev.kind == "diagnostic" or not ev.topic or ev.mastery_after is None:
         return []
-    same = [h for h in history if h.topic == ev.topic]
+    same = [h for h in history if h.topic == ev.topic and h.language == ev.language]
     best_before = max([_rank(h.mastery_after, i + 1) for i, h in enumerate(same)]
                       + [_rank(ev.mastery_before, max(len(same), 1))])
     reached = band(ev.mastery_after, len(same) + 1)

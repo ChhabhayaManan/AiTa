@@ -34,6 +34,8 @@ class LearningEvent(Base):
     mastery_before  = Column(Float, nullable=True)
     mastery_after   = Column(Float, nullable=True)
     source_ref      = Column(String(60), nullable=True)
+    # The language the evidence happened in: c, cpp or python.
+    language        = Column(String(10), nullable=False)
     created_at      = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
@@ -43,6 +45,7 @@ class TopicMastery(Base):
     user_id        = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
                             primary_key=True)
     topic          = Column(String(40), primary_key=True)
+    language       = Column(String(10), primary_key=True)
     mastery        = Column(Float, nullable=False)
     evidence_count = Column(Integer, nullable=False, default=0)
     last_event_at  = Column(DateTime(timezone=True), nullable=True)
@@ -71,12 +74,14 @@ class McqQuestion(Base):
     external_id   = Column(String(60), unique=True, nullable=False)
     topic         = Column(String(40), nullable=False, index=True)
     difficulty    = Column(String(10), nullable=False)
+    # c, cpp or python for a question about code; any for a concept question with none.
+    language      = Column(String(10), nullable=False, default="python", server_default="python")
     stem          = Column(Text, nullable=False)
     # [{"text": ..., "misconception": tag | None}, ...]
     options       = Column(JSON, nullable=False)
     answer_index  = Column(Integer, nullable=False)
-    # ≤ 2 lines of Python whose output is exactly the correct option's text: the
-    # answer key is proven by execution, never by judgement. Never serialised.
+    # ≤ 2 lines of Python whose output is exactly the correct option's text, for a Python
+    # question whose stem prints nothing; empty otherwise. Never serialised.
     verify_code   = Column(Text, nullable=False)
     explanations  = Column(JSON, default=list)
     is_diagnostic = Column(Boolean, nullable=False, default=False)

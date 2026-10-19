@@ -36,7 +36,8 @@ def _learning_context(db: Session, user_id: int, ev: CodeEvaluation, sub) -> Dic
     never writes the profile."""
     problem = db.get(Problem, sub.problem_id) if sub and sub.problem_id else None
     topic = normalise_topic(problem.topic) if problem else None
-    mastery = db.get(TopicMastery, (user_id, topic)) if topic else None
+    language = getattr(sub.language, "value", sub.language) if sub else None
+    mastery = db.get(TopicMastery, (user_id, topic, language)) if topic and language else None
     case = failing_case(db, ev)
     statuses = [r.status for r in db.query(ExecutionResult)
                 .filter(ExecutionResult.evaluation_id == ev.id,

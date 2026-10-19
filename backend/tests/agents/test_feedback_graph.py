@@ -235,7 +235,7 @@ def _bound_evaluation(session, user):
                               ["wrong_initial_value", "off_by_one"])):
         session.add(LearningEvent(
             user_id=user.id, kind="code", topic="dynamic_programming", score=0.5,
-            weight=1.0, misconceptions=tags,
+            weight=1.0, misconceptions=tags, language="python",
             source_ref=f"evaluation:{evaluation.id}" if n == 2 else f"evaluation:{900 + n}"))
     session.commit()
     return evaluation

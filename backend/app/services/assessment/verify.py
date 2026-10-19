@@ -2,7 +2,9 @@
 an item is kept only if running code proves it.
 
 An MCQ is proven by the code in its own stem when that code prints something, and
-otherwise by a short `verify_code` that must compute the answer rather than quote it."""
+otherwise, for Python only, by a short `verify_code` that must compute the answer rather
+than quote it. A C or C++ stem must be a whole program that prints the answer. A concept
+question (language `any`) has no code to run and is checked for shape only."""
 
 import ast
 import re
@@ -18,9 +20,12 @@ from app.services.execution.judge import judge
 from app.services.execution.run_code import run_code
 
 DIFFICULTIES = ("easy", "medium", "hard")
-DEBUG_LANGUAGES = {"python": Language.PYTHON, "cpp": Language.CPP}
+DEBUG_LANGUAGES = {"python": Language.PYTHON, "c": Language.C, "cpp": Language.CPP}
+CODE_LANGUAGES = DEBUG_LANGUAGES
+CONCEPT = "any"
 MAX_VERIFY_LINES = 2
-_STEM_CODE = re.compile(r"```(?:python|py)?[^\n]*\n(.*?)```", re.DOTALL)
+_FENCE_NAMES = {"python": ("python", "py", ""), "c": ("c",), "cpp": ("cpp", "c++")}
+_STEM_CODE = re.compile(r"```([\w+]*)[^\n]*\n(.*?)```", re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -59,23 +64,35 @@ def verify_mcq(item: dict, provider: ExecutionProvider | None = None) -> Check:
         if i != answer and tag is not None and tag not in MISCONCEPTIONS:
             return _fail(f"unknown misconception tag {tag!r}")
 
+    language = item.get("language") or "python"
+    stem_code = _STEM_CODE.search(item.get("stem") or "")
+    if language == CONCEPT:
+        return _fail("a concept question has no code") if stem_code else Check(True)
+    if language not in CODE_LANGUAGES:
+        return _fail(f"unknown language {language!r}")
+    if stem_code and stem_code.group(1).lower() not in _FENCE_NAMES[language]:
+        return _fail(f"stem code is fenced as {stem_code.group(1)!r}, not {language}")
+    if language != "python" and not stem_code:
+        return _fail("stem needs the whole program")
+
     try:
-        stem_code = _STEM_CODE.search(item.get("stem") or "")
         if stem_code:
-            printed = _run_python(stem_code.group(1), provider)
+            printed = _run(CODE_LANGUAGES[language], stem_code.group(2), provider)
             if printed is None:
                 return _fail("stem code did not run cleanly")
             if printed:
                 if printed != texts[answer]:
                     return _fail(f"stem code printed {printed!r}, key says {texts[answer]!r}")
                 return Check(True)
+            if language != "python":
+                return _fail("stem code printed nothing")
 
         code = item.get("verify_code") or ""
         if not code.strip() or _code_lines(code) > MAX_VERIFY_LINES:
             return _fail(f"verify_code must be 1-{MAX_VERIFY_LINES} lines")
         if _hardcodes(code, texts[answer]):
             return _fail("verify_code hardcodes the answer")
-        printed = _run_python(code, provider)
+        printed = _run(Language.PYTHON, code, provider)
     except ExecutorUnavailable:
         return _fail("executor unavailable")
     if printed is None:
@@ -95,8 +112,8 @@ def _hardcodes(code: str, answer: str) -> bool:
                for node in ast.walk(tree))
 
 
-def _run_python(code: str, provider) -> str | None:
-    report = run_code(Language.PYTHON, code, [("", None)], provider=provider)
+def _run(language: Language, code: str, provider) -> str | None:
+    report = run_code(language, code, [("", None)], provider=provider)
     outcome = report.outcomes[0]
     if not report.compiled or outcome.status is not ExecStatus.OK:
         return None
@@ -112,7 +129,7 @@ def verify_debug(item: dict, test_cases, provider: ExecutionProvider | None = No
         return _fail("unknown bug_type")
     language = DEBUG_LANGUAGES.get(item.get("language"))
     if language is None:
-        return _fail("language must be python or cpp")
+        return _fail("language must be python, c or cpp")
     fixed, buggy = item.get("fixed_code") or "", item.get("buggy_code") or ""
     if not fixed.strip() or not buggy.strip():
         return _fail("missing code")

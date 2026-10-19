@@ -15,6 +15,7 @@ from app.schemas.assessment import (
     NextItemResponse,
 )
 from app.services.assessment.grading import grade_debug, grade_mcq
+from app.services.onboarding.recheck import require_no_open_check
 
 router = APIRouter(prefix="/assessment", tags=["Assessment Agent"])
 
@@ -26,7 +27,9 @@ def get_next(
 ):
     """The weakest unlocked topic, with the item type and difficulty set by its measured
     mastery. Coding problems are submitted through
-    `/code-eval/evaluate` with their `id` as `problem_id`."""
+    `/code-eval/evaluate` with their `id` as `problem_id`. A 428 means the student
+    switched to a new language and must take its short check first."""
+    require_no_open_check(db, current_user)
     return asdict(next_item(db, current_user.id))
 
 

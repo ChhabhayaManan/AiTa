@@ -8,7 +8,7 @@ from app.agents.assessment.graph import next_item
 from app.agents.profiling.graph import ingest
 from app.core.exceptions import LLMUnavailable
 from app.models.code_eval import CodeEvaluation, CodeSubmission, Language
-from app.models.learning import DebugChallenge, McqQuestion
+from app.models.learning import DebugAttempt, DebugChallenge, McqQuestion
 from app.models.problem import (
     Difficulty,
     Problem,
@@ -32,13 +32,13 @@ def no_generation(monkeypatch):
     monkeypatch.setattr(policy, "generate_problem", refuse)
 
 
-def add_mcq(session, topic, difficulty="easy"):
+def add_mcq(session, topic, difficulty="easy", language="c"):
     n = next(_ids)
     q = McqQuestion(external_id=f"q{n}", topic=topic, difficulty=difficulty, stem=f"stem {n}",
                     options=[{"text": "1", "misconception": None},
                              {"text": "2", "misconception": "off_by_one"}],
-                    answer_index=0, verify_code="print(1)", explanations=["why"],
-                    reviewed=True)
+                    answer_index=0, verify_code="", explanations=["why"],
+                    reviewed=True, language=language)
     session.add(q)
     session.commit()
     return q
@@ -55,10 +55,10 @@ def add_problem(session, topic, difficulty="easy"):
     return p
 
 
-def add_debug(session, problem, topic, difficulty="easy"):
+def add_debug(session, problem, topic, difficulty="easy", language="c"):
     n = next(_ids)
     c = DebugChallenge(external_id=f"d{n}", problem_id=problem.id, topic=topic,
-                       difficulty=difficulty, language="python", statement="s",
+                       difficulty=difficulty, language=language, statement="s",
                        buggy_code="bug", fixed_code="SECRET_FIX", bug_type="off_by_one",
                        reviewed=True)
     session.add(c)
@@ -69,6 +69,33 @@ def add_debug(session, problem, topic, difficulty="easy"):
 def practise(session, user, topic, score, times=1, kind="code"):
     for _ in range(times):
         ingest(session, EventInput(user_id=user.id, kind=kind, score=score, raw_topic=topic))
+
+
+def test_c_student_sees_only_c_and_concept_items(session, user):
+    c_q, concept = add_mcq(session, "basics_io"), add_mcq(session, "basics_io", language="any")
+    add_mcq(session, "basics_io", language="python")
+    problem = add_problem(session, "basics_io", "medium")
+    c_debug = add_debug(session, problem, "basics_io", "medium")
+    add_debug(session, problem, "basics_io", "medium", language="python")
+
+    plan = policy.load_profile(session, user.id)
+    plan.topic, plan.item_type, plan.difficulty = "basics_io", "mcq", "easy"
+    served = []
+    for _ in range(2):
+        item = policy.pick_item(session, plan).item
+        served.append(item["id"])
+        assert item["language"] in ("c", "any")
+        grade_mcq(session, user.id, item["id"], 0)
+    assert sorted(served) == sorted([c_q.id, concept.id])
+    assert policy.pick_item(session, plan).item_type == "debug"
+
+    plan.item_type, plan.difficulty = "debug", "medium"
+    assert policy.pick_item(session, plan).item["id"] == c_debug.id
+    session.add(DebugAttempt(user_id=user.id, challenge_id=c_debug.id, submitted_code="x",
+                             fixed=True))
+    session.commit()
+    after = policy.pick_item(session, plan)
+    assert after.item_type == "coding" and after.item["id"] == problem.id
 
 
 def test_weakest_unlocked_topic_gets_an_mcq(session, user):
@@ -201,7 +228,8 @@ def test_payloads_never_carry_answers(session, user):
     add_mcq(session, "basics_io")
 
     mcq = next_item(session, user.id)
-    assert set(mcq.item) == {"id", "stem", "options", "topic", "difficulty", "is_diagnostic"}
+    assert set(mcq.item) == {"id", "stem", "options", "topic", "difficulty", "language",
+                             "is_diagnostic"}
     assert mcq.item["options"] == ["1", "2"]
 
     debug = policy._debug_payload(session.query(DebugChallenge).one())
