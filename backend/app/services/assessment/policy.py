@@ -246,7 +246,7 @@ def pick_item(db: Session, plan: Plan) -> NextItem | None:
             if found is None:
                 found, level = _generate_coding(db, plan.topic, plan.difficulty)
                 if found is not None:
-                    plan.notes.append("the bank had no fitting problem, so a new one was generated")
+                    plan.notes.append("none of the saved problems fitted, so a new one was generated")
             payload = _coding_payload if found else None
         if found is None:
             continue
@@ -263,11 +263,11 @@ def _reason(plan: Plan, item_type: str, difficulty: str) -> str:
     state = plan.topics[plan.topic]
     label = TOPIC_LABELS[plan.topic]
     if state.evidence == 0:
-        why = f"{label} is the next unlocked topic you haven't practised yet"
+        why = f"{label} is the next open topic you haven't practised yet"
     else:
-        attempts = "attempt" if state.evidence == 1 else "attempts"
-        why = (f"{label} is your weakest unlocked topic "
-               f"(mastery {state.mastery:.2f} from {state.evidence} {attempts})")
+        answers = "graded answer" if state.evidence == 1 else "graded answers"
+        why = (f"{label} is your weakest open topic "
+               f"(topic level {round(state.mastery * 100)}% after {state.evidence} {answers})")
     article = "an" if difficulty[0] in "aeiou" else "a"
     reason = f"{why}, so here is {article} {difficulty} {TYPE_LABELS[item_type]}"
     if plan.notes:
