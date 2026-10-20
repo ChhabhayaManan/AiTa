@@ -36,7 +36,7 @@ export default function ThreadPicker({ threads, currentId, onSelect }) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="flex max-w-full items-center gap-1 text-xs text-white/45 transition-colors hover:text-white/80"
+        className="flex max-w-full items-center gap-1 text-xs text-ink-subtle transition-colors hover:text-ink"
         aria-haspopup="listbox"
         aria-expanded={open}
         title="Switch conversation"
@@ -47,10 +47,10 @@ export default function ThreadPicker({ threads, currentId, onSelect }) {
       </button>
 
       {open && (
-        <div className="absolute inset-x-3 top-full z-30 mt-1 animate-fade-in rounded-xl border border-white/10 bg-surface-800 p-1.5 shadow-2xl shadow-black/50">
-          <p className="px-2.5 pb-1 pt-1.5 font-mono text-[10px] uppercase tracking-wider text-white/30">Recent chats</p>
+        <div className="absolute inset-x-3 top-full z-30 mt-1 animate-fade-in rounded-2xl border border-line-strong bg-tile-2 p-1.5 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.7)]">
+          <p className="eyebrow px-2.5 pb-1 pt-1.5 text-[10px]">Recent chats</p>
           {threads.length === 0 ? (
-            <p className="px-2.5 py-3 text-xs text-white/35">No saved chats yet.</p>
+            <p className="px-2.5 py-3 text-xs text-ink-subtle">No saved chats yet.</p>
           ) : (
             <ul className="max-h-72 overflow-y-auto" role="listbox">
               {threads.map(t => {
@@ -62,12 +62,12 @@ export default function ThreadPicker({ threads, currentId, onSelect }) {
                       role="option"
                       aria-selected={selected}
                       onClick={() => { setOpen(false); if (!selected) onSelect(t.id) }}
-                      className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${selected ? 'bg-brand-600/15 text-white' : 'text-white/65 hover:bg-white/[0.05] hover:text-white/90'}`}
+                      className={`flex w-full items-start gap-2 rounded-xl px-2.5 py-2 text-left transition-colors ${selected ? 'bg-white/[0.08] text-ink' : 'text-ink-muted hover:bg-white/[0.05] hover:text-ink'}`}
                     >
-                      <MessageSquare size={13} className={`mt-0.5 shrink-0 ${selected ? 'text-brand-400' : 'text-white/25'}`} />
+                      <MessageSquare size={13} className={`mt-0.5 shrink-0 ${selected ? 'text-pop-mint' : 'text-ink-faint'}`} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px]">{t.title || 'Untitled chat'}</span>
-                        <span className="block font-mono text-[10px] text-white/30">{ago(t.updated_at || t.created_at)}</span>
+                        <span className="block font-mono text-[10px] text-ink-faint">{ago(t.updated_at || t.created_at)}</span>
                       </span>
                     </button>
                   </li>

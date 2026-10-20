@@ -1,12 +1,12 @@
 import { AlertTriangle, BarChart3, BookOpen, Lightbulb, Loader2, Play, Wrench } from 'lucide-react'
 
 const TONES = {
-  sky:     'text-sky-300 bg-sky-500/10 border-sky-500/25',
-  violet:  'text-violet-300 bg-violet-500/10 border-violet-500/25',
-  emerald: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/25',
-  amber:   'text-amber-300 bg-amber-500/10 border-amber-500/25',
-  rose:    'text-rose-300 bg-rose-500/10 border-rose-500/25',
-  muted:   'text-white/55 bg-white/[0.04] border-white/10',
+  sky:     'text-pop-aqua bg-pop-aqua/10 border-pop-aqua/25',
+  violet:  'text-pop-pink bg-pop-pink/10 border-pop-pink/25',
+  emerald: 'text-pop-mint bg-pop-mint/10 border-pop-mint/25',
+  amber:   'text-pop-sun bg-pop-sun/10 border-pop-sun/25',
+  rose:    'text-pop-coral bg-pop-coral/10 border-pop-coral/25',
+  muted:   'text-ink-subtle bg-white/[0.04] border-line-strong',
 }
 
 const TOOLS = {

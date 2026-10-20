@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { TextArea } from '../../ui/Field'
 import { CODE_CAP, CodeBlock, ItemActions } from './shared'
 
 export default function PredictOutputView({ item, onSubmit, disabled }) {
@@ -7,11 +8,19 @@ export default function PredictOutputView({ item, onSubmit, disabled }) {
   return (
     <div>
       <CodeBlock language={item.language}>{item.body.code}</CodeBlock>
-      <label htmlFor="predict-output" className="label mt-5">What does this print?</label>
-      <textarea id="predict-output" value={text} onChange={e => setText(e.target.value)}
-        rows={4} maxLength={CODE_CAP} spellCheck={false} disabled={disabled}
+      <TextArea
+        className="mt-5"
+        label="What does this print?"
+        helper="Type the exact output, one line per line."
+        value={text}
+        onChange={e => setText(e.target.value)}
+        rows={4}
+        maxLength={CODE_CAP}
+        spellCheck={false}
+        disabled={disabled}
         placeholder="Type the exact output"
-        className="input-field font-mono resize-y" />
+        mono
+      />
       <ItemActions canSubmit={!!text.trim()} disabled={disabled}
         onSubmit={() => onSubmit({ text })} onSkip={() => onSubmit({ text: '' })} />
     </div>

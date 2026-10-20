@@ -7,8 +7,8 @@ function citationLabel(citation) {
 export default function Citations({ citations, messageId, active }) {
   if (!citations?.length) return null
   return (
-    <div className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-      <p className="mb-1.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-white/35">
+    <div className="mt-3 rounded-2xl border border-line bg-tile-2 px-3 py-2.5">
+      <p className="eyebrow mb-1.5 flex items-center gap-1.5 text-[10px]">
         <BookOpen size={11} /> Sources
       </p>
       <ol className="space-y-0.5">
@@ -17,9 +17,9 @@ export default function Citations({ citations, messageId, active }) {
           const [title, ...rest] = [citation.title, citation.chapter, citation.section].filter(Boolean)
           const body = (
             <>
-              <span className="font-medium text-white/80">{title || 'Untitled source'}</span>
+              <span className="font-medium text-ink-muted">{title || 'Untitled source'}</span>
               {rest.map((part, j) => (
-                <span key={j} className="text-white/45"> › {part}</span>
+                <span key={j} className="text-ink-subtle"> › {part}</span>
               ))}
             </>
           )
@@ -41,7 +41,7 @@ export default function Citations({ citations, messageId, active }) {
                   title={citationLabel(citation)}
                 >
                   {body}
-                  <ExternalLink size={10} className="ml-1 inline -translate-y-px text-white/30 group-hover:text-brand-300" />
+                  <ExternalLink size={10} className="ml-1 inline -translate-y-px text-ink-faint group-hover:text-brand-300" />
                 </a>
               ) : (
                 <span className="min-w-0 flex-1">{body}</span>

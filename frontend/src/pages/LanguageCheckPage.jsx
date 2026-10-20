@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowRight, Loader2, Sparkles } from 'lucide-react'
+import { ArrowRight, Code2, HelpCircle, Layers, RefreshCw } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { recheckAPI, getErrorMessage } from '../utils/api'
 import { StepTitle } from '../components/onboarding/StepControls'
 import BandSummary from '../components/onboarding/BandSummary'
+import FocusLayout from '../components/ui/FocusLayout'
+import Button from '../components/ui/Button'
+import BusyNote from '../components/ui/BusyNote'
 import DiagnosticStep from './onboarding/steps/DiagnosticStep'
 
 const LABELS = { c: 'C', cpp: 'C++', python: 'Python' }
@@ -37,14 +40,23 @@ export default function LanguageCheckPage() {
     navigate('/practice', { replace: true })
   }
 
+  const points = [
+    { icon: Layers, tone: 'bg-pop-aqua/15 text-pop-aqua', text: `Your progress in each language is kept separately, so we need to see where you stand in ${language}.` },
+    { icon: Code2, tone: 'bg-pop-mint/15 text-pop-mint', text: 'How well you explain ideas carries over, so there are no written answers this time.' },
+    { icon: HelpCircle, tone: 'bg-pop-sun/15 text-pop-sun', text: 'Not sure? Press "I don\'t know". It simply counts as not known yet.' },
+  ]
+
   const intro = (
     <>
-      <StepTitle title={`A short check in ${language}`}
+      <StepTitle eyebrow="Language check" title={`A short check in ${language}`}
         subtitle="Up to 9 code questions, about 4 minutes. It starts easy and adapts to your answers." />
-      <ul className="space-y-2 text-sm text-white/60 mb-8 list-disc pl-5">
-        <li>Your progress in each language is kept separately, so we need to see where you stand in {language}.</li>
-        <li>How well you explain ideas carries over, so there are no written answers this time.</li>
-        <li>Not sure? Press "I don't know" — it simply counts as not known yet.</li>
+      <ul className="mb-8 space-y-3">
+        {points.map(({ icon: Icon, tone, text }) => (
+          <li key={text} className="flex items-start gap-3 text-sm leading-relaxed text-ink-muted">
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${tone}`}><Icon size={15} /></span>
+            <span className="pt-1.5">{text}</span>
+          </li>
+        ))}
       </ul>
     </>
   )
@@ -52,41 +64,28 @@ export default function LanguageCheckPage() {
   let body
   if (result) {
     body = (
-      <div>
-        <StepTitle title={`You're set up in ${language}`} subtitle={result.title} />
+      <div className="tile p-6 sm:p-10 motion-safe:animate-rise">
+        <StepTitle eyebrow="Done" title={`You're set up in ${language}`} subtitle={result.title} />
         <div className="mb-8"><BandSummary card={{ bands: result.bands }} /></div>
-        <button type="button" onClick={() => navigate('/practice', { replace: true })}
-          className="btn-primary !w-auto flex items-center gap-2">
-          Go to Practice <ArrowRight size={16} />
-        </button>
+        <Button size="lg" iconRight={ArrowRight} onClick={() => navigate('/practice', { replace: true })}>Go to Practice</Button>
       </div>
     )
   } else if (finishing || finishError) {
     body = finishError ? (
-      <div className="text-center py-6">
-        <p className="text-sm text-red-300 mb-4">{finishError}</p>
-        <button type="button" onClick={finish} className="btn-secondary !w-auto">Try again</button>
+      <div className="tile flex flex-col items-start gap-4 p-6">
+        <p className="text-sm text-ink-muted">{finishError} Try again in a moment.</p>
+        <Button variant="secondary" icon={RefreshCw} onClick={finish}>Try again</Button>
       </div>
     ) : (
-      <div className="flex justify-center py-16">
-        <Loader2 size={24} className="animate-spin text-brand-400" aria-label="Saving your check" />
-      </div>
+      <BusyNote active steps={[{ after: 0, text: 'Saving your check…' }]} />
     )
   } else {
     body = <DiagnosticStep api={recheckAPI} intro={intro} written={false} onSaved={finish} onConflict={onConflict} />
   }
 
   return (
-    <div className="min-h-screen px-4 sm:px-6 py-10">
-      <div className={`${result ? 'max-w-2xl' : 'max-w-5xl'} mx-auto`}>
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-            <Sparkles size={16} className="text-white" />
-          </div>
-          <span className="font-display font-bold text-xl text-white">ai<span className="text-brand-400">TA</span></span>
-        </div>
-        <div className="glass-card p-6 sm:p-8 animate-fade-in">{body}</div>
-      </div>
-    </div>
+    <FocusLayout width={result || finishing || finishError ? 'max-w-2xl' : 'max-w-6xl'}>
+      {body}
+    </FocusLayout>
   )
 }

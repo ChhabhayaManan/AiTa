@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { onboardingAPI, getErrorMessage } from '../../utils/api'
+import FocusLayout from '../../components/ui/FocusLayout'
+import Button from '../../components/ui/Button'
+import Skeleton from '../../components/ui/Skeleton'
 import ProgressHeader from '../../components/onboarding/ProgressHeader'
 import { STEPS } from '../../components/onboarding/options'
 import WelcomeStep from './steps/WelcomeStep'
@@ -77,40 +80,39 @@ export default function OnboardingFlow() {
   const question = diag && !diag.done && diag.item ? diag.order : null
 
   return (
-    <div className="min-h-screen px-4 sm:px-6 py-10">
-      <div className={`${step === 'diagnostic' ? 'max-w-5xl' : 'max-w-2xl'} mx-auto`}>
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-            <Sparkles size={16} className="text-white" />
-          </div>
-          <span className="font-display font-bold text-xl text-white">ai<span className="text-brand-400">TA</span></span>
+    <FocusLayout
+      width={step === 'diagnostic' ? 'max-w-6xl' : 'max-w-2xl'}
+      aside={<span className="hidden text-xs text-ink-subtle sm:block">Setting up your practice · about 10 minutes</span>}
+    >
+      {error ? (
+        <div className="tile flex flex-col items-start gap-4 p-6">
+          <p className="text-sm text-ink-muted">{error} Check your connection, then try again.</p>
+          <Button variant="secondary" icon={RefreshCw} onClick={load}>Try again</Button>
         </div>
-
-        {error ? (
-          <div className="glass-card p-6 text-center">
-            <p className="text-sm text-red-300 mb-4">{error}</p>
-            <button type="button" onClick={load} className="btn-secondary !w-auto">Try again</button>
+      ) : !View ? (
+        <div className="space-y-6" aria-busy="true">
+          <Skeleton className="h-1.5 w-full rounded-full" />
+          <div className="tile space-y-4 p-8">
+            <Skeleton className="h-7 w-1/2" />
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-3/5" />
           </div>
-        ) : !View ? (
-          <div className="flex justify-center py-20">
-            <div className="w-6 h-6 border-2 border-white/20 border-t-brand-400 rounded-full animate-spin" />
+        </div>
+      ) : (
+        <>
+          <ProgressHeader step={step} question={question} remaining={diag?.remaining} />
+          <div className={`${step === 'diagnostic' ? '' : 'tile p-6 sm:p-10'} motion-safe:animate-rise`}>
+            <View
+              key={step}
+              initial={initialFor(step, state)}
+              onSaved={handleSaved}
+              onConflict={handleConflict}
+              onProgress={handleProgress}
+              onBack={CAN_GO_BACK.includes(step) ? handleBack : undefined}
+            />
           </div>
-        ) : (
-          <>
-            <ProgressHeader step={step} question={question} remaining={diag?.remaining} />
-            <div className="glass-card p-6 sm:p-8 animate-fade-in">
-              <View
-                key={step}
-                initial={initialFor(step, state)}
-                onSaved={handleSaved}
-                onConflict={handleConflict}
-                onProgress={handleProgress}
-                onBack={CAN_GO_BACK.includes(step) ? handleBack : undefined}
-              />
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+        </>
+      )}
+    </FocusLayout>
   )
 }

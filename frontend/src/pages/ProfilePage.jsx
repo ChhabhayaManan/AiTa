@@ -1,30 +1,46 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, User, Building, MapPin, Code2, Target, Sparkles, Lock, Shield, Award, Lightbulb } from 'lucide-react'
+import { Award, Building, Lightbulb, Lock, MapPin, Save, Shield, Target, User } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAuth } from '../hooks/useAuth'
 import { userAPI, onboardingAPI, getErrorMessage } from '../utils/api'
-import toast from 'react-hot-toast'
 import BandSummary, { conceptLine } from '../components/onboarding/BandSummary'
 import {
   AboutFields, LearningFields, aboutForm, aboutPayload, aboutComplete, learningForm, learningComplete,
 } from '../components/onboarding/BackgroundFields'
 import { YEARS } from '../components/onboarding/options'
+import { LANGUAGES } from '../components/code/templates'
+import { languageLabel } from '../components/learning/labels'
+import { LanguagePicker } from '../components/practice/Workbench'
+import AppShell from '../components/ui/AppShell'
+import Button from '../components/ui/Button'
+import Chip from '../components/ui/Chip'
+import Tabs from '../components/ui/Tabs'
+import Skeleton from '../components/ui/Skeleton'
+import { TextArea, TextField } from '../components/ui/Field'
 
-const PREFERRED_LANGUAGES = [
-  { value: 'c', label: 'C' },
-  { value: 'cpp', label: 'C++' },
-  { value: 'python', label: 'Python' },
+const TABS = [
+  { value: 'profile', label: 'Profile info', icon: User },
+  { value: 'learning', label: 'Learning', icon: Target },
+  { value: 'security', label: 'Security', icon: Lock },
+  { value: 'privacy', label: 'Privacy', icon: Shield },
 ]
-const languageLabel = value => PREFERRED_LANGUAGES.find(l => l.value === value)?.label || value
-const GOALS = ['Web Development', 'Machine Learning', 'Data Science', 'Mobile Apps', 'Competitive Programming', 'System Design', 'DevOps', 'Cybersecurity']
-const INTERESTS = ['Algorithms', 'AI/ML', 'Databases', 'Networking', 'Frontend', 'Backend', 'Open Source', 'Research']
-const TOPICS = [
-  'variables', 'loops', 'functions', 'recursion', 'OOP', 'data structures',
-  'algorithms', 'sorting', 'binary search', 'graphs', 'dynamic programming',
-  'trees', 'linked lists', 'stacks', 'queues', 'hashing', 'SQL', 'REST APIs',
-  'React', 'Node.js', 'machine learning', 'neural networks', 'pandas', 'numpy',
-  'system design', 'design patterns', 'concurrency', 'testing', 'git',
-]
+
+const PRIVATE = ['Your name and email', 'Your code', 'Your chat messages']
+
+function Panel({ title, description, children }) {
+  return (
+    <section className="tile p-5 sm:p-7">
+      {title && (
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">{title}</h2>
+          {description && <p className="mt-1 text-sm leading-relaxed text-ink-subtle">{description}</p>}
+        </div>
+      )}
+      {children}
+    </section>
+  )
+}
 
 export default function ProfilePage() {
   const { user, updateUser, refreshUser } = useAuth()
@@ -38,19 +54,18 @@ export default function ProfilePage() {
     city: user?.city || '',
     state: user?.state || '',
     years_of_experience: user?.years_of_experience || 0,
-    preferred_language: user?.preferred_language || 'c',
-    learning_goals: user?.learning_goals || [],
-    interests: user?.interests || [],
-    interested_topics: user?.interested_topics || [],
   })
+  const language = user?.preferred_language || 'c'
 
   const [pwForm, setPwForm] = useState({ current_password: '', new_password: '' })
+  const [pwError, setPwError] = useState('')
   const [saving, setSaving] = useState(false)
   const [savingPw, setSavingPw] = useState(false)
   const [savingConsent, setSavingConsent] = useState(false)
   const [consent, setConsent] = useState(user?.data_sharing_consent ?? false)
   const [activeTab, setActiveTab] = useState('profile')
   const [card, setCard] = useState(null)
+  const [cardLoading, setCardLoading] = useState(true)
   const [aboutPrefs, setAboutPrefs] = useState(null)
   const [learningPrefs, setLearningPrefs] = useState(null)
   const [aboutDirty, setAboutDirty] = useState(false)
@@ -58,12 +73,25 @@ export default function ProfilePage() {
   const [switchTo, setSwitchTo] = useState(null)
   const [switching, setSwitching] = useState(false)
 
+  const set = field => e => setForm(f => ({ ...f, [field]: e.target.value }))
+
+  useEffect(() => {
+    onboardingAPI.state()
+      .then(({ data }) => {
+        if (data.current_step !== 'done' || !data.card) return
+        setCard(data.card)
+        setAboutPrefs(aboutForm(data.answers?.about, user))
+        setLearningPrefs(learningForm(data.answers?.learning))
+      })
+      .catch(() => {})
+      .finally(() => setCardLoading(false))
+  }, [])
+
   const handleSwitchLanguage = async () => {
     setSwitching(true)
     try {
       const { data } = await onboardingAPI.switchLanguage(switchTo)
       updateUser({ preferred_language: data.language })
-      setForm(f => ({ ...f, preferred_language: data.language }))
       setSwitchTo(null)
       if (data.needs_check) {
         navigate('/language-check')
@@ -78,17 +106,6 @@ export default function ProfilePage() {
       setSwitching(false)
     }
   }
-
-  useEffect(() => {
-    onboardingAPI.state()
-      .then(({ data }) => {
-        if (data.current_step !== 'done' || !data.card) return
-        setCard(data.card)
-        setAboutPrefs(aboutForm(data.answers?.about, user))
-        setLearningPrefs(learningForm(data.answers?.learning))
-      })
-      .catch(() => {})
-  }, [])
 
   const handleSavePrefs = async () => {
     setSavingPrefs(true)
@@ -120,36 +137,20 @@ export default function ProfilePage() {
     }
   }
 
-  const toggleArray = (field, value) => {
-    setForm(f => ({
-      ...f,
-      [field]: f[field].includes(value) ? f[field].filter(v => v !== value) : [...f[field], value]
-    }))
-  }
-
   const handleSaveProfile = async () => {
     setSaving(true)
     try {
       const payload = {
         ...form,
-        // The study language only changes through the switch above.
-        preferred_language: undefined,
-        // coerce year_of_study: empty string → null, otherwise parse as int
-        year_of_study: form.year_of_study === '' || form.year_of_study === null
-          ? null
-          : parseInt(form.year_of_study, 10) || null,
+        year_of_study: form.year_of_study === '' || form.year_of_study === null ? null : parseInt(form.year_of_study, 10) || null,
         years_of_experience: parseFloat(form.years_of_experience) || 0,
       }
       const { data } = await userAPI.updateProfile(payload)
       updateUser(data)
       setAboutPrefs(a => a && { ...a, year_of_study: data.year_of_study ?? null, institution: data.institution ?? '' })
-      toast.success('Profile updated! ✅')
+      toast.success('Profile saved.')
     } catch (err) {
-      const detail = err.response?.data?.detail
-      const msg = Array.isArray(detail)
-        ? detail.map(e => e.msg || JSON.stringify(e)).join(', ')
-        : detail || 'Update failed.'
-      toast.error(msg)
+      toast.error(getErrorMessage(err, "Couldn't save your profile."))
     } finally {
       setSaving(false)
     }
@@ -157,16 +158,17 @@ export default function ProfilePage() {
 
   const handleChangePassword = async () => {
     if (!pwForm.current_password || !pwForm.new_password) {
-      toast.error('Fill in both password fields.')
+      setPwError('Fill in both password fields.')
       return
     }
+    setPwError('')
     setSavingPw(true)
     try {
       await userAPI.changePassword(pwForm)
-      toast.success('Password changed successfully! 🔒')
+      toast.success('Password changed.')
       setPwForm({ current_password: '', new_password: '' })
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Password change failed.')
+      setPwError(getErrorMessage(err, "Couldn't change your password."))
     } finally {
       setSavingPw(false)
     }
@@ -178,354 +180,177 @@ export default function ProfilePage() {
       await userAPI.updateConsent(value)
       setConsent(value)
       updateUser({ data_sharing_consent: value })
-      toast.success(value ? 'Data sharing enabled.' : 'Data sharing disabled.')
+      toast.success(value ? 'Research sharing turned on.' : 'Research sharing turned off.')
     } catch {
-      toast.error('Failed to update consent.')
+      toast.error("Couldn't update this setting. Try again.")
     } finally {
       setSavingConsent(false)
     }
   }
 
-  const TABS = [
-    { id: 'profile', label: 'Profile Info', icon: User },
-    { id: 'learning', label: 'Learning', icon: Target },
-    { id: 'security', label: 'Security', icon: Lock },
-    { id: 'privacy', label: 'Privacy', icon: Shield },
-  ]
+  const name = user?.full_name || user?.username || 'You'
+  const initials = name.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase()
 
   return (
-    <div className="min-h-screen">
-      {/* Navbar */}
-      <nav className="border-b border-white/[0.06] bg-surface-900/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-3xl mx-auto px-6 h-16 flex items-center gap-4">
-          <button onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors">
-            <ArrowLeft size={18} />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
-              <Sparkles size={14} className="text-white" />
-            </div>
-            <span className="font-display font-700 text-lg text-white">ai<span className="text-brand-400">TA</span></span>
+    <AppShell title="Profile">
+      <div className="mx-auto flex max-w-3xl flex-col gap-5">
+        <header className="tile flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-7">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-pop-aqua font-mono text-xl font-semibold text-canvas shadow-[0_5px_0_#3b9a9f]" aria-hidden="true">
+            {initials}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-2xl font-semibold tracking-tight text-ink">{name}</h1>
+            <p className="mt-1 truncate text-sm text-ink-subtle">@{user?.username} · {user?.email}</p>
           </div>
-          <span className="text-white/20">/</span>
-          <span className="font-display font-600 text-white/60">Edit Profile</span>
-        </div>
-      </nav>
-
-      <div className="max-w-3xl mx-auto px-6 py-10">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-brand-600/20 border border-brand-500/20 flex items-center justify-center">
-            <User size={28} className="text-brand-400" />
+          <div className="flex flex-wrap gap-2">
+            <Chip tone="aqua">Coding in {languageLabel(language)}</Chip>
+            <Chip className="capitalize">{user?.role}</Chip>
           </div>
-          <div>
-            <h1 className="font-display font-700 text-2xl text-white">{user?.username}</h1>
-            <p className="text-white/40 text-sm">{user?.email} · <span className="capitalize">{user?.role}</span></p>
-          </div>
-        </div>
+        </header>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-surface-800 rounded-xl p-1 mb-6">
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 flex-1 py-2.5 px-4 rounded-lg text-sm font-display font-600 transition-all ${activeTab === tab.id ? 'bg-surface-600 text-white' : 'text-white/40 hover:text-white/60'}`}>
-              <tab.icon size={15} />
-              <span className="hidden sm:block">{tab.label}</span>
-            </button>
-          ))}
-        </div>
+        <Tabs tabs={TABS} value={activeTab} onChange={setActiveTab} label="Profile sections" className="self-start" />
 
-        {/* ── Profile Tab ── */}
         {activeTab === 'profile' && (
-          <div className="glass-card p-6 space-y-5 animate-fade-in">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="label">Full Name</label>
-                <div className="relative">
-                  <User size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
-                  <input type="text" value={form.full_name}
-                    onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-                    placeholder="Your full name" className="input-field pl-10" />
-                </div>
-              </div>
-              <div>
-                <label className="label">Institution</label>
-                <div className="relative">
-                  <Building size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
-                  <input type="text" value={form.institution}
-                    onChange={e => setForm(f => ({ ...f, institution: e.target.value }))}
-                    placeholder="College / University" className="input-field pl-10" />
-                </div>
-              </div>
-              <div>
-                <label className="label">City</label>
-                <div className="relative">
-                  <MapPin size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
-                  <input type="text" value={form.city}
-                    onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
-                    placeholder="Your city" className="input-field pl-10" />
-                </div>
-              </div>
-              <div>
-                <label className="label">State</label>
-                <input type="text" value={form.state}
-                  onChange={e => setForm(f => ({ ...f, state: e.target.value }))}
-                  placeholder="Your state" className="input-field" />
-              </div>
-              <div>
-                <label className="label">Year of Study</label>
-                <input type="number" min="1" max="6" value={form.year_of_study}
-                  onChange={e => setForm(f => ({ ...f, year_of_study: e.target.value }))}
-                  placeholder="e.g. 2" className="input-field" />
-              </div>
-              <div>
-                <label className="label">Years of Experience</label>
-                <input type="number" min="0" max="50" step="0.5" value={form.years_of_experience}
-                  onChange={e => setForm(f => ({ ...f, years_of_experience: parseFloat(e.target.value) || 0 }))}
-                  placeholder="0" className="input-field" />
-              </div>
+          <Panel title="Profile info" description="Shown only to you. Your institution and year also help pitch explanations.">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <TextField label="Full name" icon={User} value={form.full_name} onChange={set('full_name')} placeholder="Your full name" />
+              <TextField label="Institution" icon={Building} value={form.institution} onChange={set('institution')} placeholder="College or university" />
+              <TextField label="City" icon={MapPin} value={form.city} onChange={set('city')} placeholder="Your city" />
+              <TextField label="State" value={form.state} onChange={set('state')} placeholder="Your state" />
+              <TextField label="Year of study" type="number" min="1" max="6" value={form.year_of_study} onChange={set('year_of_study')} placeholder="e.g. 2" />
+              <TextField label="Years of coding experience" type="number" min="0" max="50" step="0.5" value={form.years_of_experience}
+                onChange={e => setForm(f => ({ ...f, years_of_experience: parseFloat(e.target.value) || 0 }))} />
             </div>
-            <div>
-              <label className="label">Bio</label>
-              <textarea value={form.bio}
-                onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
-                placeholder="Tell us about yourself..."
-                rows={3}
-                className="input-field resize-none" />
+            <TextArea className="mt-5" label="Bio" optional value={form.bio} onChange={set('bio')} placeholder="A line or two about you" rows={3} />
+            <div className="mt-6 flex justify-end border-t border-line pt-5">
+              <Button icon={Save} onClick={handleSaveProfile} busy={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
             </div>
-            <button onClick={handleSaveProfile} disabled={saving} className="btn-primary">
-              {saving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  Saving...
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2"><Save size={16} /> Save Changes</span>
-              )}
-            </button>
-          </div>
+          </Panel>
         )}
 
-        {/* ── Learning Tab ── */}
         {activeTab === 'learning' && (
-          <div className="space-y-6">
-          <div className="glass-card p-6 space-y-6 animate-fade-in">
-            <div>
-              <p className="label">Skill Level</p>
-              <p className="text-sm font-display font-600 capitalize text-brand-300">{user?.skill_level || 'beginner'}</p>
-              <p className="text-xs text-white/40 mt-1">From your starting check.</p>
-            </div>
-            <div>
-              <label className="label" htmlFor="preferred-language"><Code2 size={12} className="inline mr-1" />Study Language</label>
-              <select id="preferred-language" value={switchTo || form.preferred_language}
-                onChange={e => setSwitchTo(e.target.value === form.preferred_language ? null : e.target.value)}
-                disabled={!card || switching} className="input-field">
-                {PREFERRED_LANGUAGES.map(({ value, label }) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-              <p className="text-xs text-white/40 mt-1">
-                {card ? 'Practice questions, debugging challenges and your progress follow this language.'
-                  : 'You can switch once your starting check is done.'}
-              </p>
+          <>
+            <Panel title="Your language" description="Practice questions, debug challenges and your topic levels follow this language.">
+              {cardLoading ? (
+                <Skeleton className="h-10 w-56 rounded-full" />
+              ) : (
+                <>
+                  <LanguagePicker
+                    languages={LANGUAGES}
+                    value={switchTo || language}
+                    onChange={v => setSwitchTo(v === language ? null : v)}
+                    disabled={!card || switching}
+                  />
+                  {!card && <p className="mt-2 text-xs text-ink-subtle">You can switch once your starting check is done.</p>}
+                </>
+              )}
               {switchTo && (
-                <div className="mt-3 p-4 rounded-xl border border-brand-500/30 bg-brand-600/10 space-y-3" role="alert">
-                  <p className="text-sm text-white/80">
-                    Switch to {languageLabel(switchTo)}? Your {languageLabel(form.preferred_language)} progress is kept
-                    and comes back when you switch back.
+                <div className="mt-5 space-y-3 rounded-[20px] border border-line-strong bg-tile-3 p-5 motion-safe:animate-rise" role="alert">
+                  <p className="text-sm text-ink">
+                    Switch to {languageLabel(switchTo)}? Your {languageLabel(language)} progress is kept and comes back when you switch back.
                   </p>
-                  <p className="text-xs text-white/55">
+                  <p className="text-xs text-ink-subtle">
                     If you haven't studied {languageLabel(switchTo)} here before, you'll take a short code check in it first (about 4 minutes).
                   </p>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={handleSwitchLanguage} disabled={switching} className="btn-primary !w-auto">
-                      {switching ? 'Switching...' : `Switch to ${languageLabel(switchTo)}`}
-                    </button>
-                    <button type="button" onClick={() => setSwitchTo(null)} disabled={switching} className="btn-secondary !w-auto">
-                      Cancel
-                    </button>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button onClick={handleSwitchLanguage} busy={switching}>{switching ? 'Switching…' : `Switch to ${languageLabel(switchTo)}`}</Button>
+                    <Button variant="secondary" onClick={() => setSwitchTo(null)} disabled={switching}>Cancel</Button>
                   </div>
                 </div>
               )}
-            </div>
-            <div>
-              <label className="label"><Sparkles size={12} className="inline mr-1" />Topics <span className="text-white/30 font-normal">(used by recommendation agent)</span></label>
-              <div className="flex flex-wrap gap-2">
-                {TOPICS.map(topic => (
-                  <button key={topic} type="button" onClick={() => toggleArray('interested_topics', topic)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-500 border transition-all ${form.interested_topics.includes(topic) ? 'border-teal-500/60 bg-teal-600/10 text-teal-300' : 'border-white/10 bg-surface-700/30 text-white/40 hover:border-white/20'}`}>
-                    {topic}
-                  </button>
-                ))}
+              <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-5">
+                <span className="text-sm text-ink-muted">Skill level</span>
+                <span className="text-right text-sm">
+                  <span className="font-medium capitalize text-ink">{user?.skill_level || 'beginner'}</span>
+                  <span className="block text-xs text-ink-subtle">From your starting check</span>
+                </span>
               </div>
-            </div>
-            <div>
-              <label className="label"><Target size={12} className="inline mr-1" />Learning Goals</label>
-              <div className="flex flex-wrap gap-2">
-                {GOALS.map(goal => (
-                  <button key={goal} type="button" onClick={() => toggleArray('learning_goals', goal)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-display font-500 border transition-all ${form.learning_goals.includes(goal) ? 'border-brand-500/60 bg-brand-600/10 text-brand-300' : 'border-white/10 bg-surface-700/30 text-white/40 hover:border-white/20'}`}>
-                    {goal}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="label">Interests</label>
-              <div className="flex flex-wrap gap-2">
-                {INTERESTS.map(i => (
-                  <button key={i} type="button" onClick={() => toggleArray('interests', i)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-display font-500 border transition-all ${form.interests.includes(i) ? 'border-purple-500/60 bg-purple-600/10 text-purple-300' : 'border-white/10 bg-surface-700/30 text-white/40 hover:border-white/20'}`}>
-                    {i}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button onClick={handleSaveProfile} disabled={saving} className="btn-primary">
-              {saving ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />Saving...</span>
-                : <span className="flex items-center justify-center gap-2"><Save size={16} /> Save Learning Profile</span>}
-            </button>
-          </div>
+            </Panel>
 
-          {learningPrefs && (
-            <section className="glass-card p-6 space-y-6 animate-fade-in">
-              <div>
-                <h3 className="font-display font-600 text-white mb-1">Background and preferences</h3>
-                <p className="text-white/30 text-sm">Hints, feedback and chat follow these.</p>
-              </div>
-              <LearningFields form={learningPrefs} onChange={setLearningPrefs} />
-              <AboutFields form={aboutPrefs} withSchool={false}
-                onChange={f => { setAboutPrefs(f); setAboutDirty(true) }} />
-              <button onClick={handleSavePrefs}
-                disabled={savingPrefs || !learningComplete(learningPrefs) || (aboutDirty && !aboutComplete(aboutPrefs))}
-                className="btn-primary">
-                {savingPrefs ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />Saving...</span>
-                  : <span className="flex items-center justify-center gap-2"><Save size={16} /> Save Preferences</span>}
-              </button>
-            </section>
-          )}
+            {learningPrefs && (
+              <Panel title="Background and preferences" description="Hints, feedback and chat follow these.">
+                <div className="space-y-8">
+                  <LearningFields form={learningPrefs} onChange={setLearningPrefs} />
+                  <AboutFields form={aboutPrefs} withSchool={false} onChange={f => { setAboutPrefs(f); setAboutDirty(true) }} />
+                </div>
+                <div className="mt-6 flex justify-end border-t border-line pt-5">
+                  <Button
+                    icon={Save}
+                    onClick={handleSavePrefs}
+                    busy={savingPrefs}
+                    disabled={!learningComplete(learningPrefs) || (aboutDirty && !aboutComplete(aboutPrefs))}
+                  >
+                    {savingPrefs ? 'Saving…' : 'Save preferences'}
+                  </Button>
+                </div>
+              </Panel>
+            )}
 
-          {card && (
-            <section className="glass-card p-6 space-y-5 animate-fade-in">
-              <div>
-                <h3 className="font-display font-600 text-white mb-1">Starting check</h3>
-                <p className="text-white/30 text-sm">Your result from onboarding. It can't be edited; practice updates your topic progress from here on.</p>
-              </div>
-              <p className="flex items-center gap-2 font-display font-600 text-lg text-white">
-                <Award size={18} className="text-brand-400" aria-hidden="true" /> {card.title}
-              </p>
-              <BandSummary card={card} headingLevel={4} />
-              <p className="flex items-center gap-2 text-sm text-white/70">
-                <Lightbulb size={16} className="text-brand-400 shrink-0" aria-hidden="true" /> {conceptLine(card)}
-              </p>
-            </section>
-          )}
-          </div>
+            {card && (
+              <Panel title="Starting check" description="Your result from onboarding. It can't be edited. Practice updates your topic levels from here on.">
+                <p className="mb-5 flex items-center gap-2 text-lg font-semibold text-ink">
+                  <Award size={18} className="text-pop-mint" aria-hidden="true" /> {card.title}
+                </p>
+                <BandSummary card={card} headingLevel={4} />
+                <p className="mt-5 flex items-center gap-2 text-sm text-ink-muted">
+                  <Lightbulb size={16} className="shrink-0 text-pop-sun" aria-hidden="true" /> {conceptLine(card)}
+                </p>
+              </Panel>
+            )}
+          </>
         )}
 
-        {/* ── Security Tab ── */}
         {activeTab === 'security' && (
-          <div className="glass-card p-6 space-y-5 animate-fade-in">
-            <div>
-              <h3 className="font-display font-600 text-white mb-1">Change Password</h3>
-              <p className="text-white/30 text-sm mb-5">Make sure it's at least 8 characters with an uppercase and a digit.</p>
-              <div className="space-y-4">
-                <div>
-                  <label className="label">Current Password</label>
-                  <input type="password" value={pwForm.current_password}
-                    onChange={e => setPwForm(f => ({ ...f, current_password: e.target.value }))}
-                    placeholder="••••••••" className="input-field" />
-                </div>
-                <div>
-                  <label className="label">New Password</label>
-                  <input type="password" value={pwForm.new_password}
-                    onChange={e => setPwForm(f => ({ ...f, new_password: e.target.value }))}
-                    placeholder="••••••••" className="input-field" />
-                </div>
-                <button onClick={handleChangePassword} disabled={savingPw} className="btn-primary">
-                  {savingPw ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />Updating...</span>
-                    : <span className="flex items-center justify-center gap-2"><Lock size={16} /> Update Password</span>}
-                </button>
-              </div>
+          <Panel title="Change password" description="Min 8 chars, 1 uppercase, 1 digit.">
+            <div className="space-y-5">
+              <TextField label="Current password" type="password" autoComplete="current-password" value={pwForm.current_password}
+                onChange={e => setPwForm(f => ({ ...f, current_password: e.target.value }))} />
+              <TextField label="New password" type="password" autoComplete="new-password" value={pwForm.new_password}
+                onChange={e => setPwForm(f => ({ ...f, new_password: e.target.value }))} error={pwError} />
             </div>
-          </div>
+            <div className="mt-6 flex justify-end border-t border-line pt-5">
+              <Button icon={Lock} onClick={handleChangePassword} busy={savingPw}>{savingPw ? 'Updating…' : 'Update password'}</Button>
+            </div>
+          </Panel>
         )}
 
-        {/* ── Privacy Tab ── */}
         {activeTab === 'privacy' && (
-          <div className="glass-card p-6 space-y-6 animate-fade-in">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Shield size={16} className="text-brand-400" />
-                <h3 className="font-display font-600 text-white">Data Controls</h3>
+          <Panel title="Privacy" description="You decide whether your activity helps research.">
+            <div className="flex items-start justify-between gap-4 rounded-[20px] border border-line bg-tile-2 p-5">
+              <div className="flex-1">
+                <p id="consent-label" className="text-[15px] font-medium text-ink">Allow your anonymised activity to be used for research and to improve aiTA</p>
+                <p id="consent-desc" className="mt-1.5 text-xs leading-relaxed text-ink-subtle">
+                  This covers things like your scores, how many hints you used and how your topic levels changed, with your name removed. You can turn it off at any time.
+                </p>
               </div>
-              <p className="text-white/30 text-sm mb-6">
-                Control how your data is used. These settings affect peer comparison and collaborative filtering.
-              </p>
-
-              {/* Main consent toggle */}
-              <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-surface-700/30 border border-white/[0.06] mb-4">
-                <div className="flex-1">
-                  <p className="font-display font-600 text-sm text-white mb-1">
-                    Allow anonymized data for peer comparison
-                  </p>
-                  <p className="text-white/40 text-xs leading-relaxed">
-                    Your scores, sessions, and accuracy are anonymized and included in platform-wide
-                    comparisons. No personal info (name, email) is ever shared. You can turn this off
-                    at any time and your data is immediately excluded.
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleConsentToggle(!consent)}
-                  disabled={savingConsent}
-                  className={`shrink-0 w-12 h-6 rounded-full transition-all duration-300 relative ${
-                    consent ? 'bg-brand-600' : 'bg-surface-600'
-                  } ${savingConsent ? 'opacity-50' : ''}`}
-                >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-300 ${
-                    consent ? 'left-6' : 'left-0.5'
-                  }`} />
-                </button>
-              </div>
-
-              {/* What's collected */}
-              <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                <div className="px-4 py-3 bg-surface-700/20 border-b border-white/[0.06]">
-                  <p className="text-white/40 text-xs font-mono uppercase tracking-wider">What data is used</p>
-                </div>
-                {[
-                  { label: 'Points & Level',        desc: 'Used for leaderboard ranking',              shared: true  },
-                  { label: 'Session count',          desc: 'Used for activity comparison',              shared: true  },
-                  { label: 'Code evaluation scores', desc: 'Used for score benchmarking',               shared: true  },
-                  { label: 'Accuracy rate',          desc: 'Used for skill-level comparison',           shared: true  },
-                  { label: 'Name & Email',           desc: 'Never shared — always private',             shared: false },
-                  { label: 'Code submissions',       desc: 'Never shared — always private',             shared: false },
-                  { label: 'Chat messages',          desc: 'Never shared — always private',             shared: false },
-                ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04] last:border-0">
-                    <div>
-                      <p className="text-white/70 text-sm font-display font-500">{item.label}</p>
-                      <p className="text-white/30 text-xs">{item.desc}</p>
-                    </div>
-                    <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${
-                      item.shared
-                        ? consent ? 'bg-brand-600/15 text-brand-400' : 'bg-surface-600 text-white/20'
-                        : 'bg-red-500/10 text-red-400'
-                    }`}>
-                      {item.shared ? (consent ? 'Shared' : 'Off') : 'Private'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <p className="text-white/20 text-xs mt-4">
-                Changing this setting takes effect immediately. Your data is never sold to third parties.
-              </p>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={consent}
+                aria-labelledby="consent-label"
+                aria-describedby="consent-desc"
+                onClick={() => handleConsentToggle(!consent)}
+                disabled={savingConsent}
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300 disabled:opacity-50 ${consent ? 'bg-pop-mint' : 'bg-tile-3'}`}
+              >
+                <span className={`absolute top-1 h-5 w-5 rounded-full bg-ink shadow transition-transform duration-300 ${consent ? 'translate-x-6' : 'translate-x-1'}`} />
+                <span className="sr-only">{consent ? 'On' : 'Off'}</span>
+              </button>
             </div>
-          </div>
+            <div className="mt-5">
+              <p className="eyebrow">Never shared</p>
+              <ul className="mt-3 divide-y divide-line">
+                {PRIVATE.map(item => (
+                  <li key={item} className="flex items-center justify-between py-3 text-sm text-ink-muted">
+                    {item}
+                    <Chip tone="mint" icon={Lock}>Private</Chip>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Panel>
         )}
       </div>
-    </div>
+    </AppShell>
   )
 }

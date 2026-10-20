@@ -3,8 +3,9 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
   AlertCircle, ChevronDown, Clock, FileText, HeartHandshake,
-  RotateCcw, ShieldAlert, Sparkles, ThumbsDown, ThumbsUp,
+  RotateCcw, ShieldAlert, ThumbsDown, ThumbsUp,
 } from 'lucide-react'
+import LogoMark from '../ui/LogoMark'
 import CodeBlock from './CodeBlock'
 import ToolChips from './ToolChips'
 import Citations from './Citations'
@@ -18,8 +19,8 @@ const MODERATED = {
 }
 
 const NOTICES = {
-  busy:  { icon: Clock,       tone: 'text-amber-300/80' },
-  error: { icon: AlertCircle, tone: 'text-rose-300/80' },
+  busy:  { icon: Clock,       tone: 'text-pop-sun' },
+  error: { icon: AlertCircle, tone: 'text-pop-coral' },
 }
 
 const LIVE_LABELS = {
@@ -93,7 +94,7 @@ function AnswerMarkdown({ content, citations, onCite }) {
   const components = useMemo(() => ({
     pre: ({ node }) => <FencedCode node={node} />,
     code: ({ children }) => (
-      <code className="rounded-md border border-white/10 bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.85em] text-amber-200/90">{children}</code>
+      <code className="rounded-md bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.85em] text-pop-sun">{children}</code>
     ),
     sup: ({ node, children }) => {
       const n = Number(node?.properties?.dataCite)
@@ -104,7 +105,7 @@ function AnswerMarkdown({ content, citations, onCite }) {
           onClick={() => onCite(n)}
           title={citationLabel(citations[n - 1])}
           aria-label={`Source ${n}: ${citationLabel(citations[n - 1])}`}
-          className="mx-0.5 inline-flex h-[1.05rem] min-w-[1.05rem] -translate-y-[2px] items-center justify-center rounded bg-brand-500/15 px-1 align-middle font-mono text-[10px] font-bold text-brand-300 transition-colors hover:bg-brand-500/30 hover:text-white"
+          className="mx-0.5 inline-flex h-[1.05rem] min-w-[1.05rem] -translate-y-[2px] items-center justify-center rounded bg-brand-500/15 px-1 align-middle font-mono text-[10px] font-bold text-brand-300 transition-colors hover:bg-brand-500/30 hover:text-ink"
         >
           {n}
         </button>
@@ -115,26 +116,26 @@ function AnswerMarkdown({ content, citations, onCite }) {
     ),
     p: ({ children }) => <p className="my-2 first:mt-0 last:mb-0">{children}</p>,
     ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5 marker:text-brand-400/70">{children}</ul>,
-    ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5 marker:text-white/40">{children}</ol>,
+    ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5 marker:text-ink-subtle">{children}</ol>,
     li: ({ children }) => <li className="pl-0.5">{children}</li>,
-    h1: ({ children }) => <h3 className="mb-2 mt-4 font-display text-base font-bold text-white first:mt-0">{children}</h3>,
-    h2: ({ children }) => <h3 className="mb-2 mt-4 font-display text-[15px] font-bold text-white first:mt-0">{children}</h3>,
-    h3: ({ children }) => <h4 className="mb-1.5 mt-3 font-display text-sm font-semibold text-white first:mt-0">{children}</h4>,
-    h4: ({ children }) => <h4 className="mb-1 mt-3 text-sm font-semibold text-white/90 first:mt-0">{children}</h4>,
-    strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
-    blockquote: ({ children }) => <blockquote className="my-2 border-l-2 border-brand-500/40 pl-3 text-white/60">{children}</blockquote>,
-    hr: () => <hr className="my-4 border-white/10" />,
+    h1: ({ children }) => <h3 className="mb-2 mt-4 font-display text-base font-bold text-ink first:mt-0">{children}</h3>,
+    h2: ({ children }) => <h3 className="mb-2 mt-4 font-display text-[15px] font-bold text-ink first:mt-0">{children}</h3>,
+    h3: ({ children }) => <h4 className="mb-1.5 mt-3 font-display text-sm font-semibold text-ink first:mt-0">{children}</h4>,
+    h4: ({ children }) => <h4 className="mb-1 mt-3 text-sm font-semibold text-ink first:mt-0">{children}</h4>,
+    strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
+    blockquote: ({ children }) => <blockquote className="my-2 border-l-2 border-pop-aqua/40 pl-3 text-ink-subtle">{children}</blockquote>,
+    hr: () => <hr className="my-4 border-line" />,
     table: ({ children }) => (
-      <div className="my-3 overflow-x-auto rounded-lg border border-white/10">
+      <div className="my-3 overflow-x-auto rounded-xl border border-line">
         <table className="w-full border-collapse text-xs">{children}</table>
       </div>
     ),
-    th: ({ children }) => <th className="border-b border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-left font-semibold text-white/85">{children}</th>,
+    th: ({ children }) => <th className="border-b border-line bg-tile-2 px-2.5 py-1.5 text-left font-semibold text-ink">{children}</th>,
     td: ({ children }) => <td className="border-t border-white/[0.06] px-2.5 py-1.5 align-top">{children}</td>,
   }), [citations, onCite])
 
   return (
-    <div className="break-words text-sm leading-relaxed text-white/80">
+    <div className="break-words text-sm leading-relaxed text-ink-muted">
       <Markdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={rehypePlugins}
@@ -156,7 +157,7 @@ function UserText({ text }) {
     if (prose) out.push(<p key={i} className="whitespace-pre-wrap break-words">{prose}</p>)
     if (i + 2 < parts.length) {
       out.push(
-        <pre key={`code-${i}`} className="my-2 overflow-x-auto rounded-lg border border-white/[0.06] bg-[#0d1117] px-3 py-2 font-mono text-xs leading-6 text-green-200/80">
+        <pre key={`code-${i}`} className="my-2 overflow-x-auto rounded-xl bg-canvas px-3 py-2 font-mono text-xs leading-6 text-pop-mint/90">
           {parts[i + 2]}
         </pre>
       )
@@ -181,7 +182,7 @@ function ProblemContext({ text }) {
         <ChevronDown size={12} className={`ml-auto shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="max-h-48 overflow-y-auto whitespace-pre-wrap border-t border-teal-400/15 px-2.5 py-2 text-[11px] leading-relaxed text-white/60">
+        <div className="max-h-48 overflow-y-auto whitespace-pre-wrap border-t border-teal-400/15 px-2.5 py-2 text-[11px] leading-relaxed text-ink-subtle">
           {text}
         </div>
       )}
@@ -190,19 +191,17 @@ function ProblemContext({ text }) {
 }
 
 function Avatar() {
-  return (
-    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 shadow-md shadow-brand-900/40">
-      <Sparkles size={13} className="text-white" />
-    </div>
-  )
+  return <LogoMark className="mt-0.5 h-7 w-7" />
 }
+
+const DOT_DELAYS = ['', '[animation-delay:150ms]', '[animation-delay:300ms]']
 
 function Typing({ status }) {
   return (
-    <div className="flex items-center gap-2 py-1 text-xs text-white/40">
+    <div className="flex items-center gap-2 py-1 text-xs text-ink-subtle">
       <span className="flex gap-1">
-        {[0, 150, 300].map(delay => (
-          <span key={delay} className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-400/70" style={{ animationDelay: `${delay}ms` }} />
+        {DOT_DELAYS.map(delay => (
+          <span key={delay} className={`h-1.5 w-1.5 animate-bounce rounded-full bg-pop-mint/80 ${delay}`} />
         ))}
       </span>
       {LIVE_LABELS[status] || LIVE_LABELS.thinking}…
@@ -218,7 +217,7 @@ function ThumbButton({ active, onClick, label, children }) {
       aria-label={label}
       aria-pressed={active}
       title={label}
-      className={`rounded-md p-1.5 transition-colors ${active ? 'bg-brand-500/15 text-brand-300' : 'text-white/25 hover:bg-white/[0.05] hover:text-white/70'}`}
+      className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${active ? 'bg-white/[0.08] text-ink' : 'text-ink-faint hover:bg-white/[0.06] hover:text-ink-muted'}`}
     >
       {children}
     </button>
@@ -240,7 +239,7 @@ export default function ChatMessage({ message, onThumbs, onRetry }) {
     const { problem, question } = splitProblem(message.content || '')
     return (
       <div className="flex justify-end animate-fade-in">
-        <div className="max-w-[85%] rounded-2xl rounded-br-md border border-brand-500/25 bg-brand-600/20 px-4 py-2.5 text-sm leading-relaxed text-white/90">
+        <div className="max-w-[85%] rounded-[20px] rounded-br-md bg-tile-3 px-4 py-2.5 text-sm leading-relaxed text-ink">
           {problem && <ProblemContext text={problem} />}
           <UserText text={question} />
         </div>
@@ -272,7 +271,7 @@ export default function ChatMessage({ message, onThumbs, onRetry }) {
         <Avatar />
         <div className="min-w-0 flex-1 pt-0.5">
           <ToolChips traces={message.tool_calls} />
-          <div className="flex items-start gap-2.5 rounded-xl border border-dashed border-white/[0.12] bg-white/[0.025] px-3.5 py-2.5 text-sm text-white/60">
+          <div className="flex items-start gap-2.5 rounded-2xl border border-dashed border-line-strong bg-tile-2 px-3.5 py-2.5 text-sm text-ink-muted">
             <Icon size={15} className={`mt-0.5 shrink-0 ${notice.tone}`} />
             <div className="min-w-0">
               <p>{message.content}</p>

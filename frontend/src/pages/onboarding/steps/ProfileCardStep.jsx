@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { Award, Compass, Lightbulb, Pencil, Rocket, Save } from 'lucide-react'
+import { ArrowRight, Award, Compass, Lightbulb, Pencil, RefreshCw, Save } from 'lucide-react'
 import { useAuth } from '../../../hooks/useAuth'
 import { onboardingAPI, getErrorMessage } from '../../../utils/api'
 import { topicLabel } from '../../../components/learning/labels'
@@ -9,6 +9,14 @@ import BandSummary, { conceptLine } from '../../../components/onboarding/BandSum
 import {
   AboutFields, LearningFields, aboutForm, aboutPayload, aboutComplete, learningForm, learningComplete,
 } from '../../../components/onboarding/BackgroundFields'
+import Button from '../../../components/ui/Button'
+import BusyNote from '../../../components/ui/BusyNote'
+
+const FINISH_STEPS = [
+  { after: 0, text: 'Building your profile…' },
+  { after: 4, text: 'Reviewing your written answers…' },
+  { after: 25, text: 'Almost there. Written answers take a little longer…' },
+]
 
 function BackgroundEditor({ card, onSaved }) {
   const { user } = useAuth()
@@ -38,34 +46,24 @@ function BackgroundEditor({ card, onSaved }) {
   }
 
   return (
-    <section className="rounded-xl border border-white/[0.06] bg-surface-900/40 p-4">
+    <section className="rounded-[20px] border border-line bg-tile-2 p-5">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-display font-semibold text-sm text-white">Your background</h3>
-        {!editing && (
-          <button type="button" onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 text-xs text-brand-300 hover:text-brand-200">
-            <Pencil size={13} /> Edit
-          </button>
-        )}
+        <h3 className="text-[15px] font-semibold text-ink">Your background</h3>
+        {!editing && <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(true)}>Edit background</Button>}
       </div>
       {editing ? (
-        <div className="mt-4 space-y-6">
+        <div className="mt-5 space-y-8">
           <AboutFields form={about} onChange={setAbout} />
           <LearningFields form={learning} onChange={setLearning} />
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={cancel} disabled={saving}
-              className="px-4 py-2.5 rounded-xl border border-white/10 text-sm text-white/50 hover:text-white/80 hover:border-white/20 transition-all disabled:opacity-50">
-              Cancel
-            </button>
-            <button type="button" onClick={save}
-              disabled={saving || !aboutComplete(about) || !learningComplete(learning)}
-              className="btn-primary !w-auto flex items-center gap-1.5">
-              <Save size={15} /> {saving ? 'Saving...' : 'Save'}
-            </button>
+            <Button variant="secondary" onClick={cancel} disabled={saving}>Cancel</Button>
+            <Button icon={Save} onClick={save} busy={saving} disabled={!aboutComplete(about) || !learningComplete(learning)}>
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
           </div>
         </div>
       ) : (
-        <p className="text-xs text-white/40 mt-1">Your answers from the earlier steps. You can change them here or later on your Profile page.</p>
+        <p className="mt-1 text-xs text-ink-subtle">Your answers from the earlier steps. You can change them here or later on your Profile page.</p>
       )}
     </section>
   )
@@ -115,47 +113,44 @@ export default function ProfileCardStep({ initial, onConflict }) {
 
   if (!card) {
     return error ? (
-      <div className="text-center py-6" role="alert">
-        <p className="text-sm text-red-300 mb-4">{error}</p>
-        <button type="button" onClick={() => setAttempt(a => a + 1)} className="btn-secondary !w-auto">Try again</button>
+      <div className="flex flex-col items-start gap-4" role="alert">
+        <p className="text-sm text-ink-muted">{error} Try again in a moment.</p>
+        <Button variant="secondary" icon={RefreshCw} onClick={() => setAttempt(a => a + 1)}>Try again</Button>
       </div>
     ) : (
-      <div className="flex flex-col items-center gap-3 py-10" role="status">
-        <div className="w-6 h-6 border-2 border-white/20 border-t-brand-400 rounded-full animate-spin" />
-        <p className="text-sm text-white/50">Building your profile...</p>
-      </div>
+      <BusyNote active steps={FINISH_STEPS} note="This usually takes under a minute." />
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <p className="text-xs font-mono uppercase tracking-wider text-white/40">Your starting title</p>
-        <h2 className="font-display font-bold text-3xl text-white mt-1 flex items-center justify-center gap-2">
-          <Award size={26} className="text-brand-400" aria-hidden="true" /> {card.title}
-        </h2>
+      <div className="relative overflow-hidden rounded-[22px] border border-pop-mint/25 bg-pop-mint/[0.06] p-6 text-center sm:p-8">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-pop-mint text-canvas shadow-[0_6px_0_#4c9a5d]" aria-hidden="true">
+          <Award size={26} />
+        </span>
+        <p className="eyebrow mt-5">Your starting title</p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-ink">{card.title}</h2>
+        <p className="mx-auto mt-2 max-w-[48ch] text-sm text-ink-subtle">Here's where you stand right now. It changes as you practise.</p>
       </div>
 
       <BandSummary card={card} />
 
-      <p className="flex items-center gap-2 text-sm text-white/70">
-        <Lightbulb size={16} className="text-brand-400 shrink-0" aria-hidden="true" /> {conceptLine(card)}
+      <p className="flex items-center gap-2 text-sm text-ink-muted">
+        <Lightbulb size={16} className="shrink-0 text-pop-sun" aria-hidden="true" /> {conceptLine(card)}
       </p>
 
-      <section className="rounded-xl border border-brand-500/20 bg-brand-600/10 p-4">
-        <h3 className="flex items-center gap-2 font-display font-semibold text-sm text-white">
-          <Compass size={16} className="text-brand-400" aria-hidden="true" />
+      <section className="rounded-[20px] border border-line-strong bg-tile-3 p-5">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+          <Compass size={17} className="text-pop-aqua" aria-hidden="true" />
           Start with {topicLabel(card.start_topic)}
         </h3>
-        {card.start_reason && <p className="text-sm text-white/60 mt-1">{card.start_reason}</p>}
+        {card.start_reason && <p className="mt-1.5 text-sm leading-relaxed text-ink-subtle">{card.start_reason}</p>}
       </section>
 
       <BackgroundEditor card={card} onSaved={handleSaved} />
 
-      <div className="flex justify-end">
-        <button type="button" onClick={start} disabled={starting} className="btn-primary !w-auto flex items-center gap-1.5">
-          <Rocket size={16} /> Start learning
-        </button>
+      <div className="flex justify-end border-t border-line pt-6">
+        <Button size="lg" iconRight={ArrowRight} onClick={start} busy={starting}>Start learning</Button>
       </div>
     </div>
   )

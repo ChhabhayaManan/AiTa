@@ -8,10 +8,10 @@ export default function WriteCodeView({ item, onSubmit, disabled }) {
 
   return (
     <div>
-      <RichText text={item.body.statement} className="text-white/85 text-[15px] mb-4" />
+      <RichText text={item.body.statement} className="mb-5 text-[15px] text-ink" />
       <CodeArea value={code} onChange={setCode} disabled={disabled} maxLength={CODE_CAP}
-        label="Your code" />
-      <ItemActions canSubmit={!!code.trim()} disabled={disabled}
+        label="Your code" language={item.language} minHeight="300px" />
+      <ItemActions canSubmit={!!code.trim()} disabled={disabled} busyLabel="Running your code…"
         onSubmit={() => onSubmit({ code })} onSkip={() => onSubmit({ code: '' })} />
     </div>
   )

@@ -3,6 +3,12 @@ import { Check } from 'lucide-react'
 import { LANGUAGES } from '../../../components/onboarding/options'
 import { StepTitle, StepNav, useSaveStep } from '../../../components/onboarding/StepControls'
 
+const KEY = {
+  c:      { glyph: 'C',   face: 'bg-pop-aqua', depth: 'shadow-[0_6px_0_#3b9a9f]' },
+  cpp:    { glyph: 'C++', face: 'bg-pop-pink', depth: 'shadow-[0_6px_0_#a9466b]' },
+  python: { glyph: 'Py',  face: 'bg-pop-sun',  depth: 'shadow-[0_6px_0_#b39331]' },
+}
+
 export default function LanguageStep({ initial, onSaved, onBack, onConflict }) {
   const [language, setLanguage] = useState(initial || null)
   const { saving, save } = useSaveStep('language', onSaved, onConflict)
@@ -10,24 +16,36 @@ export default function LanguageStep({ initial, onSaved, onBack, onConflict }) {
   return (
     <div>
       <StepTitle
+        eyebrow="Language"
         title="Pick your language"
-        subtitle="The check and your practice problems will use it. You can change the default later on your profile."
+        subtitle="The check and your practice problems will use it. You can change it later on your Profile page."
       />
 
-      <div role="radiogroup" aria-label="Programming language" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div role="radiogroup" aria-label="Programming language" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {LANGUAGES.map(l => {
           const selected = language === l.value
+          const key = KEY[l.value]
           return (
-            <button key={l.value} type="button" role="radio" aria-checked={selected}
+            <button
+              key={l.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
               onClick={() => setLanguage(l.value)}
-              className={`relative text-left p-5 rounded-2xl border transition-all ${selected ? 'border-brand-500/60 bg-brand-600/10' : 'border-white/10 bg-surface-700/30 hover:border-white/20'}`}>
-              <span className={`block font-mono font-bold text-3xl mb-3 ${selected ? 'text-brand-300' : 'text-white/70'}`}>
-                {l.label}
+              className={`relative flex flex-row items-center gap-4 rounded-[20px] border p-5 text-left transition-colors duration-200 sm:flex-col sm:items-start ${
+                selected ? 'border-ink bg-tile-3' : 'border-line-strong bg-tile-2 hover:border-ink-faint'
+              }`}
+            >
+              <span aria-hidden="true" className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl font-mono text-lg font-bold text-canvas transition-transform duration-200 ${key.face} ${selected ? 'translate-y-1 shadow-[0_2px_0_rgba(0,0,0,0.4)]' : key.depth}`}>
+                {key.glyph}
               </span>
-              <span className="block text-xs text-white/45 leading-relaxed">{l.blurb}</span>
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold text-ink">{l.label}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-ink-subtle">{l.blurb}</span>
+              </span>
               {selected && (
-                <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center">
-                  <Check size={12} className="text-white" />
+                <span className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full bg-ink">
+                  <Check size={14} className="text-canvas" strokeWidth={3} />
                 </span>
               )}
             </button>

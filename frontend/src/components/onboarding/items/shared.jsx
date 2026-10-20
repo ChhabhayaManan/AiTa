@@ -1,13 +1,17 @@
-import { Loader2, Send } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { LANGUAGES } from '../options'
+import Button from '../../ui/Button'
 
 export const CODE_CAP = 4000
 
 export function CodeFrame({ language, children }) {
   const label = LANGUAGES.find(l => l.value === language)?.label || language
   return (
-    <div className="rounded-xl bg-black/40 border border-white/10 overflow-hidden">
-      <div className="px-4 py-1.5 border-b border-white/[0.06] text-[10px] font-mono uppercase tracking-widest text-white/30">{label}</div>
+    <div className="overflow-hidden rounded-2xl border border-line bg-[#0e0e11]">
+      <div className="flex items-center gap-2 border-b border-line bg-tile-2 px-4 py-2">
+        <span className="h-2 w-2 rounded-full bg-pop-aqua" aria-hidden="true" />
+        <span className="font-mono text-[11px] font-semibold tracking-wide text-ink-muted">{label}</span>
+      </div>
       {children}
     </div>
   )
@@ -16,23 +20,18 @@ export function CodeFrame({ language, children }) {
 export function CodeBlock({ language, children }) {
   return (
     <CodeFrame language={language}>
-      <pre className="p-4 text-sky-300 text-sm font-mono leading-relaxed overflow-x-auto whitespace-pre">{children}</pre>
+      <pre className="overflow-x-auto whitespace-pre p-4 font-mono text-[13.5px] leading-relaxed text-ink">{children}</pre>
     </CodeFrame>
   )
 }
 
-export function ItemActions({ canSubmit, disabled, onSubmit, onSkip, label = 'Submit', busyLabel = 'Checking...' }) {
+export function ItemActions({ canSubmit, disabled, onSubmit, onSkip, label = 'Submit', busyLabel = 'Checking…' }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mt-5">
-      <button type="button" onClick={onSkip} disabled={disabled}
-        className="text-sm text-white/40 hover:text-white/70 transition-colors disabled:opacity-50">
-        I don't know
-      </button>
-      <button type="button" onClick={onSubmit} disabled={!canSubmit || disabled}
-        className="btn-primary !w-auto flex items-center gap-2">
-        {disabled ? <Loader2 size={16} className="animate-spin" /> : <Send size={15} />}
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+      <Button variant="ghost" onClick={onSkip} disabled={disabled}>I don't know</Button>
+      <Button size="lg" icon={Send} onClick={onSubmit} disabled={!canSubmit} busy={disabled}>
         {disabled ? busyLabel : label}
-      </button>
+      </Button>
     </div>
   )
 }

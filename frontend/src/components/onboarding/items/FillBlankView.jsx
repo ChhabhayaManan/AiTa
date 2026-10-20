@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { TextField } from '../../ui/Field'
 import { CodeBlock, ItemActions } from './shared'
 
 const BLANK_CAP = 300
@@ -16,16 +17,25 @@ export default function FillBlankView({ item, onSubmit, disabled }) {
           <span key={i}>
             {part}
             {i < parts.length - 1 && (
-              <mark className="px-1 rounded bg-amber-400/20 text-amber-200 ring-1 ring-amber-400/50">{marker}</mark>
+              <mark className="rounded-md bg-pop-sun/20 px-1 text-pop-sun ring-1 ring-pop-sun/50">{text.trim() ? text : marker}</mark>
             )}
           </span>
         ))}
       </CodeBlock>
-      <label htmlFor="fill-blank" className="label mt-5">What goes in the blank?</label>
-      <input id="fill-blank" type="text" value={text} onChange={e => setText(e.target.value)}
+      <TextField
+        className="mt-5"
+        label="What goes in the blank?"
+        helper="Your answer is shown in the code above as you type."
+        value={text}
+        onChange={e => setText(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && canSubmit) onSubmit({ text }) }}
-        maxLength={BLANK_CAP} spellCheck={false} autoComplete="off" disabled={disabled}
-        placeholder="The missing code" className="input-field font-mono" />
+        maxLength={BLANK_CAP}
+        spellCheck={false}
+        autoComplete="off"
+        disabled={disabled}
+        placeholder="The missing code"
+        inputClassName="font-mono text-sm"
+      />
       <ItemActions canSubmit={!!text.trim()} disabled={disabled}
         onSubmit={() => onSubmit({ text })} onSkip={() => onSubmit({ text: '' })} />
     </div>

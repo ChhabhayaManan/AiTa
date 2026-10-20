@@ -139,9 +139,13 @@ export const codeEvalAPI = {
   getProblem:       (id)   => api.get(`/code-eval/problems/${id}`),
 }
 
+// A report waits on the model; the backend falls back to a pattern-only report when it is
+// slow, and that fallback can land after the default 60s.
+const FEEDBACK_TIMEOUT = 120000
+
 export const feedbackAPI = {
-  autoGenerate: ()       => api.post('/feedback/auto-generate'),
-  generate:    (data)    => api.post('/feedback/generate', data),
+  autoGenerate: ()       => api.post('/feedback/auto-generate', null, { timeout: FEEDBACK_TIMEOUT }),
+  generate:    (data)    => api.post('/feedback/generate', data, { timeout: FEEDBACK_TIMEOUT }),
   getAll:      ()        => api.get('/feedback/'),
   unreadCount: ()        => api.get('/feedback/unread-count'),
   getReport:   (id)      => api.get(`/feedback/${id}`),

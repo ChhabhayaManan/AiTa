@@ -2,6 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { onboardingAPI, getErrorMessage } from '../../utils/api'
+import Button from '../ui/Button'
 
 export function useSaveStep(step, onSaved, onConflict) {
   const [saving, setSaving] = useState(false)
@@ -20,27 +21,42 @@ export function useSaveStep(step, onSaved, onConflict) {
   return { saving, save }
 }
 
-export function StepTitle({ title, subtitle }) {
+export function StepTitle({ title, subtitle, eyebrow }) {
   return (
-    <div className="mb-6">
-      <h2 className="font-display font-bold text-xl text-white">{title}</h2>
-      {subtitle && <p className="text-sm text-white/45 mt-1 leading-relaxed">{subtitle}</p>}
+    <div className="mb-7">
+      {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
+      <h2 className="text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">{title}</h2>
+      {subtitle && <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-ink-subtle">{subtitle}</p>}
     </div>
   )
 }
 
+const COLS = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-2 sm:grid-cols-3',
+  4: 'grid-cols-2 sm:grid-cols-4',
+  5: 'grid-cols-2 sm:grid-cols-5',
+  6: 'grid-cols-3 sm:grid-cols-6',
+}
+
 export function ChoiceGroup({ label, options, value, onChange, columns = 2, clearable = false }) {
-  const cols = { 2: 'grid-cols-2', 3: 'grid-cols-2 sm:grid-cols-3', 4: 'grid-cols-2 sm:grid-cols-4', 5: 'grid-cols-2 sm:grid-cols-5', 6: 'grid-cols-3 sm:grid-cols-6' }
   return (
     <div role="radiogroup" aria-label={label}>
-      <span className="label">{label}</span>
-      <div className={`grid gap-2 ${cols[columns] || cols[2]}`}>
+      <span className="mb-2.5 block text-[13px] font-medium text-ink-muted">{label}</span>
+      <div className={`grid gap-2 ${COLS[columns] || COLS[2]}`}>
         {options.map(o => {
           const selected = value === o.value
           return (
-            <button key={o.value} type="button" role="radio" aria-checked={selected}
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
               onClick={() => onChange(selected && clearable ? null : o.value)}
-              className={`py-2.5 px-3 rounded-xl border text-sm font-display font-semibold transition-all ${selected ? 'border-brand-500/60 bg-brand-600/10 text-brand-300' : 'border-white/10 bg-surface-700/30 text-white/50 hover:border-white/20'}`}>
+              className={`min-h-[44px] rounded-2xl border px-3 py-2 text-sm font-medium transition-colors duration-200 ${
+                selected ? 'border-ink bg-ink text-canvas' : 'border-line-strong bg-tile-2 text-ink-muted hover:border-ink-faint hover:text-ink'
+              }`}
+            >
               {o.label}
             </button>
           )
@@ -52,17 +68,13 @@ export function ChoiceGroup({ label, options, value, onChange, columns = 2, clea
 
 export function StepNav({ onBack, onNext, canNext = true, saving, nextLabel = 'Next' }) {
   return (
-    <div className="flex items-center justify-between gap-3 mt-8">
+    <div className="mt-10 flex items-center justify-between gap-3 border-t border-line pt-6">
       {onBack ? (
-        <button type="button" onClick={onBack} disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-white/10 text-sm text-white/50 hover:text-white/80 hover:border-white/20 transition-all disabled:opacity-50">
-          <ChevronLeft size={16} /> Back
-        </button>
+        <Button variant="ghost" icon={ChevronLeft} onClick={onBack} disabled={saving}>Back</Button>
       ) : <span />}
-      <button type="button" onClick={onNext} disabled={!canNext || saving}
-        className="btn-primary !w-auto flex items-center gap-1.5">
-        {saving ? 'Saving...' : nextLabel} {!saving && <ChevronRight size={16} />}
-      </button>
+      <Button size="lg" iconRight={ChevronRight} onClick={onNext} disabled={!canNext} busy={saving}>
+        {saving ? 'Saving…' : nextLabel}
+      </Button>
     </div>
   )
 }

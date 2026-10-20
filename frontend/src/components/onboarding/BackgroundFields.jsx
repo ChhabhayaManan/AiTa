@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { TextField } from '../ui/Field'
 import {
   YEARS, EXPERIENCE, GOALS,
   EXPLANATION_STYLES, EXAMPLE_ORDERS, CHAT_LANGUAGES, HOURS_PER_WEEK, SELF_RATINGS,
@@ -29,31 +29,22 @@ export const learningForm = (initial) =>
 export const learningComplete = (form) => LEARNING_FIELDS.every(f => form[f] !== null)
 
 export function AboutFields({ form, onChange, withSchool = true }) {
-  const id = useId()
   const set = (field) => (value) => onChange({ ...form, [field]: value })
   const program = (
-    <div>
-      <label className="label" htmlFor={`${id}-program`}>Program</label>
-      <input id={`${id}-program`} type="text" maxLength={100} value={form.program}
-        onChange={e => set('program')(e.target.value)}
-        placeholder="e.g. B.Tech CSE" className="input-field" />
-    </div>
+    <TextField label="Program" optional maxLength={100} value={form.program}
+      onChange={e => set('program')(e.target.value)} placeholder="e.g. B.Tech CSE" />
   )
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {withSchool ? (
         <>
           <ChoiceGroup label="Year of study" options={YEARS} value={form.year_of_study}
             onChange={set('year_of_study')} columns={6} clearable />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {program}
-            <div>
-              <label className="label" htmlFor={`${id}-institution`}>Institution</label>
-              <input id={`${id}-institution`} type="text" maxLength={255} value={form.institution}
-                onChange={e => set('institution')(e.target.value)}
-                placeholder="College / University" className="input-field" />
-            </div>
+            <TextField label="Institution" optional maxLength={255} value={form.institution}
+              onChange={e => set('institution')(e.target.value)} placeholder="College or university" />
           </div>
         </>
       ) : program}
@@ -70,7 +61,7 @@ export function AboutFields({ form, onChange, withSchool = true }) {
 export function LearningFields({ form, onChange }) {
   const set = (field) => (value) => onChange({ ...form, [field]: value })
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <ChoiceGroup label="Explanations" options={EXPLANATION_STYLES} value={form.explanation_style}
         onChange={set('explanation_style')} />
       <ChoiceGroup label="Examples or concept first?" options={EXAMPLE_ORDERS} value={form.example_order}
