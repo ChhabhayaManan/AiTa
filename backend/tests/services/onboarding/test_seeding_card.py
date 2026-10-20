@@ -5,6 +5,7 @@ import pytest
 from app.core.topics import TOPICS
 from app.services.onboarding import profile_card, seeding
 from app.services.onboarding.types import ItemRef, Resp, Seed
+from app.services.onboarding.walk import TIERS
 
 ASKED = {"strong": Seed(0.70, "asked"), "ok": Seed(0.50, "asked"),
          "needs_work": Seed(0.25, "asked")}
@@ -77,7 +78,7 @@ def test_write_code_does_not_upgrade_needs_work():
                   Resp(ItemRef("arrays", "write_code", "medium", "write"), 1.0, "sandbox")]
     out = seeding.seeds(responses)
     assert out["functions"] == Seed(0.25, "asked")
-    assert seeding.skill_level(out) == "intermediate"
+    assert seeding.skill_level(out) == "beginner"
 
 
 def test_concept_level():
@@ -88,9 +89,13 @@ def test_concept_level():
 
 
 def test_skill_level():
-    strong = {t: ASKED["strong"] for t in TOPICS[:6]}
-    assert seeding.skill_level(strong) == "advanced"
-    assert seeding.skill_level({**dict(list(strong.items())[:2]), "sorting": ASKED["ok"]}) == "intermediate"
+    def cleared(tiers):
+        return {t: ASKED["strong"] for tier in TIERS[:tiers] for t in tier}
+
+    assert seeding.skill_level(cleared(4)) == "advanced"
+    assert seeding.skill_level(cleared(3)) == "intermediate"
+    assert seeding.skill_level(cleared(2)) == "beginner"
+    assert seeding.skill_level({**cleared(3), "loops": ASKED["ok"]}) == "beginner"
     assert seeding.skill_level({"basics_io": ASKED["strong"],
                                 "loops": Seed(0.60, "inferred")}) == "beginner"
 

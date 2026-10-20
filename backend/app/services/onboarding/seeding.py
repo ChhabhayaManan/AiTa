@@ -15,8 +15,8 @@ SEED_VALUES = {"strong": 0.70, "ok": 0.50, "needs_work": 0.25, "inferred": 0.60}
 CODE_WEIGHT = 0.75
 CONCEPT_HIGH = 0.75
 CONCEPT_MEDIUM = 0.4
-ADVANCED_STRONG = 6
-INTERMEDIATE_STRONG = 2
+ADVANCED_LEVEL = 4
+INTERMEDIATE_LEVEL = 3
 WRITE_UPGRADES = TIERS[1] + TIERS[2]
 
 
@@ -59,8 +59,18 @@ def concept_level(theory_scores: list[float | None]) -> str:
     return "medium" if mean >= CONCEPT_MEDIUM else "low"
 
 
+def tier_level(seeds: dict[str, Seed]) -> int:
+    level = 0
+    for tier in TIERS:
+        asked = [seeds[t] for t in tier if t in seeds and seeds[t].source == "asked"]
+        if not asked or any(s.value != SEED_VALUES["strong"] for s in asked):
+            break
+        level += 1
+    return level
+
+
 def skill_level(seeds: dict[str, Seed]) -> str:
-    strong = sum(1 for s in seeds.values() if s.value == SEED_VALUES["strong"])
-    if strong >= ADVANCED_STRONG:
+    level = tier_level(seeds)
+    if level >= ADVANCED_LEVEL:
         return "advanced"
-    return "intermediate" if strong >= INTERMEDIATE_STRONG else "beginner"
+    return "intermediate" if level >= INTERMEDIATE_LEVEL else "beginner"

@@ -73,7 +73,7 @@ export default function LanguageCheckPage() {
       </div>
     )
   } else {
-    body = <DiagnosticStep api={recheckAPI} intro={intro} onSaved={finish} onConflict={onConflict} />
+    body = <DiagnosticStep api={recheckAPI} intro={intro} written={false} onSaved={finish} onConflict={onConflict} />
   }
 
   return (

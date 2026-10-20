@@ -28,10 +28,11 @@ const KIND_LABEL = {
   theory: 'Explain in words',
 }
 
+const MAP_NOTE = 'From your code answers so far. Your written answers can still move a topic on your profile.'
 const MS_CAP = 3_600_000
 const THEORY_COUNT = 3
 
-export default function DiagnosticStep({ initial, onSaved, onConflict, onProgress, api = onboardingAPI, intro }) {
+export default function DiagnosticStep({ initial, onSaved, onConflict, onProgress, api = onboardingAPI, intro, written = true }) {
   const [started, setStarted] = useState(!!initial)
   const [diag, setDiag] = useState(null)
   const [map, setMap] = useState(initial?.topic_map || {})
@@ -174,7 +175,7 @@ export default function DiagnosticStep({ initial, onSaved, onConflict, onProgres
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <aside className="lg:order-2 lg:w-72 shrink-0">
-        <TopicMap states={map} />
+        <TopicMap states={map} note={written ? MAP_NOTE : null} />
       </aside>
 
       <div className="flex-1 min-w-0 lg:order-1">

@@ -4,7 +4,7 @@ import { topicLabel } from '../learning/labels'
 const STATES = {
   asking:     { label: 'Asking now',  chip: 'border-brand-400/80 bg-brand-600/20 text-brand-200 motion-safe:animate-pulse' },
   strong:     { label: 'Strong',      chip: 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300' },
-  ok:         { label: 'Okay',        chip: 'border-sky-500/40 bg-sky-500/10 text-sky-300' },
+  ok:         { label: 'Passed',      chip: 'border-sky-500/40 bg-sky-500/10 text-sky-300' },
   needs_work: { label: 'Needs work',  chip: 'border-amber-500/50 bg-amber-500/10 text-amber-300' },
   inferred:   { label: 'Inferred',    chip: 'border-dotted border-sky-400/60 bg-transparent text-sky-300/80' },
   skipped:    { label: 'Skipped',     chip: 'border-white/15 bg-transparent text-white/35 italic' },
@@ -13,10 +13,11 @@ const STATES = {
 
 const CHIP = 'inline-flex items-center px-2.5 py-1 rounded-lg border-2 text-[11px] font-display font-semibold leading-tight'
 
-export default function TopicMap({ states = {} }) {
+export default function TopicMap({ states = {}, note }) {
   return (
     <section aria-label="Topic map" className="rounded-xl border border-white/[0.06] bg-surface-900/40 p-4">
-      <h3 className="label !mb-3">Topic map</h3>
+      <h3 className={`label ${note ? '!mb-1' : '!mb-3'}`}>Topic map</h3>
+      {note && <p className="text-[11px] text-white/40 mb-3">{note}</p>}
       <ol className="space-y-2">
         {TIERS.map((tier, i) => (
           <li key={i} className="flex items-start gap-2">

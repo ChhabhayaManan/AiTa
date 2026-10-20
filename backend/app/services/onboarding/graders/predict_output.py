@@ -10,7 +10,10 @@ from app.services.onboarding.types import Grade
 def grade(item: DiagnosticItem, answer: dict, provider: ExecutionProvider | None = None) -> Grade:
     expected = item.key["expected_output"]
     text = answer.get("text")
-    score = 0.0 if is_blank(text) else float(normalize_output(text) == normalize_output(expected))
-    why = ("Your output matches what the program prints." if score
-           else "The program prints this; compare it with yours line by line.")
+    if is_blank(text):
+        score, why = 0.0, "No answer given. This is what the program prints."
+    else:
+        score = float(normalize_output(text) == normalize_output(expected))
+        why = ("Your output matches what the program prints." if score
+               else "The program prints this; compare it with yours line by line.")
     return Grade(score, "key", {"correct": score >= 0.5, "expected": expected, "why": why})

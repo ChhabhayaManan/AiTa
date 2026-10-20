@@ -1,9 +1,8 @@
 """The profile reveal card shown after the diagnostic. Pure: no LLM, no points."""
 
 from app.core.topics import TOPICS
-from app.services.onboarding.seeding import SEED_VALUES
+from app.services.onboarding.seeding import SEED_VALUES, tier_level
 from app.services.onboarding.types import Card, Seed
-from app.services.onboarding.walk import TIERS
 
 TITLES = ["Fresh Starter", "Syntax Scout", "Loop Wrangler", "Array Ace", "Recursion Ranger",
           "Algorithm Architect"]
@@ -28,13 +27,7 @@ def band_of(seed: Seed | None) -> str:
 
 
 def title_for(seeds: dict[str, Seed]) -> str:
-    level = 0
-    for tier in TIERS:
-        asked = [seeds[t] for t in tier if t in seeds and seeds[t].source == "asked"]
-        if not asked or any(s.value != SEED_VALUES["strong"] for s in asked):
-            break
-        level += 1
-    return TITLES[level]
+    return TITLES[tier_level(seeds)]
 
 
 def build(seeds: dict[str, Seed], concept: str, prefs: dict, start_topic: str) -> Card:

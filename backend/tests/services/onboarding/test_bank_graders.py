@@ -150,4 +150,5 @@ def test_empty_answers_score_zero_without_calls(session):
     for kind, answer in BLANK.items():
         grade = GRADERS[kind](make(session, kind), answer, provider)
         assert grade.score == 0.0, kind
+        assert "yours" not in grade.reveal["why"], kind
     assert provider.calls == []
