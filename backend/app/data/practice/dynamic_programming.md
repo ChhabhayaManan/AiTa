@@ -926,3 +926,984 @@ int main() {
 }
 ```
 === END ===
+
+=== PROBLEM ===
+ID: aita-dp-tile-strip
+DIFFICULTY: easy
+STATEMENT: A single line contains an integer n. A strip of length n must be covered exactly, with no gaps and no overlaps, by tiles of length 2 and tiles of length 3 placed end to end. Two tilings are different if the sequence of tile lengths from left to right is different. Print the number of different tilings modulo 1000000007.
+CONSTRAINTS: 1 <= n <= 100000. Print the count modulo 1000000007; it is 0 when no tiling exists.
+REFERENCE:
+```python
+import sys
+
+MOD = 1000000007
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    n = int(data[k])
+    ways = [0] * (n + 3)
+    ways[0] = 1
+    ways[2] = 1
+    for i in range(3, n + 1):
+        ways[i] = (ways[i - 2] + ways[i - 3]) % MOD
+    print(ways[n])
+```
+TESTS:
+### input
+5
+### output
+2
+### input
+1
+### output
+0
+### input
+2
+### output
+1
+### input
+3
+### output
+1
+### input
+8
+### output
+4
+### input
+12
+### output
+12
+### input
+100000
+### output
+327940636
+=== END ===
+
+=== PROBLEM ===
+ID: aita-dp-stone-jumps
+DIFFICULTY: easy
+STATEMENT: The first line contains an integer n, the number of stones in a row. The second line contains n integers, the cost of standing on each stone from left to right. You start on the first stone and must finish on the last one, and each move takes you forward by exactly one or exactly two stones. You pay the cost of every stone you stand on, including the first and the last. Print the smallest total cost.
+CONSTRAINTS: 1 <= n <= 100000; each cost is between 0 and 10000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    cost = [int(x) for x in data[pos + 1:pos + 1 + n]]
+    pos += 1 + n
+    best = [0] * n
+    best[0] = cost[0]
+    if n > 1:
+        best[1] = cost[0] + cost[1]
+    for i in range(2, n):
+        best[i] = cost[i] + min(best[i - 1], best[i - 2])
+    print(best[n - 1])
+```
+TESTS:
+### input
+5
+1 100 1 1 1
+### output
+3
+### input
+1
+7
+### output
+7
+### input
+2
+3 4
+### output
+7
+### input
+6
+10 1 10 1 10 1
+### output
+13
+### input
+4
+0 0 0 0
+### output
+0
+### input
+7
+5 2 8 3 9 4 6
+### output
+20
+### input
+40
+10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000
+### output
+210000
+=== END ===
+
+=== PROBLEM ===
+ID: aita-dp-no-adjacent
+DIFFICULTY: medium
+STATEMENT: The first line contains an integer n. The second line contains n integers. Choose some of these numbers, possibly none of them, so that no two chosen numbers stand next to each other in the list. Print the largest possible sum of the chosen numbers; choosing nothing gives a sum of 0.
+CONSTRAINTS: 1 <= n <= 100000; each number is between -1000000000 and 1000000000, so the answer needs a 64-bit integer (long long in C).
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    values = [int(x) for x in data[pos + 1:pos + 1 + n]]
+    pos += 1 + n
+    before_prev, prev = 0, 0
+    for x in values:
+        before_prev, prev = prev, max(prev, before_prev + x)
+    print(prev)
+```
+TESTS:
+### input
+5
+3 2 7 10 1
+### output
+13
+### input
+1
+5
+### output
+5
+### input
+1
+-3
+### output
+0
+### input
+4
+-1 -2 -3 -4
+### output
+0
+### input
+6
+4 4 4 4 4 4
+### output
+12
+### input
+7
+2 -1 5 -3 8 6 -2
+### output
+15
+### input
+100
+1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000 1000000000
+### output
+50000000000
+=== END ===
+
+=== PROBLEM ===
+ID: aita-dp-blocked-paths
+DIFFICULTY: medium
+STATEMENT: The first line contains two integers r and c. Each of the next r lines contains a string of exactly c characters with no spaces, where '.' is an open cell and '#' is a blocked cell. A robot starts in the top-left cell and wants to reach the bottom-right cell. At each step it moves one cell to the right or one cell down, and it may never stand on a blocked cell. Print the number of different routes modulo 1000000007.
+CONSTRAINTS: 1 <= r, c <= 100. Print 0 if the start or the end cell is blocked or no route exists.
+REFERENCE:
+```python
+import sys
+
+MOD = 1000000007
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    r, c = int(data[pos]), int(data[pos + 1])
+    grid = data[pos + 2:pos + 2 + r]
+    pos += 2 + r
+    ways = [[0] * c for _ in range(r)]
+    for i in range(r):
+        for j in range(c):
+            if grid[i][j] == '#':
+                continue
+            if i == 0 and j == 0:
+                ways[i][j] = 1
+                continue
+            up = ways[i - 1][j] if i > 0 else 0
+            left = ways[i][j - 1] if j > 0 else 0
+            ways[i][j] = (up + left) % MOD
+    print(ways[r - 1][c - 1])
+```
+TESTS:
+### input
+3 3
+...
+.#.
+...
+### output
+2
+### input
+1 1
+.
+### output
+1
+### input
+1 1
+#
+### output
+0
+### input
+2 2
+..
+..
+### output
+2
+### input
+3 3
+#..
+...
+...
+### output
+0
+### input
+2 3
+...
+..#
+### output
+0
+### input
+3 4
+.#..
+....
+....
+### output
+4
+### input
+3 5
+..#..
+.....
+#....
+### output
+8
+### input
+25 25
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+### output
+603457371
+=== END ===
+
+=== PROBLEM ===
+ID: aita-dp-knapsack-small
+DIFFICULTY: hard
+STATEMENT: The first line contains two integers n and W, the number of items and the capacity of a bag. Each of the next n lines contains two integers w and v, the weight and the value of one item. Each item can be packed at most once, and the total weight packed must not exceed W. Print the largest total value that can be packed.
+CONSTRAINTS: 1 <= n <= 100; 1 <= W <= 10000; 1 <= w <= 10000; 0 <= v <= 1000000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n, cap = int(data[pos]), int(data[pos + 1])
+    pos += 2
+    best = [0] * (cap + 1)
+    for _ in range(n):
+        w, v = int(data[pos]), int(data[pos + 1])
+        pos += 2
+        for room in range(cap, w - 1, -1):
+            best[room] = max(best[room], best[room - w] + v)
+    print(best[cap])
+```
+TESTS:
+### input
+1 5
+5 10
+### output
+10
+### input
+1 4
+5 10
+### output
+0
+### input
+3 5
+2 6
+3 10
+4 12
+### output
+16
+### input
+4 7
+1 1
+3 4
+4 5
+5 7
+### output
+9
+### input
+4 10
+5 10
+4 40
+6 30
+3 50
+### output
+90
+### input
+3 6
+2 3
+2 3
+2 3
+### output
+9
+### input
+5 3
+4 100
+5 100
+6 100
+7 100
+8 100
+### output
+0
+### input
+20 10000
+997 1200
+1234 1500
+2500 3100
+3333 4000
+4000 5200
+1500 1700
+800 1000
+2100 2600
+3600 4500
+4100 5000
+1800 2300
+2700 3300
+950 1150
+1600 2050
+3000 3650
+2200 2750
+5000 6100
+1100 1400
+2900 3550
+4500 5600
+### output
+12750
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-tile-strip
+LANGUAGE: c
+BUG: wrong_initial_value
+CORRECT:
+```c
+#include <stdio.h>
+
+long long ways[100003];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        ways[0] = 1;
+        ways[1] = 0;
+        ways[2] = 1;
+        for (int i = 3; i <= n; i++) {
+            ways[i] = (ways[i - 2] + ways[i - 3]) % 1000000007;
+        }
+        printf("%lld\n", ways[n]);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+long long ways[100003];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        ways[0] = 1;
+        ways[1] = 1;
+        ways[2] = 1;
+        for (int i = 3; i <= n; i++) {
+            ways[i] = (ways[i - 2] + ways[i - 3]) % 1000000007;
+        }
+        printf("%lld\n", ways[n]);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-no-adjacent
+LANGUAGE: c
+BUG: off_by_one
+CORRECT:
+```c
+#include <stdio.h>
+
+long long a[100001];
+long long best[100001];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        for (int i = 1; i <= n; i++) {
+            scanf("%lld", &a[i]);
+        }
+        best[0] = 0;
+        best[1] = a[1] > 0 ? a[1] : 0;
+        for (int i = 2; i <= n; i++) {
+            long long skip = best[i - 1];
+            long long take = best[i - 2] + a[i];
+            best[i] = take > skip ? take : skip;
+        }
+        printf("%lld\n", best[n]);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+long long a[100001];
+long long best[100001];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        for (int i = 1; i <= n; i++) {
+            scanf("%lld", &a[i]);
+        }
+        best[0] = 0;
+        best[1] = a[1] > 0 ? a[1] : 0;
+        for (int i = 2; i <= n; i++) {
+            long long skip = best[i - 1];
+            long long take = best[i - 1] + a[i];
+            best[i] = take > skip ? take : skip;
+        }
+        printf("%lld\n", best[n]);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-knapsack-small
+LANGUAGE: c
+BUG: uninitialised_variable
+CORRECT:
+```c
+#include <stdio.h>
+
+long long best[10001];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n, cap;
+        scanf("%d %d", &n, &cap);
+        for (int c = 0; c <= cap; c++) {
+            best[c] = 0;
+        }
+        for (int k = 0; k < n; k++) {
+            int w;
+            long long v;
+            scanf("%d %lld", &w, &v);
+            for (int c = cap; c >= w; c--) {
+                if (best[c - w] + v > best[c]) {
+                    best[c] = best[c - w] + v;
+                }
+            }
+        }
+        printf("%lld\n", best[cap]);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+long long best[10001];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n, cap;
+        scanf("%d %d", &n, &cap);
+        for (int k = 0; k < n; k++) {
+            int w;
+            long long v;
+            scanf("%d %lld", &w, &v);
+            for (int c = cap; c >= w; c--) {
+                if (best[c - w] + v > best[c]) {
+                    best[c] = best[c - w] + v;
+                }
+            }
+        }
+        printf("%lld\n", best[cap]);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: dsa-max-subarray
+LANGUAGE: cpp
+BUG: wrong_loop_bound
+CORRECT:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> a(n);
+        for (int i = 0; i < n; i++) {
+            cin >> a[i];
+        }
+        int current = a[0], best = a[0];
+        for (int i = 1; i < n; i++) {
+            current = max(a[i], current + a[i]);
+            best = max(best, current);
+        }
+        cout << best << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> a(n);
+        for (int i = 0; i < n; i++) {
+            cin >> a[i];
+        }
+        int current = a[0], best = a[0];
+        for (int i = 1; i < n - 1; i++) {
+            current = max(a[i], current + a[i]);
+            best = max(best, current);
+        }
+        cout << best << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-tile-strip
+LANGUAGE: cpp
+BUG: missing_base_case
+CORRECT:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    const long long MOD = 1000000007;
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<long long> ways(n + 3, 0);
+        ways[0] = 1;
+        ways[2] = 1;
+        for (int i = 3; i <= n; i++) {
+            ways[i] = (ways[i - 2] + ways[i - 3]) % MOD;
+        }
+        cout << ways[n] << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    const long long MOD = 1000000007;
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<long long> ways(n + 3, 0);
+        ways[0] = 1;
+        for (int i = 3; i <= n; i++) {
+            ways[i] = (ways[i - 2] + ways[i - 3]) % MOD;
+        }
+        cout << ways[n] << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-stone-jumps
+LANGUAGE: cpp
+BUG: wrong_comparison_operator
+CORRECT:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<long long> cost(n), best(n);
+        for (int i = 0; i < n; i++) {
+            cin >> cost[i];
+        }
+        best[0] = cost[0];
+        if (n > 1) {
+            best[1] = cost[0] + cost[1];
+        }
+        for (int i = 2; i < n; i++) {
+            if (best[i - 1] < best[i - 2]) {
+                best[i] = cost[i] + best[i - 1];
+            } else {
+                best[i] = cost[i] + best[i - 2];
+            }
+        }
+        cout << best[n - 1] << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<long long> cost(n), best(n);
+        for (int i = 0; i < n; i++) {
+            cin >> cost[i];
+        }
+        best[0] = cost[0];
+        if (n > 1) {
+            best[1] = cost[0] + cost[1];
+        }
+        for (int i = 2; i < n; i++) {
+            if (best[i - 1] > best[i - 2]) {
+                best[i] = cost[i] + best[i - 1];
+            } else {
+                best[i] = cost[i] + best[i - 2];
+            }
+        }
+        cout << best[n - 1] << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-knapsack-small
+LANGUAGE: cpp
+BUG: off_by_one
+CORRECT:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n, cap;
+        cin >> n >> cap;
+        vector<long long> best(cap + 1, 0);
+        for (int k = 0; k < n; k++) {
+            int w;
+            long long v;
+            cin >> w >> v;
+            for (int c = cap; c >= w; c--) {
+                best[c] = max(best[c], best[c - w] + v);
+            }
+        }
+        cout << best[cap] << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n, cap;
+        cin >> n >> cap;
+        vector<long long> best(cap + 1, 0);
+        for (int k = 0; k < n; k++) {
+            int w;
+            long long v;
+            cin >> w >> v;
+            for (int c = cap; c > w; c--) {
+                best[c] = max(best[c], best[c - w] + v);
+            }
+        }
+        cout << best[cap] << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-stone-jumps
+LANGUAGE: python
+BUG: index_out_of_range
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    cost = list(map(int, input().split()))
+    best = [0] * n
+    best[0] = cost[0]
+    if n > 1:
+        best[1] = cost[0] + cost[1]
+    for i in range(2, n):
+        best[i] = cost[i] + min(best[i - 1], best[i - 2])
+    print(best[n - 1])
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    cost = list(map(int, input().split()))
+    best = [0] * n
+    best[0] = cost[0]
+    best[1] = cost[0] + cost[1]
+    for i in range(2, n):
+        best[i] = cost[i] + min(best[i - 1], best[i - 2])
+    print(best[n - 1])
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-blocked-paths
+LANGUAGE: python
+BUG: wrong_initial_value
+CORRECT:
+```python
+MOD = 1000000007
+t = int(input())
+for _ in range(t):
+    r, c = map(int, input().split())
+    grid = [input().strip() for _ in range(r)]
+    ways = [[0] * c for _ in range(r)]
+    ways[0][0] = 1 if grid[0][0] == '.' else 0
+    for j in range(1, c):
+        ways[0][j] = ways[0][j - 1] if grid[0][j] == '.' else 0
+    for i in range(1, r):
+        ways[i][0] = ways[i - 1][0] if grid[i][0] == '.' else 0
+    for i in range(1, r):
+        for j in range(1, c):
+            if grid[i][j] == '.':
+                ways[i][j] = (ways[i - 1][j] + ways[i][j - 1]) % MOD
+    print(ways[r - 1][c - 1])
+```
+BUGGY:
+```python
+MOD = 1000000007
+t = int(input())
+for _ in range(t):
+    r, c = map(int, input().split())
+    grid = [input().strip() for _ in range(r)]
+    ways = [[0] * c for _ in range(r)]
+    ways[0][0] = 1 if grid[0][0] == '.' else 0
+    for j in range(1, c):
+        ways[0][j] = 1 if grid[0][j] == '.' else 0
+    for i in range(1, r):
+        ways[i][0] = ways[i - 1][0] if grid[i][0] == '.' else 0
+    for i in range(1, r):
+        for j in range(1, c):
+            if grid[i][j] == '.':
+                ways[i][j] = (ways[i - 1][j] + ways[i][j - 1]) % MOD
+    print(ways[r - 1][c - 1])
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-dp-knapsack-small
+LANGUAGE: python
+BUG: wrong_loop_bound
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n, cap = map(int, input().split())
+    items = [tuple(map(int, input().split())) for _ in range(n)]
+    best = [0] * (cap + 1)
+    for k in range(n):
+        w, v = items[k]
+        for room in range(cap, w - 1, -1):
+            best[room] = max(best[room], best[room - w] + v)
+    print(best[cap])
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n, cap = map(int, input().split())
+    items = [tuple(map(int, input().split())) for _ in range(n)]
+    best = [0] * (cap + 1)
+    for k in range(n - 1):
+        w, v = items[k]
+        for room in range(cap, w - 1, -1):
+            best[room] = max(best[room], best[room - w] + v)
+    print(best[cap])
+```
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: easy
+STEM:
+ways[i] counts the ways to cover a strip of length i with tiles of length 2 and 3. What does this program print?
+```python
+ways = [1, 0, 1]
+for i in range(3, 8):
+    ways.append(ways[i - 2] + ways[i - 3])
+print(ways[7])
+```
+OPTIONS:
+A) 2 || off_by_one
+B) 3 || correct
+C) 1 || wrong_initial_value
+D) 5 || none
+EXPLANATION: The list grows 1, 0, 1, 1, 1, 2, 2, 3, so a strip of length 7 has 3 tilings: 2+2+3, 2+3+2 and 3+2+2.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: medium
+STEM:
+best(i) is the largest sum you can pick from vals[i:] without taking two neighbours. What does this program print?
+```python
+memo = {}
+
+def best(i, vals):
+    if i >= len(vals):
+        return 0
+    if i in memo:
+        return memo[i]
+    memo[i] = max(best(i + 1, vals), vals[i] + best(i + 2, vals))
+    return memo[i]
+
+print(best(0, [4, 1, 2, 7, 5]), len(memo))
+```
+OPTIONS:
+A) 11 7 || none
+B) 19 5 || none
+C) 11 5 || correct
+D) 8 5 || off_by_one
+EXPLANATION: Working back from the end gives best values 5, 7, 7, 8, 11, and only i = 0 to 4 are stored because calls with i past the end return before saving.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: hard
+STEM:
+What does this program print?
+```python
+weight = [2, 3]
+value = [3, 4]
+cap = 6
+best = [0] * (cap + 1)
+for k in range(2):
+    for c in range(weight[k], cap + 1):
+        best[c] = max(best[c], best[c - weight[k]] + value[k])
+print(best[cap])
+```
+OPTIONS:
+A) 7 || none
+B) 8 || none
+C) 12 || none
+D) 9 || correct
+EXPLANATION: Because c runs upward, best[c - weight[k]] may already include item k, so an item can be used again and three items of weight 2 give 9.
+=== END ===

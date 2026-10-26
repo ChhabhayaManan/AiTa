@@ -1042,3 +1042,1174 @@ int main() {
 }
 ```
 === END ===
+
+=== PROBLEM ===
+ID: aita-fn-digit-sum-winner
+DIFFICULTY: easy
+STATEMENT: A single line contains two positive integers a and b. Add up the digits of each number. Print the number whose digits add up to more. If both digit sums are equal, print the smaller of the two numbers. Hint: write a function that returns the digit sum of a number, and call it once for a and once for b.
+CONSTRAINTS: 1 <= a, b <= 1000000000000000000.
+REFERENCE:
+```python
+import sys
+
+
+def digit_sum(x):
+    total = 0
+    while x > 0:
+        total += x % 10
+        x //= 10
+    return total
+
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(t):
+    a = int(data[1 + 2 * k])
+    b = int(data[2 + 2 * k])
+    sa, sb = digit_sum(a), digit_sum(b)
+    if sa > sb:
+        print(a)
+    elif sb > sa:
+        print(b)
+    else:
+        print(min(a, b))
+```
+TESTS:
+### input
+123 99
+### output
+99
+### input
+55 19
+### output
+19
+### input
+1000000000000000000 9
+### output
+9
+### input
+7 7
+### output
+7
+### input
+999999999999999999 1
+### output
+999999999999999999
+### input
+40 13
+### output
+13
+=== END ===
+
+=== PROBLEM ===
+ID: aita-fn-round-best
+DIFFICULTY: easy
+STATEMENT: Three players play n rounds of a game. The first line contains an integer n. Each of the next n lines contains three integers: the scores of the three players in that round. A score can be negative. For every round take the highest of its three scores, and print the sum of these highest scores over all rounds. Hint: write a function that returns the largest of three numbers.
+CONSTRAINTS: 1 <= n <= 1000; -1000000000 <= each score <= 1000000000.
+REFERENCE:
+```python
+import sys
+
+
+def max_of_three(a, b, c):
+    best = a
+    if b > best:
+        best = b
+    if c > best:
+        best = c
+    return best
+
+
+data = sys.stdin.read().split()
+pos = 0
+t = int(data[pos])
+pos += 1
+for _ in range(t):
+    n = int(data[pos])
+    pos += 1
+    total = 0
+    for _ in range(n):
+        a, b, c = int(data[pos]), int(data[pos + 1]), int(data[pos + 2])
+        pos += 3
+        total += max_of_three(a, b, c)
+    print(total)
+```
+TESTS:
+### input
+3
+1 5 3
+4 4 2
+0 -1 -2
+### output
+9
+### input
+1
+-5 -2 -9
+### output
+-2
+### input
+2
+1000000000 999999999 -1000000000
+1000000000 1000000000 1000000000
+### output
+2000000000
+### input
+4
+-1 -1 -1
+2 7 7
+3 -8 1
+-100 -50 -75
+### output
+-41
+### input
+1
+0 0 0
+### output
+0
+### input
+2
+-1000000000 -1000000000 -1000000000
+-3 -7 -4
+### output
+-1000000003
+=== END ===
+
+=== PROBLEM ===
+ID: aita-fn-divisor-classes
+DIFFICULTY: medium
+STATEMENT: The proper divisors of a number are all its positive divisors smaller than the number itself (the proper divisors of 12 are 1, 2, 3, 4 and 6). A number is perfect if its proper divisors add up to exactly the number, abundant if they add up to more, and deficient if they add up to less. The first line contains an integer n. The second line contains n positive integers. Print three integers separated by single spaces: how many of the n numbers are deficient, how many are perfect, and how many are abundant. Hint: write a function that returns the sum of the proper divisors of a number.
+CONSTRAINTS: 1 <= n <= 100; 1 <= each number <= 10000.
+REFERENCE:
+```python
+import sys
+
+
+def proper_divisor_sum(x):
+    return sum(d for d in range(1, x) if x % d == 0)
+
+
+data = sys.stdin.read().split()
+pos = 0
+t = int(data[pos])
+pos += 1
+for _ in range(t):
+    n = int(data[pos])
+    pos += 1
+    counts = [0, 0, 0]
+    for x in map(int, data[pos:pos + n]):
+        s = proper_divisor_sum(x)
+        if s < x:
+            counts[0] += 1
+        elif s == x:
+            counts[1] += 1
+        else:
+            counts[2] += 1
+    pos += n
+    print(*counts)
+```
+TESTS:
+### input
+5
+6 12 7 28 1
+### output
+2 2 1
+### input
+1
+1
+### output
+1 0 0
+### input
+4
+496 8128 945 2
+### output
+1 2 1
+### input
+6
+10000 9999 18 20 16 25
+### output
+3 0 3
+### input
+3
+2 3 4
+### output
+3 0 0
+### input
+100
+9901 9902 9903 9904 9905 9906 9907 9908 9909 9910 9911 9912 9913 9914 9915 9916 9917 9918 9919 9920 9921 9922 9923 9924 9925 9926 9927 9928 9929 9930 9931 9932 9933 9934 9935 9936 9937 9938 9939 9940 9941 9942 9943 9944 9945 9946 9947 9948 9949 9950 9951 9952 9953 9954 9955 9956 9957 9958 9959 9960 9961 9962 9963 9964 9965 9966 9967 9968 9969 9970 9971 9972 9973 9974 9975 9976 9977 9978 9979 9980 9981 9982 9983 9984 9985 9986 9987 9988 9989 9990 9991 9992 9993 9994 9995 9996 9997 9998 9999 10000
+### output
+77 0 23
+=== END ===
+
+=== PROBLEM ===
+ID: aita-fn-nearest-prime
+DIFFICULTY: medium
+STATEMENT: A single line contains a positive integer n. Print the prime number closest to n. If n itself is prime, print n. If two primes are equally close to n, print the smaller one. Hint: write a function that checks whether a number is prime, then call it on the numbers n, n - 1, n + 1, n - 2, n + 2 and so on.
+CONSTRAINTS: 1 <= n <= 1000000.
+REFERENCE:
+```python
+import sys
+
+
+def is_prime(m):
+    if m < 2:
+        return False
+    d = 2
+    while d * d <= m:
+        if m % d == 0:
+            return False
+        d += 1
+    return True
+
+
+def nearest_prime(n):
+    d = 0
+    while True:
+        if is_prime(n - d):
+            return n - d
+        if is_prime(n + d):
+            return n + d
+        d += 1
+
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    print(nearest_prime(int(data[k])))
+```
+TESTS:
+### input
+10
+### output
+11
+### input
+1
+### output
+2
+### input
+2
+### output
+2
+### input
+9
+### output
+7
+### input
+4
+### output
+3
+### input
+120
+### output
+113
+### input
+24
+### output
+23
+### input
+1000000
+### output
+1000003
+=== END ===
+
+=== PROBLEM ===
+ID: aita-fn-triple-prime-kth
+DIFFICULTY: hard
+STATEMENT: Call a number a triple prime if three numbers are all prime: the number itself, the number written with its digits in reverse order, and the sum of its digits. For example, 113 is a triple prime because 113, 311 and 1 + 1 + 3 = 5 are all prime. 13 is not, because 1 + 3 = 4 is not prime, and 23 is not, because 32 is not prime. The smallest triple primes are 2, 3, 5, 7, 11, 101, 113. A single line contains an integer k. Print the k-th smallest triple prime. Hint: write separate functions for checking a prime, reversing a number and adding up its digits, and reuse them.
+CONSTRAINTS: 1 <= k <= 300.
+REFERENCE:
+```python
+import sys
+
+
+def is_prime(m):
+    if m < 2:
+        return False
+    d = 2
+    while d * d <= m:
+        if m % d == 0:
+            return False
+        d += 1
+    return True
+
+
+def reverse_number(x):
+    r = 0
+    while x > 0:
+        r = r * 10 + x % 10
+        x //= 10
+    return r
+
+
+def digit_sum(x):
+    total = 0
+    while x > 0:
+        total += x % 10
+        x //= 10
+    return total
+
+
+def is_triple_prime(x):
+    return is_prime(x) and is_prime(reverse_number(x)) and is_prime(digit_sum(x))
+
+
+data = sys.stdin.read().split()
+t = int(data[0])
+ks = [int(v) for v in data[1:1 + t]]
+found = []
+x = 1
+while len(found) < max(ks):
+    x += 1
+    if is_triple_prime(x):
+        found.append(x)
+for k in ks:
+    print(found[k - 1])
+```
+TESTS:
+### input
+1
+### output
+2
+### input
+5
+### output
+11
+### input
+6
+### output
+101
+### input
+10
+### output
+157
+### input
+25
+### output
+919
+### input
+100
+### output
+7817
+### input
+300
+### output
+19001
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-digit-sum-winner
+LANGUAGE: c
+BUG: wrong_comparison_operator
+CORRECT:
+```c
+#include <stdio.h>
+
+int digit_sum(long long x) {
+    int total = 0;
+    while (x > 0) {
+        total += x % 10;
+        x /= 10;
+    }
+    return total;
+}
+
+long long winner(long long a, long long b) {
+    int sa = digit_sum(a);
+    int sb = digit_sum(b);
+    if (sa > sb) {
+        return a;
+    }
+    if (sb > sa) {
+        return b;
+    }
+    return a < b ? a : b;
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long a, b;
+        scanf("%lld %lld", &a, &b);
+        printf("%lld\n", winner(a, b));
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int digit_sum(long long x) {
+    int total = 0;
+    while (x > 0) {
+        total += x % 10;
+        x /= 10;
+    }
+    return total;
+}
+
+long long winner(long long a, long long b) {
+    int sa = digit_sum(a);
+    int sb = digit_sum(b);
+    if (sa > sb) {
+        return a;
+    }
+    if (sb > sa) {
+        return b;
+    }
+    return a > b ? a : b;
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long a, b;
+        scanf("%lld %lld", &a, &b);
+        printf("%lld\n", winner(a, b));
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-divisor-classes
+LANGUAGE: c
+BUG: wrong_loop_bound
+CORRECT:
+```c
+#include <stdio.h>
+
+int proper_divisor_sum(int x) {
+    int sum = 0;
+    for (int d = 1; d < x; d++) {
+        if (x % d == 0) {
+            sum += d;
+        }
+    }
+    return sum;
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        int deficient = 0, perfect = 0, abundant = 0;
+        for (int i = 0; i < n; i++) {
+            int x;
+            scanf("%d", &x);
+            int s = proper_divisor_sum(x);
+            if (s < x) {
+                deficient++;
+            } else if (s == x) {
+                perfect++;
+            } else {
+                abundant++;
+            }
+        }
+        printf("%d %d %d\n", deficient, perfect, abundant);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int proper_divisor_sum(int x) {
+    int sum = 0;
+    for (int d = 1; d <= x; d++) {
+        if (x % d == 0) {
+            sum += d;
+        }
+    }
+    return sum;
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        int deficient = 0, perfect = 0, abundant = 0;
+        for (int i = 0; i < n; i++) {
+            int x;
+            scanf("%d", &x);
+            int s = proper_divisor_sum(x);
+            if (s < x) {
+                deficient++;
+            } else if (s == x) {
+                perfect++;
+            } else {
+                abundant++;
+            }
+        }
+        printf("%d %d %d\n", deficient, perfect, abundant);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-nearest-prime
+LANGUAGE: c
+BUG: off_by_one
+CORRECT:
+```c
+#include <stdio.h>
+
+int is_prime(int m) {
+    if (m < 2) {
+        return 0;
+    }
+    for (int d = 2; d * d <= m; d++) {
+        if (m % d == 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int nearest_prime(int n) {
+    int d = 0;
+    while (1) {
+        if (is_prime(n - d)) {
+            return n - d;
+        }
+        if (is_prime(n + d)) {
+            return n + d;
+        }
+        d++;
+    }
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        printf("%d\n", nearest_prime(n));
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int is_prime(int m) {
+    if (m < 2) {
+        return 0;
+    }
+    for (int d = 2; d * d < m; d++) {
+        if (m % d == 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int nearest_prime(int n) {
+    int d = 0;
+    while (1) {
+        if (is_prime(n - d)) {
+            return n - d;
+        }
+        if (is_prime(n + d)) {
+            return n + d;
+        }
+        d++;
+    }
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        printf("%d\n", nearest_prime(n));
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-round-best
+LANGUAGE: cpp
+BUG: wrong_initial_value
+CORRECT:
+```cpp
+#include <iostream>
+using namespace std;
+
+long long maxOfThree(long long a, long long b, long long c) {
+    long long best = a;
+    if (b > best) {
+        best = b;
+    }
+    if (c > best) {
+        best = c;
+    }
+    return best;
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        long long total = 0;
+        for (int i = 0; i < n; i++) {
+            long long a, b, c;
+            cin >> a >> b >> c;
+            total += maxOfThree(a, b, c);
+        }
+        cout << total << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+using namespace std;
+
+long long maxOfThree(long long a, long long b, long long c) {
+    long long best = 0;
+    if (a > best) {
+        best = a;
+    }
+    if (b > best) {
+        best = b;
+    }
+    if (c > best) {
+        best = c;
+    }
+    return best;
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        long long total = 0;
+        for (int i = 0; i < n; i++) {
+            long long a, b, c;
+            cin >> a >> b >> c;
+            total += maxOfThree(a, b, c);
+        }
+        cout << total << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-nearest-prime
+LANGUAGE: cpp
+BUG: wrong_comparison_operator
+CORRECT:
+```cpp
+#include <iostream>
+using namespace std;
+
+bool isPrime(int m) {
+    if (m < 2) {
+        return false;
+    }
+    for (int d = 2; d * d <= m; d++) {
+        if (m % d == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int nearestPrime(int n) {
+    int d = 0;
+    while (true) {
+        if (isPrime(n - d)) {
+            return n - d;
+        }
+        if (isPrime(n + d)) {
+            return n + d;
+        }
+        d++;
+    }
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        cout << nearestPrime(n) << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+using namespace std;
+
+bool isPrime(int m) {
+    if (m <= 2) {
+        return false;
+    }
+    for (int d = 2; d * d <= m; d++) {
+        if (m % d == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int nearestPrime(int n) {
+    int d = 0;
+    while (true) {
+        if (isPrime(n - d)) {
+            return n - d;
+        }
+        if (isPrime(n + d)) {
+            return n + d;
+        }
+        d++;
+    }
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        cout << nearestPrime(n) << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-triple-prime-kth
+LANGUAGE: cpp
+BUG: wrong_loop_bound
+CORRECT:
+```cpp
+#include <iostream>
+using namespace std;
+
+bool isPrime(int m) {
+    if (m < 2) {
+        return false;
+    }
+    for (int d = 2; d * d <= m; d++) {
+        if (m % d == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int reverseNumber(int x) {
+    int r = 0;
+    while (x > 0) {
+        r = r * 10 + x % 10;
+        x /= 10;
+    }
+    return r;
+}
+
+int digitSum(int x) {
+    int s = 0;
+    while (x > 0) {
+        s += x % 10;
+        x /= 10;
+    }
+    return s;
+}
+
+bool isTriplePrime(int x) {
+    return isPrime(x) && isPrime(reverseNumber(x)) && isPrime(digitSum(x));
+}
+
+int kthTriplePrime(int k) {
+    int count = 0;
+    int x = 1;
+    while (count < k) {
+        x++;
+        if (isTriplePrime(x)) {
+            count++;
+        }
+    }
+    return x;
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int k;
+        cin >> k;
+        cout << kthTriplePrime(k) << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+using namespace std;
+
+bool isPrime(int m) {
+    if (m < 2) {
+        return false;
+    }
+    for (int d = 2; d * d <= m; d++) {
+        if (m % d == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int reverseNumber(int x) {
+    int r = 0;
+    while (x > 9) {
+        r = r * 10 + x % 10;
+        x /= 10;
+    }
+    return r;
+}
+
+int digitSum(int x) {
+    int s = 0;
+    while (x > 0) {
+        s += x % 10;
+        x /= 10;
+    }
+    return s;
+}
+
+bool isTriplePrime(int x) {
+    return isPrime(x) && isPrime(reverseNumber(x)) && isPrime(digitSum(x));
+}
+
+int kthTriplePrime(int k) {
+    int count = 0;
+    int x = 1;
+    while (count < k) {
+        x++;
+        if (isTriplePrime(x)) {
+            count++;
+        }
+    }
+    return x;
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int k;
+        cin >> k;
+        cout << kthTriplePrime(k) << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-digit-sum-winner
+LANGUAGE: python
+BUG: return_vs_print
+CORRECT:
+```python
+def digit_sum(x):
+    total = 0
+    while x > 0:
+        total += x % 10
+        x //= 10
+    return total
+
+
+def winner(a, b):
+    sa = digit_sum(a)
+    sb = digit_sum(b)
+    if sa > sb:
+        best = a
+    elif sb > sa:
+        best = b
+    else:
+        best = min(a, b)
+    return best
+
+
+t = int(input())
+for _ in range(t):
+    a, b = map(int, input().split())
+    print(winner(a, b))
+```
+BUGGY:
+```python
+def digit_sum(x):
+    total = 0
+    while x > 0:
+        total += x % 10
+        x //= 10
+    return total
+
+
+def winner(a, b):
+    sa = digit_sum(a)
+    sb = digit_sum(b)
+    if sa > sb:
+        best = a
+    elif sb > sa:
+        best = b
+    else:
+        best = min(a, b)
+    print(best)
+
+
+t = int(input())
+for _ in range(t):
+    a, b = map(int, input().split())
+    print(winner(a, b))
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-divisor-classes
+LANGUAGE: python
+BUG: off_by_one
+CORRECT:
+```python
+def proper_divisor_sum(x):
+    total = 0
+    for d in range(1, x // 2 + 1):
+        if x % d == 0:
+            total += d
+    return total
+
+
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    nums = list(map(int, input().split()))
+    deficient = perfect = abundant = 0
+    for x in nums:
+        s = proper_divisor_sum(x)
+        if s < x:
+            deficient += 1
+        elif s == x:
+            perfect += 1
+        else:
+            abundant += 1
+    print(deficient, perfect, abundant)
+```
+BUGGY:
+```python
+def proper_divisor_sum(x):
+    total = 0
+    for d in range(1, x // 2):
+        if x % d == 0:
+            total += d
+    return total
+
+
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    nums = list(map(int, input().split()))
+    deficient = perfect = abundant = 0
+    for x in nums:
+        s = proper_divisor_sum(x)
+        if s < x:
+            deficient += 1
+        elif s == x:
+            perfect += 1
+        else:
+            abundant += 1
+    print(deficient, perfect, abundant)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fn-triple-prime-kth
+LANGUAGE: python
+BUG: wrong_initial_value
+CORRECT:
+```python
+def is_prime(m):
+    if m < 2:
+        return False
+    d = 2
+    while d * d <= m:
+        if m % d == 0:
+            return False
+        d += 1
+    return True
+
+
+def reverse_number(x):
+    r = 0
+    while x > 0:
+        r = r * 10 + x % 10
+        x //= 10
+    return r
+
+
+def digit_sum(x):
+    total = 0
+    while x > 0:
+        total += x % 10
+        x //= 10
+    return total
+
+
+def kth_triple_prime(k):
+    count = 0
+    x = 1
+    while count < k:
+        x += 1
+        if is_prime(x) and is_prime(reverse_number(x)) and is_prime(digit_sum(x)):
+            count += 1
+    return x
+
+
+t = int(input())
+for _ in range(t):
+    k = int(input())
+    print(kth_triple_prime(k))
+```
+BUGGY:
+```python
+def is_prime(m):
+    if m < 2:
+        return False
+    d = 2
+    while d * d <= m:
+        if m % d == 0:
+            return False
+        d += 1
+    return True
+
+
+def reverse_number(x):
+    r = 0
+    while x > 0:
+        r = r * 10 + x % 10
+        x //= 10
+    return r
+
+
+def digit_sum(x):
+    total = 0
+    while x > 0:
+        total += x % 10
+        x //= 10
+    return total
+
+
+def kth_triple_prime(k):
+    count = 1
+    x = 1
+    while count < k:
+        x += 1
+        if is_prime(x) and is_prime(reverse_number(x)) and is_prime(digit_sum(x)):
+            count += 1
+    return x
+
+
+t = int(input())
+for _ in range(t):
+    k = int(input())
+    print(kth_triple_prime(k))
+```
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: easy
+STEM:
+What does this program print?
+```python
+x = 10
+
+def change():
+    x = 5
+    return x
+
+y = change()
+print(x, y)
+```
+OPTIONS:
+A) 5 5 || none
+B) 10 5 || correct
+C) 10 10 || none
+D) 5 10 || none
+EXPLANATION: The x inside change is a new local variable, so the outer x stays 10 while the function returns 5.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: medium
+STEM:
+What does this program print?
+```python
+def first_even(nums):
+    for n in nums:
+        if n % 2 == 0:
+            return n
+    return -1
+
+print(first_even([3, 7, 8, 4]), first_even([1, 5]))
+```
+OPTIONS:
+A) 4 -1 || none
+B) 8 None || none
+C) 8 -1 || correct
+D) 8 4 -1 || none
+EXPLANATION: return stops the function at the first even number, 8, and the second list has no even number so the loop ends and -1 is returned.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: hard
+STEM:
+What does this program print?
+```python
+def update(nums, k):
+    nums.append(k)
+    k = k + 1
+    nums = [0]
+    return k
+
+a = [1]
+b = 5
+c = update(a, b)
+print(a, b, c)
+```
+OPTIONS:
+A) [0] 6 6 || none
+B) [1] 5 6 || none
+C) [0] 5 6 || none
+D) [1, 5] 5 6 || correct
+EXPLANATION: append changes the caller's list, but giving k or nums a new value only changes the function's local names, so b stays 5 and a keeps [1, 5].
+=== END ===

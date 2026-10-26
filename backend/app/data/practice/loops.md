@@ -872,3 +872,801 @@ int main() {
 }
 ```
 === END ===
+
+=== PROBLEM ===
+ID: aita-alternating-sum
+DIFFICULTY: easy
+STATEMENT: A single line contains a positive integer n. Work out 1 - 2 + 3 - 4 + 5 - ... up to n, where every odd number is added and every even number is subtracted, and print the result.
+CONSTRAINTS: 1 <= n <= 1000000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    n = int(data[k])
+    total = 0
+    for i in range(1, n + 1):
+        if i % 2 == 1:
+            total += i
+        else:
+            total -= i
+    print(total)
+```
+TESTS:
+### input
+5
+### output
+3
+### input
+1
+### output
+1
+### input
+2
+### output
+-1
+### input
+10
+### output
+-5
+### input
+999999
+### output
+500000
+### input
+1000000
+### output
+-500000
+=== END ===
+
+=== PROBLEM ===
+ID: aita-countdown-rows
+DIFFICULTY: easy
+STATEMENT: A single line contains a positive integer n. Print n lines. Line number i (counting from 1) contains the integers from i down to 1, separated by single spaces.
+CONSTRAINTS: 1 <= n <= 20.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    n = int(data[k])
+    for i in range(1, n + 1):
+        print(" ".join(str(j) for j in range(i, 0, -1)))
+```
+TESTS:
+### input
+3
+### output
+1
+2 1
+3 2 1
+### input
+1
+### output
+1
+### input
+2
+### output
+1
+2 1
+### input
+5
+### output
+1
+2 1
+3 2 1
+4 3 2 1
+5 4 3 2 1
+### input
+12
+### output
+1
+2 1
+3 2 1
+4 3 2 1
+5 4 3 2 1
+6 5 4 3 2 1
+7 6 5 4 3 2 1
+8 7 6 5 4 3 2 1
+9 8 7 6 5 4 3 2 1
+10 9 8 7 6 5 4 3 2 1
+11 10 9 8 7 6 5 4 3 2 1
+12 11 10 9 8 7 6 5 4 3 2 1
+=== END ===
+
+=== PROBLEM ===
+ID: aita-savings-days
+DIFFICULTY: medium
+STATEMENT: A single line contains three integers a, d and s. Riya saves a rupees on day 1, and on every later day she saves d rupees more than she saved the day before. Print the number of days after which her total savings first become at least s rupees.
+CONSTRAINTS: 1 <= a <= 1000, 0 <= d <= 1000, 1 <= s <= 1000000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    a, d, s = int(data[pos]), int(data[pos + 1]), int(data[pos + 2])
+    pos += 3
+    total = 0
+    amount = a
+    days = 0
+    while total < s:
+        total += amount
+        amount += d
+        days += 1
+    print(days)
+```
+TESTS:
+### input
+3 2 100
+### output
+10
+### input
+5 0 5
+### output
+1
+### input
+5 0 6
+### output
+2
+### input
+1 1 10
+### output
+4
+### input
+1 0 1000000
+### output
+1000000
+### input
+1000 1000 1000000
+### output
+45
+=== END ===
+
+=== PROBLEM ===
+ID: aita-digit-sum-steps
+DIFFICULTY: medium
+STATEMENT: A single line contains a non-negative integer n. Replace n by the sum of its digits, and keep doing this until n has only one digit. Print how many replacements were made. If n already has one digit, print 0.
+CONSTRAINTS: 0 <= n <= 1000000000000000000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    n = int(data[k])
+    steps = 0
+    while n >= 10:
+        s = 0
+        while n > 0:
+            s += n % 10
+            n //= 10
+        n = s
+        steps += 1
+    print(steps)
+```
+TESTS:
+### input
+99
+### output
+2
+### input
+0
+### output
+0
+### input
+7
+### output
+0
+### input
+10
+### output
+1
+### input
+199
+### output
+3
+### input
+1000000000000000000
+### output
+1
+### input
+999999999999999999
+### output
+2
+=== END ===
+
+=== PROBLEM ===
+ID: aita-digit-sum-divides
+DIFFICULTY: hard
+STATEMENT: A single line contains two integers L and R. Count how many integers x with L <= x <= R are divisible by the sum of their own digits, and print the count. For example, 12 counts because 1 + 2 = 3 divides 12, but 13 does not count because 1 + 3 = 4 does not divide 13.
+CONSTRAINTS: 1 <= L <= R <= 1000000000, R - L <= 100000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    low, high = int(data[pos]), int(data[pos + 1])
+    pos += 2
+    count = 0
+    for x in range(low, high + 1):
+        m = x
+        s = 0
+        while m > 0:
+            s += m % 10
+            m //= 10
+        if x % s == 0:
+            count += 1
+    print(count)
+```
+TESTS:
+### input
+11 20
+### output
+3
+### input
+1 1
+### output
+1
+### input
+11 11
+### output
+0
+### input
+1 10
+### output
+10
+### input
+1 100
+### output
+33
+### input
+123456 123999
+### output
+58
+### input
+999900000 1000000000
+### output
+4130
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-alternating-sum
+LANGUAGE: c
+BUG: wrong_initial_value
+CORRECT:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        long long total = 0;
+        int sign = 1;
+        for (int i = 1; i <= n; i++) {
+            total += sign * i;
+            sign = -sign;
+        }
+        printf("%lld\n", total);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        long long total = 0;
+        int sign = -1;
+        for (int i = 1; i <= n; i++) {
+            total += sign * i;
+            sign = -sign;
+        }
+        printf("%lld\n", total);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-savings-days
+LANGUAGE: c
+BUG: wrong_comparison_operator
+CORRECT:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long a, d, s;
+        scanf("%lld %lld %lld", &a, &d, &s);
+        long long total = 0;
+        long long amount = a;
+        int days = 0;
+        while (total < s) {
+            total += amount;
+            amount += d;
+            days++;
+        }
+        printf("%d\n", days);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long a, d, s;
+        scanf("%lld %lld %lld", &a, &d, &s);
+        long long total = 0;
+        long long amount = a;
+        int days = 0;
+        while (total <= s) {
+            total += amount;
+            amount += d;
+            days++;
+        }
+        printf("%d\n", days);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-digit-sum-steps
+LANGUAGE: c
+BUG: off_by_one
+CORRECT:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long n;
+        scanf("%lld", &n);
+        int steps = 0;
+        while (n >= 10) {
+            long long s = 0;
+            while (n > 0) {
+                s += n % 10;
+                n /= 10;
+            }
+            n = s;
+            steps++;
+        }
+        printf("%d\n", steps);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long n;
+        scanf("%lld", &n);
+        int steps = 0;
+        do {
+            long long s = 0;
+            while (n > 0) {
+                s += n % 10;
+                n /= 10;
+            }
+            n = s;
+            steps++;
+        } while (n >= 10);
+        printf("%d\n", steps);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-countdown-rows
+LANGUAGE: cpp
+BUG: wrong_loop_bound
+CORRECT:
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        for (int i = 1; i <= n; i++) {
+            for (int j = i; j >= 1; j--) {
+                cout << j;
+                if (j > 1) {
+                    cout << " ";
+                }
+            }
+            cout << endl;
+        }
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        for (int i = 1; i <= n; i++) {
+            for (int j = n; j >= 1; j--) {
+                cout << j;
+                if (j > 1) {
+                    cout << " ";
+                }
+            }
+            cout << endl;
+        }
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-digit-sum-divides
+LANGUAGE: cpp
+BUG: off_by_one
+CORRECT:
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        long long low, high;
+        cin >> low >> high;
+        int count = 0;
+        for (long long x = low; x <= high; x++) {
+            long long m = x;
+            long long s = 0;
+            while (m > 0) {
+                s += m % 10;
+                m /= 10;
+            }
+            if (x % s == 0) {
+                count++;
+            }
+        }
+        cout << count << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        long long low, high;
+        cin >> low >> high;
+        int count = 0;
+        for (long long x = low; x < high; x++) {
+            long long m = x;
+            long long s = 0;
+            while (m > 0) {
+                s += m % 10;
+                m /= 10;
+            }
+            if (x % s == 0) {
+                count++;
+            }
+        }
+        cout << count << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-digit-sum-steps
+LANGUAGE: cpp
+BUG: wrong_loop_bound
+CORRECT:
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        long long n;
+        cin >> n;
+        int steps = 0;
+        while (n >= 10) {
+            long long s = 0;
+            while (n > 0) {
+                s += n % 10;
+                n /= 10;
+            }
+            n = s;
+            steps++;
+        }
+        cout << steps << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        long long n;
+        cin >> n;
+        int steps = 0;
+        while (n >= 10) {
+            long long s = 0;
+            while (n > 9) {
+                s += n % 10;
+                n /= 10;
+            }
+            n = s;
+            steps++;
+        }
+        cout << steps << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: dsa-fizzbuzz
+LANGUAGE: python
+BUG: off_by_one
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    for i in range(1, n + 1):
+        if i % 15 == 0:
+            print("FizzBuzz")
+        elif i % 3 == 0:
+            print("Fizz")
+        elif i % 5 == 0:
+            print("Buzz")
+        else:
+            print(i)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    for i in range(n):
+        if i % 15 == 0:
+            print("FizzBuzz")
+        elif i % 3 == 0:
+            print("Fizz")
+        elif i % 5 == 0:
+            print("Buzz")
+        else:
+            print(i)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-alternating-sum
+LANGUAGE: python
+BUG: wrong_loop_bound
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    total = 0
+    for i in range(1, n + 1, 2):
+        total += i
+    for i in range(2, n + 1, 2):
+        total -= i
+    print(total)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    total = 0
+    for i in range(1, n + 1, 2):
+        total += i
+    for i in range(2, n, 2):
+        total -= i
+    print(total)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-savings-days
+LANGUAGE: python
+BUG: wrong_initial_value
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    a, d, s = map(int, input().split())
+    total = 0
+    amount = a
+    days = 0
+    while total < s:
+        total += amount
+        amount += d
+        days += 1
+    print(days)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    a, d, s = map(int, input().split())
+    total = a
+    amount = a
+    days = 0
+    while total < s:
+        total += amount
+        amount += d
+        days += 1
+    print(days)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-digit-sum-divides
+LANGUAGE: python
+BUG: integer_division
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    low, high = map(int, input().split())
+    count = 0
+    for x in range(low, high + 1):
+        m = x
+        s = 0
+        while m > 0:
+            s += m % 10
+            m //= 10
+        if x % s == 0:
+            count += 1
+    print(count)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    low, high = map(int, input().split())
+    count = 0
+    for x in range(low, high + 1):
+        m = x
+        s = 0
+        while m > 0:
+            s += m % 10
+            m /= 10
+        if x % s == 0:
+            count += 1
+    print(count)
+```
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: easy
+STEM:
+What does this program print?
+```python
+for i in range(5, 0, -1):
+    print(i, end=" ")
+print()
+```
+OPTIONS:
+A) 5 4 3 2 1 0 || wrong_loop_bound
+B) Nothing is printed || none
+C) 5 4 3 2 1 || correct
+D) 4 3 2 1 0 || off_by_one
+EXPLANATION: With a step of -1 the range counts down from 5 and stops just before reaching 0.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: medium
+STEM:
+What does this program print?
+```python
+total = 0
+for i in range(5):
+    i += 2
+    total += i
+print(total)
+```
+OPTIONS:
+A) 7 || none
+B) 20 || correct
+C) 10 || none
+D) 27 || off_by_one
+EXPLANATION: Changing i inside the body does not affect the next pass, so i is still 0 to 4 and the sum is 2 + 3 + 4 + 5 + 6 = 20.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: hard
+STEM:
+What does this program print?
+```python
+for n in range(3):
+    pass
+else:
+    print("A", end="")
+for n in range(3):
+    if n == 1:
+        break
+else:
+    print("B", end="")
+print(n)
+```
+OPTIONS:
+A) AB2 || none
+B) A1 || correct
+C) AB1 || none
+D) A2 || none
+EXPLANATION: A loop's else part runs only when the loop finishes without break, so only A is printed, and n is still 1 from the pass that broke out.
+=== END ===

@@ -873,3 +873,787 @@ int main(void) {
 }
 ```
 === END ===
+
+=== PROBLEM ===
+ID: aita-arr-biggest-step
+DIFFICULTY: easy
+STATEMENT: The first line contains n, the number of daily readings. The second line contains the n readings in order, separated by spaces. The step from one day to the next is the later reading minus the earlier one. Print the largest step. A step can be negative. If n is 1 there are no steps, so print 0.
+CONSTRAINTS: 1 <= n <= 100000; each reading is between -1000000 and 1000000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    a = [int(x) for x in data[pos + 1:pos + 1 + n]]
+    pos += 1 + n
+    best = 0
+    if n > 1:
+        best = a[1] - a[0]
+        for i in range(2, n):
+            best = max(best, a[i] - a[i - 1])
+    print(best)
+```
+TESTS:
+### input
+6
+3 5 4 9 10 2
+### output
+5
+### input
+1
+42
+### output
+0
+### input
+4
+7 7 7 7
+### output
+0
+### input
+4
+10 6 3 1
+### output
+-2
+### input
+5
+-5 -9 -2 -20 -19
+### output
+7
+### input
+4
+1 21 25 27
+### output
+20
+### input
+5
+1 2 3 4 100
+### output
+96
+### input
+3
+-1000000 1000000 0
+### output
+2000000
+=== END ===
+
+=== PROBLEM ===
+ID: aita-arr-longest-climb
+DIFFICULTY: medium
+STATEMENT: The first line contains n. The second line contains n integers separated by spaces. A climb is a block of consecutive positions in which every value is greater than or equal to the value just before it; a single value on its own is a climb of length 1. Print two integers separated by a space: the length of the longest climb, and the position (counting from 1) where it starts. If several climbs share the longest length, report the one that starts first.
+CONSTRAINTS: 1 <= n <= 100000; each value is between -1000000000 and 1000000000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    a = [int(x) for x in data[pos + 1:pos + 1 + n]]
+    pos += 1 + n
+    best_len, best_start = 1, 0
+    start = 0
+    for i in range(1, n):
+        if a[i] < a[i - 1]:
+            start = i
+        if i - start + 1 > best_len:
+            best_len = i - start + 1
+            best_start = start
+    print(best_len, best_start + 1)
+```
+TESTS:
+### input
+8
+2 4 4 1 3 5 6 0
+### output
+4 4
+### input
+1
+-7
+### output
+1 1
+### input
+5
+3 3 3 3 3
+### output
+5 1
+### input
+5
+9 7 5 3 1
+### output
+1 1
+### input
+6
+-3 -1 -2 -2 -2 0
+### output
+4 3
+### input
+7
+1 2 3 0 4 5 6
+### output
+4 4
+### input
+6
+5 6 7 1 2 3
+### output
+3 1
+### input
+4
+1000000000 -1000000000 0 1000000000
+### output
+3 2
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-014
+LANGUAGE: c
+BUG: wrong_initial_value
+CORRECT:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        if (n == 0) {
+            printf("None\n");
+            continue;
+        }
+        int best;
+        scanf("%d", &best);
+        for (int i = 1; i < n; i++) {
+            int x;
+            scanf("%d", &x);
+            if (x > best) {
+                best = x;
+            }
+        }
+        printf("%d\n", best);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        if (n == 0) {
+            printf("None\n");
+            continue;
+        }
+        int best = 0;
+        for (int i = 0; i < n; i++) {
+            int x;
+            scanf("%d", &x);
+            if (x > best) {
+                best = x;
+            }
+        }
+        printf("%d\n", best);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-arr-biggest-step
+LANGUAGE: c
+BUG: wrong_loop_bound
+CORRECT:
+```c
+#include <stdio.h>
+
+int a[100000];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &a[i]);
+        }
+        int best = 0;
+        if (n > 1) {
+            best = a[1] - a[0];
+        }
+        for (int i = 2; i < n; i++) {
+            if (a[i] - a[i - 1] > best) {
+                best = a[i] - a[i - 1];
+            }
+        }
+        printf("%d\n", best);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int a[100000];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &a[i]);
+        }
+        int best = 0;
+        if (n > 1) {
+            best = a[1] - a[0];
+        }
+        for (int i = 2; i < n - 1; i++) {
+            if (a[i] - a[i - 1] > best) {
+                best = a[i] - a[i - 1];
+            }
+        }
+        printf("%d\n", best);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-arr-longest-climb
+LANGUAGE: c
+BUG: wrong_comparison_operator
+CORRECT:
+```c
+#include <stdio.h>
+
+int a[100000];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &a[i]);
+        }
+        int best = 1, best_start = 0, start = 0;
+        for (int i = 1; i < n; i++) {
+            if (a[i] < a[i - 1]) {
+                start = i;
+            }
+            if (i - start + 1 > best) {
+                best = i - start + 1;
+                best_start = start;
+            }
+        }
+        printf("%d %d\n", best, best_start + 1);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int a[100000];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &a[i]);
+        }
+        int best = 1, best_start = 0, start = 0;
+        for (int i = 1; i < n; i++) {
+            if (a[i] <= a[i - 1]) {
+                start = i;
+            }
+            if (i - start + 1 > best) {
+                best = i - start + 1;
+                best_start = start;
+            }
+        }
+        printf("%d %d\n", best, best_start + 1);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-arr-biggest-step
+LANGUAGE: cpp
+BUG: wrong_initial_value
+CORRECT:
+```cpp
+#include <algorithm>
+#include <climits>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<long long> a(n);
+        for (int i = 0; i < n; i++) {
+            cin >> a[i];
+        }
+        long long best = LLONG_MIN;
+        for (int i = 1; i < n; i++) {
+            best = max(best, a[i] - a[i - 1]);
+        }
+        if (n == 1) {
+            best = 0;
+        }
+        cout << best << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <algorithm>
+#include <climits>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<long long> a(n);
+        for (int i = 0; i < n; i++) {
+            cin >> a[i];
+        }
+        long long best = 0;
+        for (int i = 1; i < n; i++) {
+            best = max(best, a[i] - a[i - 1]);
+        }
+        if (n == 1) {
+            best = 0;
+        }
+        cout << best << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-arr-longest-climb
+LANGUAGE: cpp
+BUG: off_by_one
+CORRECT:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<long long> a(n);
+        for (int i = 0; i < n; i++) {
+            cin >> a[i];
+        }
+        int cur = 1, start = 0;
+        int best = 1, bestStart = 0;
+        for (int i = 1; i < n; i++) {
+            if (a[i] >= a[i - 1]) {
+                cur++;
+            } else {
+                cur = 1;
+                start = i;
+            }
+            if (cur > best) {
+                best = cur;
+                bestStart = start;
+            }
+        }
+        cout << best << " " << bestStart + 1 << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<long long> a(n);
+        for (int i = 0; i < n; i++) {
+            cin >> a[i];
+        }
+        int cur = 1, start = 0;
+        int best = 1, bestStart = 0;
+        for (int i = 1; i < n; i++) {
+            if (a[i] >= a[i - 1]) {
+                cur++;
+            } else {
+                cur = 1;
+                start = i;
+            }
+            if (cur > best) {
+                best = cur;
+                bestStart = start;
+            }
+        }
+        cout << best << " " << bestStart << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-090
+LANGUAGE: cpp
+BUG: wrong_loop_bound
+CORRECT:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> a(n);
+        for (int i = 0; i < n; i++) {
+            cin >> a[i];
+        }
+        vector<int> keep;
+        for (int i = 0; i < n; i++) {
+            bool seen = false;
+            for (int j = 0; j < i; j++) {
+                if (a[j] == a[i]) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen) {
+                keep.push_back(a[i]);
+            }
+        }
+        for (size_t k = 0; k < keep.size(); k++) {
+            if (k > 0) {
+                cout << " ";
+            }
+            cout << keep[k];
+        }
+        cout << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> a(n);
+        for (int i = 0; i < n; i++) {
+            cin >> a[i];
+        }
+        vector<int> keep;
+        for (int i = 0; i < n; i++) {
+            bool seen = false;
+            for (int j = 0; j < i - 1; j++) {
+                if (a[j] == a[i]) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen) {
+                keep.push_back(a[i]);
+            }
+        }
+        for (size_t k = 0; k < keep.size(); k++) {
+            if (k > 0) {
+                cout << " ";
+            }
+            cout << keep[k];
+        }
+        cout << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-014
+LANGUAGE: cpp
+BUG: empty_input_unhandled
+CORRECT:
+```cpp
+#include <climits>
+#include <iostream>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        int best = INT_MIN;
+        for (int i = 0; i < n; i++) {
+            int x;
+            cin >> x;
+            if (x > best) {
+                best = x;
+            }
+        }
+        if (n == 0) {
+            cout << "None" << endl;
+        } else {
+            cout << best << endl;
+        }
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <climits>
+#include <iostream>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        int best = INT_MIN;
+        for (int i = 0; i < n; i++) {
+            int x;
+            cin >> x;
+            if (x > best) {
+                best = x;
+            }
+        }
+        cout << best << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-arr-biggest-step
+LANGUAGE: python
+BUG: index_out_of_range
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = list(map(int, input().split()))
+    best = None
+    for i in range(1, n):
+        step = a[i] - a[i - 1]
+        if best is None or step > best:
+            best = step
+    print(best if best is not None else 0)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = list(map(int, input().split()))
+    best = None
+    for i in range(n):
+        step = a[i] - a[i - 1]
+        if best is None or step > best:
+            best = step
+    print(best if best is not None else 0)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-arr-longest-climb
+LANGUAGE: python
+BUG: wrong_initial_value
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = list(map(int, input().split()))
+    best, best_start = 1, 0
+    cur, start = 1, 0
+    for i in range(1, n):
+        if a[i] >= a[i - 1]:
+            cur += 1
+        else:
+            cur, start = 1, i
+        if cur > best:
+            best, best_start = cur, start
+    print(best, best_start + 1)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = list(map(int, input().split()))
+    best, best_start = 1, 0
+    cur, start = 0, 0
+    for i in range(1, n):
+        if a[i] >= a[i - 1]:
+            cur += 1
+        else:
+            cur, start = 1, i
+        if cur > best:
+            best, best_start = cur, start
+    print(best, best_start + 1)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-057
+LANGUAGE: python
+BUG: return_vs_print
+CORRECT:
+```python
+def even_sum(values):
+    total = 0
+    for v in values:
+        if v % 2 == 0:
+            total += v
+    return total
+
+
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    values = list(map(int, input().split()))[:n]
+    print(even_sum(values))
+```
+BUGGY:
+```python
+def even_sum(values):
+    total = 0
+    for v in values:
+        if v % 2 == 0:
+            total += v
+    print(total)
+
+
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    values = list(map(int, input().split()))[:n]
+    print(even_sum(values))
+```
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: easy
+STEM:
+What does this program print?
+```python
+temps = [31, 28, 35, 35, 30, 36]
+count = 0
+for i in range(1, len(temps)):
+    if temps[i] > temps[i - 1]:
+        count += 1
+print(count)
+```
+OPTIONS:
+A) 3 || wrong_comparison_operator
+B) 2 || correct
+C) 5 || none
+D) 4 || none
+EXPLANATION: Only 28 to 35 and 30 to 36 are rises; 35 followed by 35 is not greater, so the count is 2.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: medium
+STEM:
+What does this program print?
+```python
+a = [3, 1, 4, 1, 5]
+prefix = [0]
+for x in a:
+    prefix.append(prefix[-1] + x)
+print(prefix[4] - prefix[1])
+```
+OPTIONS:
+A) 10 || off_by_one
+B) 6 || correct
+C) 9 || none
+D) 14 || none
+EXPLANATION: prefix[k] is the sum of the first k elements, so prefix[4] - prefix[1] is a[1] + a[2] + a[3] = 1 + 4 + 1.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: hard
+STEM:
+What does this program print?
+```python
+a = [1, 2, 3, 4, 5]
+for i in range(1, len(a)):
+    a[i] = a[i - 1]
+print(a)
+```
+OPTIONS:
+A) [1, 1, 2, 3, 4] || mutate_while_iterating
+B) [1, 1, 1, 1, 1] || correct
+C) [5, 1, 2, 3, 4] || none
+D) [2, 3, 4, 5, 5] || none
+EXPLANATION: Each a[i - 1] has already been overwritten with 1 by the previous step, so the 1 is copied all the way along.
+=== END ===

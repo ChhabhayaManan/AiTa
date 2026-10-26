@@ -687,3 +687,703 @@ int main(void) {
 }
 ```
 === END ===
+
+=== PROBLEM ===
+ID: aita-fix-name-case
+DIFFICULTY: easy
+STATEMENT: A single line contains a name written as one word of English letters, where some letters are uppercase and some are lowercase. Print the name with its first letter in uppercase and every other letter in lowercase.
+CONSTRAINTS: The name has between 1 and 1000 letters, each from a to z or A to Z, with no spaces.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    name = data[k]
+    print(name[0].upper() + name[1:].lower())
+```
+TESTS:
+### input
+rAHUL
+### output
+Rahul
+### input
+a
+### output
+A
+### input
+Z
+### output
+Z
+### input
+AAAA
+### output
+Aaaa
+### input
+jAZZ
+### output
+Jazz
+### input
+Priya
+### output
+Priya
+### input
+zOYA
+### output
+Zoya
+=== END ===
+
+=== PROBLEM ===
+ID: aita-run-length-code
+DIFFICULTY: medium
+STATEMENT: A single line contains a word of lowercase letters. Split the word into groups of equal letters that stand next to each other, making every group as long as possible. Replace each group by its letter followed by the number of letters in that group, and print the resulting compressed word. For example, aaabcc becomes a3b1c2.
+CONSTRAINTS: The word has between 1 and 1000 lowercase letters (a to z), with no spaces.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    word = data[k]
+    parts = []
+    i = 0
+    while i < len(word):
+        j = i
+        while j < len(word) and word[j] == word[i]:
+            j += 1
+        parts.append(word[i] + str(j - i))
+        i = j
+    print("".join(parts))
+```
+TESTS:
+### input
+aaabcc
+### output
+a3b1c2
+### input
+z
+### output
+z1
+### input
+kkkkkkkkkkkk
+### output
+k12
+### input
+abc
+### output
+a1b1c1
+### input
+abba
+### output
+a1b2a1
+### input
+mississippi
+### output
+m1i1s2i1s2i1p2i1
+### input
+aabbbbbbbbbbz
+### output
+a2b10z1
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fix-name-case
+LANGUAGE: c
+BUG: wrong_comparison_operator
+CORRECT:
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    int t;
+    char s[1001];
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%s", s);
+        int n = strlen(s);
+        if (s[0] >= 'a' && s[0] <= 'z') {
+            s[0] = s[0] - 'a' + 'A';
+        }
+        for (int i = 1; i < n; i++) {
+            if (s[i] >= 'A' && s[i] <= 'Z') {
+                s[i] = s[i] - 'A' + 'a';
+            }
+        }
+        printf("%s\n", s);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    int t;
+    char s[1001];
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%s", s);
+        int n = strlen(s);
+        if (s[0] >= 'a' && s[0] <= 'z') {
+            s[0] = s[0] - 'a' + 'A';
+        }
+        for (int i = 1; i < n; i++) {
+            if (s[i] >= 'A' && s[i] < 'Z') {
+                s[i] = s[i] - 'A' + 'a';
+            }
+        }
+        printf("%s\n", s);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-run-length-code
+LANGUAGE: c
+BUG: wrong_initial_value
+CORRECT:
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    int t;
+    char s[1001];
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%s", s);
+        int n = strlen(s);
+        int count = 1;
+        for (int i = 1; i < n; i++) {
+            if (s[i] == s[i - 1]) {
+                count++;
+            } else {
+                printf("%c%d", s[i - 1], count);
+                count = 1;
+            }
+        }
+        printf("%c%d\n", s[n - 1], count);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    int t;
+    char s[1001];
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%s", s);
+        int n = strlen(s);
+        int count = 0;
+        for (int i = 1; i < n; i++) {
+            if (s[i] == s[i - 1]) {
+                count++;
+            } else {
+                printf("%c%d", s[i - 1], count);
+                count = 1;
+            }
+        }
+        printf("%c%d\n", s[n - 1], count);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-011
+LANGUAGE: c
+BUG: off_by_one
+CORRECT:
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    int t;
+    char word[201];
+    char ch;
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%s", word);
+        scanf(" %c", &ch);
+        int n = strlen(word);
+        for (int i = 0; i < n; i++) {
+            if (word[i] != ch) {
+                putchar(word[i]);
+            }
+        }
+        putchar('\n');
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    int t;
+    char word[201];
+    char ch;
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%s", word);
+        scanf(" %c", &ch);
+        int n = strlen(word);
+        for (int i = 0; i < n - 1; i++) {
+            if (word[i] != ch) {
+                putchar(word[i]);
+            }
+        }
+        putchar('\n');
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fix-name-case
+LANGUAGE: cpp
+BUG: off_by_one
+CORRECT:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        string s;
+        cin >> s;
+        if (s[0] >= 'a' && s[0] <= 'z') {
+            s[0] = s[0] - 'a' + 'A';
+        }
+        for (int i = 1; i < (int) s.size(); i++) {
+            if (s[i] >= 'A' && s[i] <= 'Z') {
+                s[i] = s[i] - 'A' + 'a';
+            }
+        }
+        cout << s << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        string s;
+        cin >> s;
+        if (s[0] >= 'a' && s[0] <= 'z') {
+            s[0] = s[0] - 'a' + 'A';
+        }
+        for (int i = 0; i < (int) s.size(); i++) {
+            if (s[i] >= 'A' && s[i] <= 'Z') {
+                s[i] = s[i] - 'A' + 'a';
+            }
+        }
+        cout << s << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-run-length-code
+LANGUAGE: cpp
+BUG: wrong_loop_bound
+CORRECT:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        string s;
+        cin >> s;
+        int n = s.size();
+        string result = "";
+        int count = 1;
+        for (int i = 1; i <= n; i++) {
+            if (i < n && s[i] == s[i - 1]) {
+                count++;
+            } else {
+                result += s[i - 1];
+                result += to_string(count);
+                count = 1;
+            }
+        }
+        cout << result << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        string s;
+        cin >> s;
+        int n = s.size();
+        string result = "";
+        int count = 1;
+        for (int i = 1; i < n; i++) {
+            if (i < n && s[i] == s[i - 1]) {
+                count++;
+            } else {
+                result += s[i - 1];
+                result += to_string(count);
+                count = 1;
+            }
+        }
+        cout << result << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-011
+LANGUAGE: cpp
+BUG: mutate_while_iterating
+CORRECT:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        string word;
+        char ch;
+        cin >> word >> ch;
+        for (int i = 0; i < (int) word.size(); i++) {
+            if (word[i] == ch) {
+                word.erase(i, 1);
+                i--;
+            }
+        }
+        cout << word << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        string word;
+        char ch;
+        cin >> word >> ch;
+        for (int i = 0; i < (int) word.size(); i++) {
+            if (word[i] == ch) {
+                word.erase(i, 1);
+            }
+        }
+        cout << word << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-105
+LANGUAGE: cpp
+BUG: wrong_comparison_operator
+CORRECT:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    cin.ignore();
+    while (t--) {
+        string s;
+        getline(cin, s);
+        for (int i = 0; i < (int) s.size(); i++) {
+            if (s[i] >= 'a' && s[i] <= 'z') {
+                s[i] = s[i] - 'a' + 'A';
+            } else if (s[i] >= 'A' && s[i] <= 'Z') {
+                s[i] = s[i] - 'A' + 'a';
+            }
+        }
+        cout << s << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    cin.ignore();
+    while (t--) {
+        string s;
+        getline(cin, s);
+        for (int i = 0; i < (int) s.size(); i++) {
+            if (s[i] > 'a' && s[i] <= 'z') {
+                s[i] = s[i] - 'a' + 'A';
+            } else if (s[i] >= 'A' && s[i] <= 'Z') {
+                s[i] = s[i] - 'A' + 'a';
+            }
+        }
+        cout << s << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-063
+LANGUAGE: cpp
+BUG: empty_input_unhandled
+CORRECT:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    cin.ignore();
+    while (t--) {
+        string line;
+        getline(cin, line);
+        if (line.empty()) {
+            cout << 0 << endl;
+            continue;
+        }
+        int words = 1;
+        for (char c : line) {
+            if (c == ' ') {
+                words++;
+            }
+        }
+        cout << words << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    cin.ignore();
+    while (t--) {
+        string line;
+        getline(cin, line);
+        int words = 1;
+        for (char c : line) {
+            if (c == ' ') {
+                words++;
+            }
+        }
+        cout << words << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-fix-name-case
+LANGUAGE: python
+BUG: return_vs_print
+CORRECT:
+```python
+def fix_name(name):
+    return name[0].upper() + name[1:].lower()
+
+
+t = int(input())
+for _ in range(t):
+    name = input().strip()
+    print(fix_name(name))
+```
+BUGGY:
+```python
+def fix_name(name):
+    print(name[0].upper() + name[1:].lower())
+
+
+t = int(input())
+for _ in range(t):
+    name = input().strip()
+    print(fix_name(name))
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-run-length-code
+LANGUAGE: python
+BUG: off_by_one
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    word = input().strip()
+    result = ""
+    i = 0
+    while i < len(word):
+        j = i
+        while j < len(word) and word[j] == word[i]:
+            j += 1
+        result += word[i] + str(j - i)
+        i = j
+    print(result)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    word = input().strip()
+    result = ""
+    i = 0
+    while i < len(word):
+        j = i
+        while j < len(word) and word[j] == word[i]:
+            j += 1
+        result += word[i] + str(j - i + 1)
+        i = j
+    print(result)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-011
+LANGUAGE: python
+BUG: mutate_while_iterating
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    word = input().strip()
+    ch = input().strip()
+    letters = list(word)
+    for c in list(letters):
+        if c == ch:
+            letters.remove(c)
+    print("".join(letters))
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    word = input().strip()
+    ch = input().strip()
+    letters = list(word)
+    for c in letters:
+        if c == ch:
+            letters.remove(c)
+    print("".join(letters))
+```
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: easy
+STEM:
+What does this program print?
+```python
+s = "notebook"
+print(s[:4], s[4:])
+```
+OPTIONS:
+A) not ebook || off_by_one
+B) note book || correct
+C) noteb ook || off_by_one
+D) notebook || none
+EXPLANATION: s[:4] takes indices 0 to 3, "note", and s[4:] takes the rest, "book", and print puts a space between them.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: medium
+STEM:
+What does this program print?
+```python
+s = "banana"
+print(s.count("a"), "nan" in s, s.find("z"))
+```
+OPTIONS:
+A) 3 True None || none
+B) 3 False -1 || none
+C) 3 True -1 || correct
+D) 2 True -1 || none
+EXPLANATION: "banana" has three a's, "nan" appears inside it, and find returns -1 when the text is not found.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: hard
+STEM:
+What does this program print?
+```python
+s = "programming"
+print(s[2:8:3], s[-3:])
+```
+OPTIONS:
+A) oam ing || off_by_one
+B) oa ng || off_by_one
+C) ogm ing || none
+D) oa ing || correct
+EXPLANATION: s[2:8:3] takes indices 2 and 5, "oa", because the stop index 8 is excluded, and s[-3:] is the last three characters, "ing".
+=== END ===

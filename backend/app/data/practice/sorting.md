@@ -954,3 +954,909 @@ int main() {
 }
 ```
 === END ===
+
+=== PROBLEM ===
+ID: aita-sort-kth-smallest
+DIFFICULTY: easy
+STATEMENT: The first line contains two integers n and k. The second line contains n space-separated integers. Print the k-th smallest of them, counting repeated values separately, so k = 1 means the smallest value and k = n the largest.
+CONSTRAINTS: 1 <= k <= n <= 1000; each integer is between -100000 and 100000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n, k = int(data[pos]), int(data[pos + 1])
+    values = sorted(map(int, data[pos + 2:pos + 2 + n]))
+    pos += 2 + n
+    print(values[k - 1])
+```
+TESTS:
+### input
+5 2
+7 3 9 3 1
+### output
+3
+### input
+1 1
+-4
+### output
+-4
+### input
+6 6
+1 2 3 4 5 6
+### output
+6
+### input
+5 3
+50 40 30 20 10
+### output
+30
+### input
+4 4
+2 2 2 2
+### output
+2
+### input
+6 2
+-5 0 -100000 100000 -5 3
+### output
+-5
+### input
+7 4
+12 -3 8 -3 0 15 4
+### output
+4
+=== END ===
+
+=== PROBLEM ===
+ID: aita-sort-unique-values
+DIFFICULTY: easy
+STATEMENT: The first line contains an integer n. The second line contains n space-separated integers. Print every different value exactly once, in ascending order, separated by single spaces.
+CONSTRAINTS: 1 <= n <= 1000; each integer is between -100000 and 100000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    values = sorted(set(map(int, data[pos + 1:pos + 1 + n])))
+    pos += 1 + n
+    print(" ".join(map(str, values)))
+```
+TESTS:
+### input
+6
+4 1 4 2 1 4
+### output
+1 2 4
+### input
+1
+0
+### output
+0
+### input
+5
+-3 -1 0 2 5
+### output
+-3 -1 0 2 5
+### input
+5
+9 9 9 9 9
+### output
+9
+### input
+6
+10 8 6 4 2 0
+### output
+0 2 4 6 8 10
+### input
+7
+0 -7 0 3 -7 3 100000
+### output
+-7 0 3 100000
+=== END ===
+
+=== PROBLEM ===
+ID: aita-sort-min-gap
+DIFFICULTY: medium
+STATEMENT: The first line contains an integer n. The second line contains n space-separated integers. Choose two of them at different positions so that the absolute difference between them is as small as possible, and print that difference. If some value appears twice, the answer is 0.
+CONSTRAINTS: 2 <= n <= 1000; each integer is between -100000 and 100000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    values = sorted(map(int, data[pos + 1:pos + 1 + n]))
+    pos += 1 + n
+    print(min(values[i] - values[i - 1] for i in range(1, n)))
+```
+TESTS:
+### input
+5
+10 3 7 20 1
+### output
+2
+### input
+2
+-5 5
+### output
+10
+### input
+4
+1 4 9 16
+### output
+3
+### input
+5
+40 30 25 10 -2
+### output
+5
+### input
+6
+8 -1 6 8 100 -50
+### output
+0
+### input
+3
+-100000 100000 0
+### output
+100000
+### input
+5
+100 1 50 25 99
+### output
+1
+=== END ===
+
+=== PROBLEM ===
+ID: aita-sort-rank-by-score
+DIFFICULTY: medium
+STATEMENT: The first line contains an integer n, the number of players, who are numbered 1 to n in input order. The second line contains their n scores. Print the player numbers ordered from the highest score to the lowest, separated by single spaces. Players with equal scores are listed with the smaller player number first.
+CONSTRAINTS: 1 <= n <= 1000; each score is between 0 and 1000000.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    scores = list(map(int, data[pos + 1:pos + 1 + n]))
+    pos += 1 + n
+    order = sorted(range(1, n + 1), key=lambda p: (-scores[p - 1], p))
+    print(" ".join(map(str, order)))
+```
+TESTS:
+### input
+4
+30 50 30 10
+### output
+2 1 3 4
+### input
+1
+99
+### output
+1
+### input
+5
+5 4 3 2 1
+### output
+1 2 3 4 5
+### input
+5
+1 2 3 4 5
+### output
+5 4 3 2 1
+### input
+6
+7 7 7 7 7 7
+### output
+1 2 3 4 5 6
+### input
+6
+0 1000000 20 0 1000000 20
+### output
+2 5 3 6 1 4
+=== END ===
+
+=== PROBLEM ===
+ID: aita-sort-by-frequency
+DIFFICULTY: hard
+STATEMENT: The first line contains an integer n. The second line contains n space-separated integers. Rearrange them so that values occurring more often come first, and values occurring the same number of times come from smallest to largest; all copies of a value stay next to each other. Print the n rearranged integers separated by single spaces.
+CONSTRAINTS: 1 <= n <= 1000; each integer is between -1000 and 1000.
+REFERENCE:
+```python
+import sys
+from collections import Counter
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    values = list(map(int, data[pos + 1:pos + 1 + n]))
+    pos += 1 + n
+    count = Counter(values)
+    values.sort(key=lambda v: (-count[v], v))
+    print(" ".join(map(str, values)))
+```
+TESTS:
+### input
+7
+4 6 4 2 6 4 9
+### output
+4 4 4 6 6 2 9
+### input
+1
+-8
+### output
+-8
+### input
+5
+1 2 3 4 5
+### output
+1 2 3 4 5
+### input
+6
+3 3 2 2 1 1
+### output
+1 1 2 2 3 3
+### input
+8
+-1 5 -1 0 5 -1 0 7
+### output
+-1 -1 -1 0 0 5 5 7
+### input
+6
+9 8 7 7 8 7
+### output
+7 7 7 8 8 9
+### input
+5
+1000 -1000 1000 -1000 0
+### output
+-1000 -1000 1000 1000 0
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-kth-smallest
+LANGUAGE: c
+BUG: off_by_one
+CORRECT:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n, k;
+        int a[1000];
+        scanf("%d %d", &n, &k);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &a[i]);
+        }
+        for (int i = 1; i < n; i++) {
+            int key = a[i];
+            int j = i - 1;
+            while (j >= 0 && a[j] > key) {
+                a[j + 1] = a[j];
+                j--;
+            }
+            a[j + 1] = key;
+        }
+        printf("%d\n", a[k - 1]);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n, k;
+        int a[1000];
+        scanf("%d %d", &n, &k);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &a[i]);
+        }
+        for (int i = 1; i < n; i++) {
+            int key = a[i];
+            int j = i - 1;
+            while (j >= 0 && a[j] > key) {
+                a[j + 1] = a[j];
+                j--;
+            }
+            a[j + 1] = key;
+        }
+        printf("%d\n", a[k]);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-min-gap
+LANGUAGE: c
+BUG: wrong_initial_value
+CORRECT:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        int a[1000];
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &a[i]);
+        }
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = 0; j < n - 1 - i; j++) {
+                if (a[j] > a[j + 1]) {
+                    int tmp = a[j];
+                    a[j] = a[j + 1];
+                    a[j + 1] = tmp;
+                }
+            }
+        }
+        int best = 200001;
+        for (int i = 1; i < n; i++) {
+            if (a[i] - a[i - 1] < best) {
+                best = a[i] - a[i - 1];
+            }
+        }
+        printf("%d\n", best);
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        int a[1000];
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &a[i]);
+        }
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = 0; j < n - 1 - i; j++) {
+                if (a[j] > a[j + 1]) {
+                    int tmp = a[j];
+                    a[j] = a[j + 1];
+                    a[j + 1] = tmp;
+                }
+            }
+        }
+        int best = 0;
+        for (int i = 1; i < n; i++) {
+            if (a[i] - a[i - 1] < best) {
+                best = a[i] - a[i - 1];
+            }
+        }
+        printf("%d\n", best);
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-rank-by-score
+LANGUAGE: c
+BUG: wrong_comparison_operator
+CORRECT:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        int s[1000], id[1000];
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &s[i]);
+            id[i] = i + 1;
+        }
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = 0; j < n - 1 - i; j++) {
+                if (s[id[j] - 1] < s[id[j + 1] - 1]) {
+                    int tmp = id[j];
+                    id[j] = id[j + 1];
+                    id[j + 1] = tmp;
+                }
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            printf("%d%s", id[i], i == n - 1 ? "" : " ");
+        }
+        printf("\n");
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        int s[1000], id[1000];
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%d", &s[i]);
+            id[i] = i + 1;
+        }
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = 0; j < n - 1 - i; j++) {
+                if (s[id[j] - 1] <= s[id[j + 1] - 1]) {
+                    int tmp = id[j];
+                    id[j] = id[j + 1];
+                    id[j + 1] = tmp;
+                }
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            printf("%d%s", id[i], i == n - 1 ? "" : " ");
+        }
+        printf("\n");
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: mbpp-078
+LANGUAGE: cpp
+BUG: off_by_one
+CORRECT:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> v(n);
+        for (int i = 0; i < n; i++) {
+            cin >> v[i];
+        }
+        for (int i = 1; i < n; i++) {
+            int key = v[i];
+            int j = i - 1;
+            while (j >= 0 && v[j] > key) {
+                v[j + 1] = v[j];
+                j--;
+            }
+            v[j + 1] = key;
+        }
+        for (int i = 0; i < n; i++) {
+            cout << (i == 0 ? "" : " ") << v[i];
+        }
+        cout << "\n";
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> v(n);
+        for (int i = 0; i < n; i++) {
+            cin >> v[i];
+        }
+        for (int i = 1; i < n; i++) {
+            int key = v[i];
+            int j = i - 1;
+            while (j > 0 && v[j] > key) {
+                v[j + 1] = v[j];
+                j--;
+            }
+            v[j + 1] = key;
+        }
+        for (int i = 0; i < n; i++) {
+            cout << (i == 0 ? "" : " ") << v[i];
+        }
+        cout << "\n";
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-unique-values
+LANGUAGE: cpp
+BUG: wrong_initial_value
+CORRECT:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> v(n);
+        for (int i = 0; i < n; i++) {
+            cin >> v[i];
+        }
+        sort(v.begin(), v.end());
+        int prev = -1000000;
+        string sep = "";
+        for (int x : v) {
+            if (x != prev) {
+                cout << sep << x;
+                sep = " ";
+                prev = x;
+            }
+        }
+        cout << "\n";
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> v(n);
+        for (int i = 0; i < n; i++) {
+            cin >> v[i];
+        }
+        sort(v.begin(), v.end());
+        int prev = 0;
+        string sep = "";
+        for (int x : v) {
+            if (x != prev) {
+                cout << sep << x;
+                sep = " ";
+                prev = x;
+            }
+        }
+        cout << "\n";
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-by-frequency
+LANGUAGE: cpp
+BUG: wrong_comparison_operator
+CORRECT:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> v(n);
+        vector<int> cnt(2001, 0);
+        for (int i = 0; i < n; i++) {
+            cin >> v[i];
+            cnt[v[i] + 1000]++;
+        }
+        sort(v.begin(), v.end(), [&](int a, int b) {
+            if (cnt[a + 1000] != cnt[b + 1000]) {
+                return cnt[a + 1000] > cnt[b + 1000];
+            }
+            return a < b;
+        });
+        for (int i = 0; i < n; i++) {
+            cout << v[i] << (i == n - 1 ? "\n" : " ");
+        }
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> v(n);
+        vector<int> cnt(2001, 0);
+        for (int i = 0; i < n; i++) {
+            cin >> v[i];
+            cnt[v[i] + 1000]++;
+        }
+        sort(v.begin(), v.end(), [&](int a, int b) {
+            if (cnt[a + 1000] != cnt[b + 1000]) {
+                return cnt[a + 1000] > cnt[b + 1000];
+            }
+            return a > b;
+        });
+        for (int i = 0; i < n; i++) {
+            cout << v[i] << (i == n - 1 ? "\n" : " ");
+        }
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-kth-smallest
+LANGUAGE: cpp
+BUG: wrong_loop_bound
+CORRECT:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n, k;
+        cin >> n >> k;
+        vector<int> v(n);
+        for (int i = 0; i < n; i++) {
+            cin >> v[i];
+        }
+        for (int i = 0; i < k; i++) {
+            int m = i;
+            for (int j = i + 1; j < n; j++) {
+                if (v[j] < v[m]) {
+                    m = j;
+                }
+            }
+            swap(v[i], v[m]);
+        }
+        cout << v[k - 1] << "\n";
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n, k;
+        cin >> n >> k;
+        vector<int> v(n);
+        for (int i = 0; i < n; i++) {
+            cin >> v[i];
+        }
+        for (int i = 0; i < k - 1; i++) {
+            int m = i;
+            for (int j = i + 1; j < n; j++) {
+                if (v[j] < v[m]) {
+                    m = j;
+                }
+            }
+            swap(v[i], v[m]);
+        }
+        cout << v[k - 1] << "\n";
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-unique-values
+LANGUAGE: python
+BUG: mutate_while_iterating
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = list(map(int, input().split()))
+    a.sort()
+    for x in a[:]:
+        if a.count(x) > 1:
+            a.remove(x)
+    print(" ".join(map(str, a)))
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = list(map(int, input().split()))
+    a.sort()
+    for x in a:
+        if a.count(x) > 1:
+            a.remove(x)
+    print(" ".join(map(str, a)))
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-min-gap
+LANGUAGE: python
+BUG: wrong_loop_bound
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = sorted(map(int, input().split()))
+    best = a[1] - a[0]
+    for i in range(2, n):
+        best = min(best, a[i] - a[i - 1])
+    print(best)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = sorted(map(int, input().split()))
+    best = a[1] - a[0]
+    for i in range(2, n - 1):
+        best = min(best, a[i] - a[i - 1])
+    print(best)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-sort-rank-by-score
+LANGUAGE: python
+BUG: return_vs_print
+CORRECT:
+```python
+def ranking(scores):
+    order = sorted(range(1, len(scores) + 1), key=lambda p: (-scores[p - 1], p))
+    return " ".join(map(str, order))
+
+
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    s = list(map(int, input().split()))
+    print(ranking(s))
+```
+BUGGY:
+```python
+def ranking(scores):
+    order = sorted(range(1, len(scores) + 1), key=lambda p: (-scores[p - 1], p))
+    print(" ".join(map(str, order)))
+
+
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    s = list(map(int, input().split()))
+    print(ranking(s))
+```
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: easy
+STEM:
+What does this program print?
+```python
+nums = [5, 2, 8]
+nums.sort(reverse=True)
+print(nums[0], nums[-1])
+```
+OPTIONS:
+A) 2 8 || none
+B) 8 2 || correct
+C) 5 8 || none
+D) 8 5 || none
+EXPLANATION: reverse=True sorts the list largest first, giving [8, 5, 2], so the first item is 8 and the last is 2.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: medium
+STEM:
+What does this program print?
+```python
+pets = ["cat", "ox", "dog", "emu", "be"]
+pets.sort(key=len)
+print(" ".join(pets))
+```
+OPTIONS:
+A) be ox cat dog emu || none
+B) be cat dog emu ox || none
+C) ox be cat dog emu || correct
+D) cat dog emu ox be || none
+EXPLANATION: Python's sort is stable, so words of the same length keep their original order: ox before be, then cat, dog, emu.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: hard
+STEM:
+What does this program print?
+```python
+scores = [("ana", 7), ("raj", 9), ("li", 7)]
+ranked = sorted(scores, key=lambda p: p[1], reverse=True)
+print([name for name, _ in ranked])
+```
+OPTIONS:
+A) ['raj', 'li', 'ana'] || none
+B) ['li', 'ana', 'raj'] || none
+C) ['ana', 'li', 'raj'] || none
+D) ['raj', 'ana', 'li'] || correct
+EXPLANATION: reverse=True puts the highest score first but keeps tied items in their original order, so ana stays ahead of li.
+=== END ===

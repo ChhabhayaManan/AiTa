@@ -1113,3 +1113,1091 @@ int main() {
 }
 ```
 === END ===
+
+=== PROBLEM ===
+ID: aita-stk-final-stack
+DIFFICULTY: easy
+STATEMENT: The first line contains n, the number of commands. Each of the next n lines is either PUSH x, which puts the integer x on top of a stack, or POP, which removes the value on top. A POP on an empty stack does nothing. The stack starts empty. After all the commands, print the values left on the stack from bottom to top, separated by single spaces, or EMPTY if no values are left.
+CONSTRAINTS: 1 <= n <= 10^5; -10^9 <= x <= 10^9.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    pos += 1
+    stack = []
+    for _ in range(n):
+        command = data[pos]
+        pos += 1
+        if command == "PUSH":
+            stack.append(int(data[pos]))
+            pos += 1
+        elif stack:
+            stack.pop()
+    print(" ".join(map(str, stack)) if stack else "EMPTY")
+```
+TESTS:
+### input
+5
+PUSH 3
+PUSH 8
+POP
+PUSH 1
+PUSH 4
+### output
+3 1 4
+### input
+2
+POP
+POP
+### output
+EMPTY
+### input
+1
+PUSH -7
+### output
+-7
+### input
+4
+PUSH 1
+PUSH 2
+POP
+POP
+### output
+EMPTY
+### input
+6
+POP
+PUSH 10
+PUSH 20
+PUSH 30
+POP
+PUSH 5
+### output
+10 20 5
+### input
+3
+PUSH 0
+PUSH 0
+PUSH 1000000000
+### output
+0 0 1000000000
+=== END ===
+
+=== PROBLEM ===
+ID: aita-stk-ticket-counter
+DIFFICULTY: easy
+STATEMENT: People wait in one line at a ticket counter. The first line contains n, the number of events. Each of the next n lines is either JOIN x, meaning a person holding token number x joins the back of the line, or SERVE, meaning the person at the front is served and leaves. The line starts empty. For every SERVE, output the token number of the person served, or -1 if nobody is waiting. Print all these outputs on one line, separated by single spaces.
+CONSTRAINTS: 1 <= n <= 10^5; 1 <= x <= 10^9; there is at least one SERVE.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    pos += 1
+    line = []
+    head = 0
+    served = []
+    for _ in range(n):
+        command = data[pos]
+        pos += 1
+        if command == "JOIN":
+            line.append(int(data[pos]))
+            pos += 1
+        elif head < len(line):
+            served.append(line[head])
+            head += 1
+        else:
+            served.append(-1)
+    print(" ".join(map(str, served)))
+```
+TESTS:
+### input
+6
+JOIN 12
+JOIN 5
+SERVE
+JOIN 9
+SERVE
+SERVE
+### output
+12 5 9
+### input
+1
+SERVE
+### output
+-1
+### input
+4
+JOIN 7
+SERVE
+SERVE
+JOIN 3
+### output
+7 -1
+### input
+5
+JOIN 1
+JOIN 2
+JOIN 3
+SERVE
+SERVE
+### output
+1 2
+### input
+3
+SERVE
+JOIN 1000000000
+SERVE
+### output
+-1 1000000000
+### input
+7
+JOIN 4
+JOIN 4
+SERVE
+JOIN 8
+SERVE
+SERVE
+SERVE
+### output
+4 4 8 -1
+=== END ===
+
+=== PROBLEM ===
+ID: aita-stk-browser-history
+DIFFICULTY: medium
+STATEMENT: A web browser starts on page 1 with no history. The first line contains n, the number of commands. Each of the next n lines is one of: VISIT x, which opens page x (the current page is saved in the back history and the forward history is wiped); BACK, which returns to the most recently saved page in the back history and saves the current page in the forward history; FORWARD, which does the opposite of BACK. A BACK with an empty back history, or a FORWARD with an empty forward history, does nothing. After every command, output the page now on screen. Print all these outputs on one line, separated by single spaces.
+CONSTRAINTS: 1 <= n <= 10^5; 1 <= x <= 10^9.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    pos += 1
+    back, forward = [], []
+    current = 1
+    shown = []
+    for _ in range(n):
+        command = data[pos]
+        pos += 1
+        if command == "VISIT":
+            back.append(current)
+            current = int(data[pos])
+            pos += 1
+            forward = []
+        elif command == "BACK":
+            if back:
+                forward.append(current)
+                current = back.pop()
+        elif forward:
+            back.append(current)
+            current = forward.pop()
+        shown.append(current)
+    print(" ".join(map(str, shown)))
+```
+TESTS:
+### input
+5
+VISIT 4
+VISIT 9
+BACK
+BACK
+FORWARD
+### output
+4 9 4 1 4
+### input
+2
+BACK
+FORWARD
+### output
+1 1
+### input
+1
+VISIT 7
+### output
+7
+### input
+7
+VISIT 2
+VISIT 3
+VISIT 5
+BACK
+BACK
+VISIT 8
+FORWARD
+### output
+2 3 5 3 2 8 8
+### input
+8
+VISIT 6
+BACK
+BACK
+FORWARD
+FORWARD
+VISIT 2
+BACK
+FORWARD
+### output
+6 1 1 6 6 2 6 2
+### input
+4
+VISIT 1000000000
+VISIT 3
+BACK
+VISIT 5
+### output
+1000000000 3 1000000000 5
+=== END ===
+
+=== PROBLEM ===
+ID: aita-stk-next-greater
+DIFFICULTY: medium
+STATEMENT: The first line contains n. The second line contains n positive integers. For each value, find the first value to its right that is strictly greater than it, or -1 if there is no such value. Print the n answers on one line, separated by single spaces.
+CONSTRAINTS: 1 <= n <= 10^5; 1 <= each value <= 10^9.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+pos = 1
+for _ in range(t):
+    n = int(data[pos])
+    values = [int(v) for v in data[pos + 1:pos + 1 + n]]
+    pos += 1 + n
+    answer = [-1] * n
+    stack = []
+    for i in range(n - 1, -1, -1):
+        while stack and stack[-1] <= values[i]:
+            stack.pop()
+        if stack:
+            answer[i] = stack[-1]
+        stack.append(values[i])
+    print(" ".join(map(str, answer)))
+```
+TESTS:
+### input
+5
+2 7 3 5 1
+### output
+7 -1 5 -1 -1
+### input
+1
+42
+### output
+-1
+### input
+4
+1 2 3 4
+### output
+2 3 4 -1
+### input
+4
+9 6 4 1
+### output
+-1 -1 -1 -1
+### input
+6
+3 3 1 3 4 4
+### output
+4 4 3 4 -1 -1
+### input
+7
+5 1 1 2 1 6 2
+### output
+6 2 2 6 6 -1 -1
+=== END ===
+
+=== PROBLEM ===
+ID: aita-stk-bracket-error
+DIFFICULTY: hard
+STATEMENT: A single line contains a string made only of the characters ( ) [ ] { }, with positions numbered from 1. Read it from left to right. A closing bracket is wrong if no bracket is open at that moment, or if the most recently opened bracket that is still open is of a different kind. If there is a wrong closing bracket, print the position of the first one. Otherwise, if some opening brackets are never closed, print the position of the leftmost of them. If every bracket is closed correctly, print OK.
+CONSTRAINTS: The string has between 1 and 10^5 characters and contains no spaces.
+REFERENCE:
+```python
+import sys
+
+data = sys.stdin.read().split()
+t = int(data[0])
+match = {")": "(", "]": "[", "}": "{"}
+for k in range(1, t + 1):
+    s = data[k]
+    stack = []
+    result = None
+    for i, ch in enumerate(s, 1):
+        if ch in "([{":
+            stack.append((ch, i))
+        elif stack and stack[-1][0] == match[ch]:
+            stack.pop()
+        else:
+            result = i
+            break
+    if result is None and stack:
+        result = stack[0][1]
+    print("OK" if result is None else result)
+```
+TESTS:
+### input
+([]{})
+### output
+OK
+### input
+)
+### output
+1
+### input
+([)]
+### output
+3
+### input
+(()[
+### output
+1
+### input
+{}[(])
+### output
+5
+### input
+()((
+### output
+3
+### input
+[
+### output
+1
+### input
+(){}[]]
+### output
+7
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-ticket-counter
+LANGUAGE: c
+BUG: empty_input_unhandled
+CORRECT:
+```c
+#include <stdio.h>
+#include <string.h>
+
+int queue[100000];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        int head = 0, tail = 0;
+        int printed = 0;
+        for (int i = 0; i < n; i++) {
+            char command[8];
+            scanf("%7s", command);
+            if (strcmp(command, "JOIN") == 0) {
+                scanf("%d", &queue[tail]);
+                tail++;
+            } else {
+                int served = -1;
+                if (head < tail) {
+                    served = queue[head++];
+                }
+                if (printed > 0) {
+                    putchar(' ');
+                }
+                printf("%d", served);
+                printed++;
+            }
+        }
+        putchar('\n');
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+#include <string.h>
+
+int queue[100000];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        int head = 0, tail = 0;
+        int printed = 0;
+        for (int i = 0; i < n; i++) {
+            char command[8];
+            scanf("%7s", command);
+            if (strcmp(command, "JOIN") == 0) {
+                scanf("%d", &queue[tail]);
+                tail++;
+            } else {
+                int served = queue[head++];
+                if (printed > 0) {
+                    putchar(' ');
+                }
+                printf("%d", served);
+                printed++;
+            }
+        }
+        putchar('\n');
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-next-greater
+LANGUAGE: c
+BUG: wrong_comparison_operator
+CORRECT:
+```c
+#include <stdio.h>
+
+long long values[100000];
+long long answer[100000];
+long long stack[100000];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%lld", &values[i]);
+        }
+        int top = 0;
+        for (int i = n - 1; i >= 0; i--) {
+            while (top > 0 && stack[top - 1] <= values[i]) {
+                top--;
+            }
+            answer[i] = top > 0 ? stack[top - 1] : -1;
+            stack[top++] = values[i];
+        }
+        for (int i = 0; i < n; i++) {
+            if (i > 0) {
+                putchar(' ');
+            }
+            printf("%lld", answer[i]);
+        }
+        putchar('\n');
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+long long values[100000];
+long long answer[100000];
+long long stack[100000];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        for (int i = 0; i < n; i++) {
+            scanf("%lld", &values[i]);
+        }
+        int top = 0;
+        for (int i = n - 1; i >= 0; i--) {
+            while (top > 0 && stack[top - 1] < values[i]) {
+                top--;
+            }
+            answer[i] = top > 0 ? stack[top - 1] : -1;
+            stack[top++] = values[i];
+        }
+        for (int i = 0; i < n; i++) {
+            if (i > 0) {
+                putchar(' ');
+            }
+            printf("%lld", answer[i]);
+        }
+        putchar('\n');
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-bracket-error
+LANGUAGE: c
+BUG: off_by_one
+CORRECT:
+```c
+#include <stdio.h>
+
+char s[100005];
+char kinds[100005];
+int places[100005];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%100004s", s);
+        int top = 0;
+        int wrong = -1;
+        for (int i = 0; s[i] != '\0'; i++) {
+            char c = s[i];
+            if (c == '(' || c == '[' || c == '{') {
+                kinds[top] = c;
+                places[top] = i;
+                top++;
+            } else {
+                char open = c == ')' ? '(' : c == ']' ? '[' : '{';
+                if (top > 0 && kinds[top - 1] == open) {
+                    top--;
+                } else {
+                    wrong = i;
+                    break;
+                }
+            }
+        }
+        if (wrong >= 0) {
+            printf("%d\n", wrong + 1);
+        } else if (top > 0) {
+            printf("%d\n", places[0] + 1);
+        } else {
+            printf("OK\n");
+        }
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+char s[100005];
+char kinds[100005];
+int places[100005];
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%100004s", s);
+        int top = 0;
+        int wrong = -1;
+        for (int i = 0; s[i] != '\0'; i++) {
+            char c = s[i];
+            if (c == '(' || c == '[' || c == '{') {
+                kinds[top] = c;
+                places[top] = i;
+                top++;
+            } else {
+                char open = c == ')' ? '(' : c == ']' ? '[' : '{';
+                if (top > 0 && kinds[top - 1] == open) {
+                    top--;
+                } else {
+                    wrong = i;
+                    break;
+                }
+            }
+        }
+        if (wrong >= 0) {
+            printf("%d\n", wrong);
+        } else if (top > 0) {
+            printf("%d\n", places[0] + 1);
+        } else {
+            printf("OK\n");
+        }
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-final-stack
+LANGUAGE: cpp
+BUG: off_by_one
+CORRECT:
+```cpp
+#include <iostream>
+#include <stack>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        stack<long long> st;
+        for (int i = 0; i < n; i++) {
+            string command;
+            cin >> command;
+            if (command == "PUSH") {
+                long long x;
+                cin >> x;
+                st.push(x);
+            } else if (st.size() > 0) {
+                st.pop();
+            }
+        }
+        if (st.empty()) {
+            cout << "EMPTY" << endl;
+            continue;
+        }
+        stack<long long> flipped;
+        while (!st.empty()) {
+            flipped.push(st.top());
+            st.pop();
+        }
+        bool first = true;
+        while (!flipped.empty()) {
+            cout << (first ? "" : " ") << flipped.top();
+            flipped.pop();
+            first = false;
+        }
+        cout << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <stack>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        stack<long long> st;
+        for (int i = 0; i < n; i++) {
+            string command;
+            cin >> command;
+            if (command == "PUSH") {
+                long long x;
+                cin >> x;
+                st.push(x);
+            } else if (st.size() > 1) {
+                st.pop();
+            }
+        }
+        if (st.empty()) {
+            cout << "EMPTY" << endl;
+            continue;
+        }
+        stack<long long> flipped;
+        while (!st.empty()) {
+            flipped.push(st.top());
+            st.pop();
+        }
+        bool first = true;
+        while (!flipped.empty()) {
+            cout << (first ? "" : " ") << flipped.top();
+            flipped.pop();
+            first = false;
+        }
+        cout << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-ticket-counter
+LANGUAGE: cpp
+BUG: wrong_loop_bound
+CORRECT:
+```cpp
+#include <iostream>
+#include <queue>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        queue<long long> line;
+        bool first = true;
+        for (int i = 0; i < n; i++) {
+            string command;
+            cin >> command;
+            if (command == "JOIN") {
+                long long x;
+                cin >> x;
+                line.push(x);
+            } else {
+                long long served = -1;
+                if (!line.empty()) {
+                    served = line.front();
+                    line.pop();
+                }
+                cout << (first ? "" : " ") << served;
+                first = false;
+            }
+        }
+        cout << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <queue>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        queue<long long> line;
+        bool first = true;
+        for (int i = 1; i < n; i++) {
+            string command;
+            cin >> command;
+            if (command == "JOIN") {
+                long long x;
+                cin >> x;
+                line.push(x);
+            } else {
+                long long served = -1;
+                if (!line.empty()) {
+                    served = line.front();
+                    line.pop();
+                }
+                cout << (first ? "" : " ") << served;
+                first = false;
+            }
+        }
+        cout << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-browser-history
+LANGUAGE: cpp
+BUG: wrong_initial_value
+CORRECT:
+```cpp
+#include <iostream>
+#include <stack>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        stack<long long> back_pages, next_pages;
+        long long current = 1;
+        for (int i = 0; i < n; i++) {
+            string command;
+            cin >> command;
+            if (command == "VISIT") {
+                back_pages.push(current);
+                cin >> current;
+                next_pages = stack<long long>();
+            } else if (command == "BACK") {
+                if (!back_pages.empty()) {
+                    next_pages.push(current);
+                    current = back_pages.top();
+                    back_pages.pop();
+                }
+            } else if (!next_pages.empty()) {
+                back_pages.push(current);
+                current = next_pages.top();
+                next_pages.pop();
+            }
+            cout << (i > 0 ? " " : "") << current;
+        }
+        cout << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <stack>
+#include <string>
+using namespace std;
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        stack<long long> back_pages, next_pages;
+        long long current = 0;
+        for (int i = 0; i < n; i++) {
+            string command;
+            cin >> command;
+            if (command == "VISIT") {
+                back_pages.push(current);
+                cin >> current;
+                next_pages = stack<long long>();
+            } else if (command == "BACK") {
+                if (!back_pages.empty()) {
+                    next_pages.push(current);
+                    current = back_pages.top();
+                    back_pages.pop();
+                }
+            } else if (!next_pages.empty()) {
+                back_pages.push(current);
+                current = next_pages.top();
+                next_pages.pop();
+            }
+            cout << (i > 0 ? " " : "") << current;
+        }
+        cout << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-browser-history
+LANGUAGE: python
+BUG: mutate_while_iterating
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    back, ahead = [], []
+    current = 1
+    shown = []
+    for _ in range(n):
+        parts = input().split()
+        if parts[0] == "VISIT":
+            back.append(current)
+            current = int(parts[1])
+            for page in ahead[:]:
+                ahead.remove(page)
+        elif parts[0] == "BACK":
+            if back:
+                ahead.append(current)
+                current = back.pop()
+        elif ahead:
+            back.append(current)
+            current = ahead.pop()
+        shown.append(current)
+    print(*shown)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    back, ahead = [], []
+    current = 1
+    shown = []
+    for _ in range(n):
+        parts = input().split()
+        if parts[0] == "VISIT":
+            back.append(current)
+            current = int(parts[1])
+            for page in ahead:
+                ahead.remove(page)
+        elif parts[0] == "BACK":
+            if back:
+                ahead.append(current)
+                current = back.pop()
+        elif ahead:
+            back.append(current)
+            current = ahead.pop()
+        shown.append(current)
+    print(*shown)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-next-greater
+LANGUAGE: python
+BUG: wrong_loop_bound
+CORRECT:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    values = list(map(int, input().split()))
+    answer = [-1] * n
+    stack = []
+    for i in range(n - 1, -1, -1):
+        while stack and stack[-1] <= values[i]:
+            stack.pop()
+        if stack:
+            answer[i] = stack[-1]
+        stack.append(values[i])
+    print(*answer)
+```
+BUGGY:
+```python
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    values = list(map(int, input().split()))
+    answer = [-1] * n
+    stack = []
+    for i in range(n - 1, 0, -1):
+        while stack and stack[-1] <= values[i]:
+            stack.pop()
+        if stack:
+            answer[i] = stack[-1]
+        stack.append(values[i])
+    print(*answer)
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-stk-bracket-error
+LANGUAGE: python
+BUG: return_vs_print
+CORRECT:
+```python
+def first_error(s):
+    match = {")": "(", "]": "[", "}": "{"}
+    stack = []
+    for i, ch in enumerate(s, 1):
+        if ch in "([{":
+            stack.append((ch, i))
+        elif stack and stack[-1][0] == match[ch]:
+            stack.pop()
+        else:
+            return i
+    if stack:
+        return stack[0][1]
+    return "OK"
+
+
+t = int(input())
+for _ in range(t):
+    print(first_error(input().strip()))
+```
+BUGGY:
+```python
+def first_error(s):
+    match = {")": "(", "]": "[", "}": "{"}
+    stack = []
+    for i, ch in enumerate(s, 1):
+        if ch in "([{":
+            stack.append((ch, i))
+        elif stack and stack[-1][0] == match[ch]:
+            stack.pop()
+        else:
+            print(i)
+    if stack:
+        return stack[0][1]
+    return "OK"
+
+
+t = int(input())
+for _ in range(t):
+    print(first_error(input().strip()))
+```
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: easy
+STEM:
+What does this program print?
+```python
+items = [4, 5, 6]
+a = items.pop()
+b = items.pop(0)
+print(a, b)
+```
+OPTIONS:
+A) 6 4 || correct
+B) 4 6 || none
+C) 6 5 || none
+D) 4 5 || none
+EXPLANATION: pop() with no index removes the last value, while pop(0) removes the first one, so a gets 6 and b gets 4.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: medium
+STEM:
+What does this program print?
+```python
+from collections import deque
+
+q = deque(["A", "B", "C"])
+order = ""
+for _ in range(5):
+    person = q.popleft()
+    order += person
+    q.append(person)
+print(order)
+```
+OPTIONS:
+A) ABCABC || off_by_one
+B) CBACB || none
+C) ABCAB || correct
+D) ABCCB || none
+EXPLANATION: Each turn takes the person at the front and sends them to the back, so the turns cycle A, B, C, A, B over five rounds.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: hard
+STEM:
+What does this program print?
+```python
+text = []
+undone = []
+for action in ["a", "b", "UNDO", "c", "d", "UNDO", "UNDO", "e"]:
+    if action == "UNDO":
+        if text:
+            undone.append(text.pop())
+    else:
+        text.append(action)
+print("".join(text), "".join(undone))
+```
+OPTIONS:
+A) ae cdb || none
+B) ae bdc || correct
+C) ace bd || none
+D) e bdc || none
+EXPLANATION: Each UNDO pops the most recent letter still in text, so b, then d, then c are removed in that order, leaving a and the later e.
+=== END ===

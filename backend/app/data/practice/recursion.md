@@ -970,3 +970,872 @@ int main() {
 }
 ```
 === END ===
+
+=== PROBLEM ===
+ID: aita-rec-digit-product
+DIFFICULTY: easy
+STATEMENT: A single line contains a non-negative integer n. Print the product of all the digits of n. The number 0 has the single digit 0, so its product is 0. Solve it with a recursive function: the product for n is its last digit times the product for n with that digit removed.
+CONSTRAINTS: 0 <= n <= 1000000000000000000.
+REFERENCE:
+```python
+import sys
+
+
+def product(n):
+    if n < 10:
+        return n
+    return (n % 10) * product(n // 10)
+
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    print(product(int(data[k])))
+```
+TESTS:
+### input
+234
+### output
+24
+### input
+0
+### output
+0
+### input
+7
+### output
+7
+### input
+105
+### output
+0
+### input
+10
+### output
+0
+### input
+9876
+### output
+3024
+### input
+999999999999999999
+### output
+150094635296999121
+### input
+1000000000000000000
+### output
+0
+=== END ===
+
+=== PROBLEM ===
+ID: aita-rec-digital-root
+DIFFICULTY: easy
+STATEMENT: A single line contains a non-negative integer n. Replace n by the sum of its digits, and keep doing this until only one digit is left. Print that digit. For example, 38 becomes 3 + 8 = 11, then 1 + 1 = 2, so the answer is 2. A number that already has one digit is its own answer. Solve it with recursion.
+CONSTRAINTS: 0 <= n <= 1000000000000000000.
+REFERENCE:
+```python
+import sys
+
+
+def digit_sum(n):
+    if n == 0:
+        return 0
+    return n % 10 + digit_sum(n // 10)
+
+
+def root(n):
+    if n < 10:
+        return n
+    return root(digit_sum(n))
+
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    print(root(int(data[k])))
+```
+TESTS:
+### input
+38
+### output
+2
+### input
+0
+### output
+0
+### input
+9
+### output
+9
+### input
+10
+### output
+1
+### input
+98765
+### output
+8
+### input
+999999999999999999
+### output
+9
+### input
+1000000000000000000
+### output
+1
+=== END ===
+
+=== PROBLEM ===
+ID: aita-rec-ladder-123
+DIFFICULTY: medium
+STATEMENT: A single line contains an integer n. A ladder has n rungs, and with each move you climb up 1, 2 or 3 rungs. Print the number of different sequences of moves that take you from the ground to exactly the top rung. A ladder with 0 rungs has exactly one way: make no moves. Use recursion and remember the answers you have already worked out, so each n is computed only once.
+CONSTRAINTS: 0 <= n <= 60. The answer fits in a 64-bit signed integer.
+REFERENCE:
+```python
+import sys
+
+memo = {}
+
+
+def ways(n):
+    if n < 0:
+        return 0
+    if n == 0:
+        return 1
+    if n not in memo:
+        memo[n] = ways(n - 1) + ways(n - 2) + ways(n - 3)
+    return memo[n]
+
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(1, t + 1):
+    print(ways(int(data[k])))
+```
+TESTS:
+### input
+4
+### output
+7
+### input
+0
+### output
+1
+### input
+1
+### output
+1
+### input
+2
+### output
+2
+### input
+3
+### output
+4
+### input
+10
+### output
+274
+### input
+25
+### output
+2555757
+### input
+60
+### output
+4680045560037375
+=== END ===
+
+=== PROBLEM ===
+ID: aita-rec-power-mod-halving
+DIFFICULTY: medium
+STATEMENT: A single line contains two integers b and e. Print b raised to the power e, modulo 1000000007; b to the power 0 is 1. Multiplying e times is far too slow for large e, so use divide and conquer: b^e is (b^(e/2))^2 when e is even, and that times one more b when e is odd, with e/2 rounded down.
+CONSTRAINTS: 1 <= b <= 1000000000, 0 <= e <= 1000000000000000000.
+REFERENCE:
+```python
+import sys
+
+MOD = 1000000007
+
+
+def power(b, e):
+    if e == 0:
+        return 1
+    half = power(b, e // 2)
+    result = half * half % MOD
+    if e % 2 == 1:
+        result = result * b % MOD
+    return result
+
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for k in range(t):
+    b = int(data[1 + 2 * k])
+    e = int(data[2 + 2 * k])
+    print(power(b % MOD, e))
+```
+TESTS:
+### input
+2 10
+### output
+1024
+### input
+5 0
+### output
+1
+### input
+3 1
+### output
+3
+### input
+7 13
+### output
+889009735
+### input
+1 1000000000000000000
+### output
+1
+### input
+2 1000000006
+### output
+1
+### input
+123456789 987654321
+### output
+652541198
+### input
+1000000000 1000000000000000000
+### output
+259616729
+=== END ===
+
+=== PROBLEM ===
+ID: aita-rec-hanoi-kth-move
+DIFFICULTY: hard
+STATEMENT: A single line contains two integers n and k. In the Tower of Hanoi puzzle, n disks numbered 1 (smallest) to n (largest) start stacked on peg 1, and all of them must be moved to peg 3, one disk at a time, never placing a larger disk on a smaller one; peg 2 is the spare. The shortest solution takes 2^n - 1 moves: move disks 1 to n-1 from peg 1 to peg 2, then move disk n from peg 1 to peg 3, then move disks 1 to n-1 from peg 2 to peg 3, solving each smaller tower the same way. Print the k-th move of this shortest solution as three integers: the disk number, the peg it leaves and the peg it lands on. Listing all the moves is far too slow; work out which third of the solution move k falls in and recurse into just that part.
+CONSTRAINTS: 1 <= n <= 60, 1 <= k <= 2^n - 1.
+REFERENCE:
+```python
+import sys
+
+
+def kth(n, src, dst, spare, k):
+    mid = 1 << (n - 1)
+    if k == mid:
+        return n, src, dst
+    if k < mid:
+        return kth(n - 1, src, spare, dst, k)
+    return kth(n - 1, spare, dst, src, k - mid)
+
+
+data = sys.stdin.read().split()
+t = int(data[0])
+for i in range(t):
+    n = int(data[1 + 2 * i])
+    k = int(data[2 + 2 * i])
+    print(*kth(n, 1, 3, 2, k))
+```
+TESTS:
+### input
+3 6
+### output
+2 2 3
+### input
+1 1
+### output
+1 1 3
+### input
+2 1
+### output
+1 1 2
+### input
+2 2
+### output
+2 1 3
+### input
+4 12
+### output
+3 2 3
+### input
+5 13
+### output
+1 1 3
+### input
+60 1
+### output
+1 1 2
+### input
+60 576460752303423488
+### output
+60 1 3
+### input
+60 1152921504606846975
+### output
+1 2 3
+### input
+60 123456789012345678
+### output
+2 3 2
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-digit-product
+LANGUAGE: c
+BUG: wrong_comparison_operator
+CORRECT:
+```c
+#include <stdio.h>
+
+long long product(long long n) {
+    if (n < 10) {
+        return n;
+    }
+    return (n % 10) * product(n / 10);
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long n;
+        scanf("%lld", &n);
+        printf("%lld\n", product(n));
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+long long product(long long n) {
+    if (n <= 10) {
+        return n;
+    }
+    return (n % 10) * product(n / 10);
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long n;
+        scanf("%lld", &n);
+        printf("%lld\n", product(n));
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-ladder-123
+LANGUAGE: c
+BUG: off_by_one
+CORRECT:
+```c
+#include <stdio.h>
+
+long long memo[61];
+int known[61];
+
+long long ways(int n) {
+    if (n < 0) {
+        return 0;
+    }
+    if (n == 0) {
+        return 1;
+    }
+    if (known[n]) {
+        return memo[n];
+    }
+    memo[n] = ways(n - 1) + ways(n - 2) + ways(n - 3);
+    known[n] = 1;
+    return memo[n];
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        printf("%lld\n", ways(n));
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+long long memo[61];
+int known[61];
+
+long long ways(int n) {
+    if (n < 1) {
+        return 0;
+    }
+    if (n == 1) {
+        return 1;
+    }
+    if (known[n]) {
+        return memo[n];
+    }
+    memo[n] = ways(n - 1) + ways(n - 2) + ways(n - 3);
+    known[n] = 1;
+    return memo[n];
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        int n;
+        scanf("%d", &n);
+        printf("%lld\n", ways(n));
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-digital-root
+LANGUAGE: c
+BUG: wrong_initial_value
+CORRECT:
+```c
+#include <stdio.h>
+
+long long digit_sum(long long n) {
+    if (n == 0) {
+        return 0;
+    }
+    return n % 10 + digit_sum(n / 10);
+}
+
+long long root(long long n) {
+    if (n < 10) {
+        return n;
+    }
+    return root(digit_sum(n));
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long n;
+        scanf("%lld", &n);
+        printf("%lld\n", root(n));
+    }
+    return 0;
+}
+```
+BUGGY:
+```c
+#include <stdio.h>
+
+long long digit_sum(long long n) {
+    if (n == 0) {
+        return 1;
+    }
+    return n % 10 + digit_sum(n / 10);
+}
+
+long long root(long long n) {
+    if (n < 10) {
+        return n;
+    }
+    return root(digit_sum(n));
+}
+
+int main(void) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        long long n;
+        scanf("%lld", &n);
+        printf("%lld\n", root(n));
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-digit-product
+LANGUAGE: cpp
+BUG: wrong_initial_value
+CORRECT:
+```cpp
+#include <iostream>
+using namespace std;
+
+long long product(long long n) {
+    if (n < 10) {
+        return n;
+    }
+    return (n % 10) * product(n / 10);
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        long long n;
+        cin >> n;
+        cout << product(n) << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+using namespace std;
+
+long long product(long long n) {
+    if (n == 0) {
+        return 0;
+    }
+    return (n % 10) * product(n / 10);
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        long long n;
+        cin >> n;
+        cout << product(n) << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-ladder-123
+LANGUAGE: cpp
+BUG: wrong_comparison_operator
+CORRECT:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+vector<long long> memo(61, -1);
+
+long long ways(int n) {
+    if (n < 0) {
+        return 0;
+    }
+    if (n == 0) {
+        return 1;
+    }
+    if (memo[n] != -1) {
+        return memo[n];
+    }
+    memo[n] = ways(n - 1) + ways(n - 2) + ways(n - 3);
+    return memo[n];
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        cout << ways(n) << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+vector<long long> memo(61, -1);
+
+long long ways(int n) {
+    if (n <= 0) {
+        return 0;
+    }
+    if (n == 0) {
+        return 1;
+    }
+    if (memo[n] != -1) {
+        return memo[n];
+    }
+    memo[n] = ways(n - 1) + ways(n - 2) + ways(n - 3);
+    return memo[n];
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        cout << ways(n) << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-power-mod-halving
+LANGUAGE: cpp
+BUG: off_by_one
+CORRECT:
+```cpp
+#include <iostream>
+using namespace std;
+
+const long long MOD = 1000000007;
+
+long long power(long long b, long long e) {
+    if (e == 0) {
+        return 1;
+    }
+    long long half = power(b, e / 2);
+    long long result = half * half % MOD;
+    if (e % 2 == 1) {
+        result = result * b % MOD;
+    }
+    return result;
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        long long b, e;
+        cin >> b >> e;
+        cout << power(b % MOD, e) << endl;
+    }
+    return 0;
+}
+```
+BUGGY:
+```cpp
+#include <iostream>
+using namespace std;
+
+const long long MOD = 1000000007;
+
+long long power(long long b, long long e) {
+    if (e <= 1) {
+        return b;
+    }
+    long long half = power(b, e / 2);
+    long long result = half * half % MOD;
+    if (e % 2 == 1) {
+        result = result * b % MOD;
+    }
+    return result;
+}
+
+int main() {
+    int t;
+    cin >> t;
+    while (t--) {
+        long long b, e;
+        cin >> b >> e;
+        cout << power(b % MOD, e) << endl;
+    }
+    return 0;
+}
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-digit-product
+LANGUAGE: python
+BUG: integer_division
+CORRECT:
+```python
+def product(n):
+    if n < 10:
+        return n
+    return (n % 10) * product(n // 10)
+
+
+t = int(input())
+for _ in range(t):
+    print(product(int(input())))
+```
+BUGGY:
+```python
+def product(n):
+    if n < 10:
+        return n
+    return (n % 10) * product(n / 10)
+
+
+t = int(input())
+for _ in range(t):
+    print(product(int(input())))
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-digital-root
+LANGUAGE: python
+BUG: return_vs_print
+CORRECT:
+```python
+def digit_sum(n):
+    if n == 0:
+        return 0
+    return n % 10 + digit_sum(n // 10)
+
+
+def root(n):
+    if n < 10:
+        return n
+    return root(digit_sum(n))
+
+
+t = int(input())
+for _ in range(t):
+    print(root(int(input())))
+```
+BUGGY:
+```python
+def digit_sum(n):
+    if n == 0:
+        return 0
+    return n % 10 + digit_sum(n // 10)
+
+
+def root(n):
+    if n < 10:
+        return n
+    root(digit_sum(n))
+
+
+t = int(input())
+for _ in range(t):
+    print(root(int(input())))
+```
+=== END ===
+
+=== DEBUG ===
+PROBLEM: aita-rec-ladder-123
+LANGUAGE: python
+BUG: wrong_initial_value
+CORRECT:
+```python
+memo = {}
+
+
+def ways(n):
+    if n < 0:
+        return 0
+    if n == 0:
+        return 1
+    if n not in memo:
+        memo[n] = ways(n - 1) + ways(n - 2) + ways(n - 3)
+    return memo[n]
+
+
+t = int(input())
+for _ in range(t):
+    print(ways(int(input())))
+```
+BUGGY:
+```python
+memo = {}
+
+
+def ways(n):
+    if n < 0:
+        return 0
+    if n == 0:
+        return 0
+    if n not in memo:
+        memo[n] = ways(n - 1) + ways(n - 2) + ways(n - 3)
+    return memo[n]
+
+
+t = int(input())
+for _ in range(t):
+    print(ways(int(input())))
+```
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: easy
+STEM:
+What does this program print?
+```python
+def count(n):
+    if n == 0:
+        return 0
+    return 1 + count(n // 10)
+
+print(count(5072))
+```
+OPTIONS:
+A) 3 || off_by_one
+B) 4 || correct
+C) 14 || none
+D) 5 || off_by_one
+EXPLANATION: Each call removes one digit and adds 1, and the call with 0 adds nothing, so a four-digit number gives 4.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: medium
+STEM:
+What does this program print?
+```python
+def show(s):
+    if s == "":
+        return
+    show(s[1:])
+    print(s[0], end="")
+
+show("loop")
+print()
+```
+OPTIONS:
+A) loop || none
+B) oopl || none
+C) pool || correct
+D) p || none
+EXPLANATION: Each call prints its first character only after the call on the rest of the string has finished, so the last character is printed first.
+=== END ===
+
+=== QUESTION ===
+LANGUAGE: python
+DIFFICULTY: hard
+STEM:
+What does this program print?
+```python
+def walk(n):
+    if n == 0:
+        return
+    walk(n - 1)
+    print(n, end="")
+    walk(n - 1)
+
+walk(3)
+print()
+```
+OPTIONS:
+A) 123 || none
+B) 121 || off_by_one
+C) 3212123 || none
+D) 1213121 || correct
+EXPLANATION: walk(1) prints 1, walk(2) prints walk(1), then 2, then walk(1) again, giving 121, and walk(3) wraps 3 between two copies of that.
+=== END ===
