@@ -25,6 +25,10 @@ class ThreadNotFound(AitaError):
     status_code = 404
 
 
+class SessionNotFound(AitaError):
+    status_code = 404
+
+
 class TurnInProgress(AitaError):
     status_code = 409
 

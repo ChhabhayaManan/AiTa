@@ -36,6 +36,8 @@ class LearningEvent(Base):
     source_ref      = Column(String(60), nullable=True)
     # The language the evidence happened in: c, cpp or python.
     language        = Column(String(10), nullable=False)
+    session_id      = Column(Integer, ForeignKey("practice_sessions.id", ondelete="SET NULL"),
+                             nullable=True, index=True)
     created_at      = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
@@ -64,6 +66,8 @@ class HintEvent(Base):
     level         = Column(Integer, nullable=False)
     was_blocked   = Column(Boolean, nullable=False, default=False)
     source        = Column(String(16), nullable=False, server_default="practice")
+    session_id    = Column(Integer, ForeignKey("practice_sessions.id", ondelete="SET NULL"),
+                           nullable=True, index=True)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
 

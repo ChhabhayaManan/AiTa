@@ -14,6 +14,7 @@ from app.models import (  # noqa: F401
     learning,
     llm_call,
     onboarding,
+    practice_session,
     problem,
     recommendation,
     user,

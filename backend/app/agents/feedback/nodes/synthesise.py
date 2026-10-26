@@ -2,7 +2,7 @@ import json
 import logging
 
 from app.agents.feedback.prompts import (
-    CP_BLOCK,
+    ACTIVITY_BLOCK,
     EVAL_BLOCK,
     LEARNING_BLOCK,
     PATTERN_BLOCK,
@@ -17,6 +17,7 @@ from app.core import llm_gateway
 from app.core.exceptions import LLMUnavailable
 from app.core.llm import invoke_with_retry
 from app.models.code_eval import Language
+from app.services.feedback.activity import references_for
 from app.services.hints import guardrail
 
 logger = logging.getLogger(__name__)
@@ -82,15 +83,14 @@ def _context(state: FeedbackState) -> str:
             hint_level=learning["hint_level"],
             recent=json.dumps(learning["recent_events"]),
         ))
-    if state.cp_ctx:
-        c = state.cp_ctx
-        parts.append(CP_BLOCK.format(
-            topic=c["topic"],
-            mode=c["mode"],
-            concepts=json.dumps(c["concepts"][:8]),
-            mastery=json.dumps(c["mastery"][:5]),
-            weak=json.dumps(c["weak"][:5]),
-            confusion=c["confusion"],
+    if state.activity_ctx:
+        a = state.activity_ctx
+        parts.append(ACTIVITY_BLOCK.format(
+            count=len(a["items"]),
+            items=json.dumps(a["items"]),
+            topics=json.dumps(a["topics"]),
+            hints=json.dumps({f"L{level}": n for level, n in a["hints"].items()}),
+            mistakes=json.dumps(a["mistakes"]),
         ))
     parts.append(PATTERN_BLOCK.format(
         errors=json.dumps(patterns["errors"]),
@@ -124,24 +124,31 @@ def _from_patterns(patterns: dict) -> FeedbackNarrative:
 def _narrative_text(narrative: FeedbackNarrative) -> str:
     return "\n".join([narrative.headline, narrative.summary, narrative.motivational or "",
                       *narrative.strengths, *narrative.errors, *narrative.misconceptions,
-                      *narrative.action_items])
+                      *narrative.action_items, *narrative.next_topics,
+                      *narrative.concept_map])
 
 
 def _leaks(state: FeedbackState, narrative: FeedbackNarrative) -> str | None:
-    """The same guardrail every hint passes through: reference lines quoted, too much
-    code, or a code block that solves the problem."""
-    if not state.eval_ctx:
-        return None
-    learning = state.eval_ctx["learning"]
-    try:
-        language = Language(state.eval_ctx["language"])
-    except ValueError:
-        language = Language.PYTHON
-    verdict = guardrail.check(
-        _narrative_text(narrative), 3, language, learning["test_cases"],
-        references=learning["references"], student_code=state.eval_ctx["code"],
-    )
-    return verdict.reason if verdict.blocked else None
+    """The per-problem guardrail every hint passes through when the report is built
+    around one evaluation, and the no-code multi-item check across every recent item."""
+    text = _narrative_text(narrative)
+    if state.eval_ctx:
+        learning = state.eval_ctx["learning"]
+        try:
+            language = Language(state.eval_ctx["language"])
+        except ValueError:
+            language = Language.PYTHON
+        verdict = guardrail.check(
+            text, 3, language, learning["test_cases"],
+            references=learning["references"], student_code=state.eval_ctx["code"],
+        )
+        if verdict.blocked:
+            return verdict.reason
+    if state.activity_ctx:
+        verdict = guardrail.check_multi_item(text, references_for(state.db, state.events))
+        if verdict.blocked:
+            return verdict.reason
+    return None
 
 
 def _fall_back(state: FeedbackState, step: str) -> FeedbackState:

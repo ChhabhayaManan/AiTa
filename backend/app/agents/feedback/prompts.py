@@ -11,8 +11,8 @@ TONE_INSTRUCTIONS = {
 
 SYSTEM_PROMPT = """You are the Feedback Agent in aiTA — an AI teaching assistant for \
 Indian programming students.
-You synthesise findings from the Code Evaluation Agent and Content Player Agent into \
-rich, personalised feedback.
+You synthesise the student's latest code evaluation and recent learning activity \
+(MCQs, debug challenges, coding problems) into rich, personalised feedback.
 
 Student: {username} | Skill: {skill}
 Languages: {languages}
@@ -28,8 +28,9 @@ Rules:
   with it
 - If a misconception has come up more than once, say so with the count, e.g. "this is
   the 3rd time wrong_initial_value has shown up in your recent attempts"
-- NEVER state the fix, NEVER write corrected code or a working solution, and write at
-  most two lines of code anywhere, only quoting the student's own code
+- NEVER state the fix, NEVER write corrected code or a working solution, and never
+  write a code block or lines of code; refer to the student's own code in words or a
+  short inline fragment
 """
 
 LEARNING_BLOCK = """LEARNER MODEL (measured, not estimated):
@@ -49,12 +50,11 @@ Learning points: {learning_points}
 Anti-patterns: {anti_patterns}
 Agent summary: {summary}"""
 
-CP_BLOCK = """CONTENT PLAYER SESSION:
-Topic: {topic} | Mode: {mode}
-Concepts covered: {concepts}
-Mastery: {mastery}
-Weaknesses: {weak}
-Confusion detected: {confusion}"""
+ACTIVITY_BLOCK = """RECENT LEARNING ACTIVITY (last {count} graded items, oldest first):
+Items: {items}
+Topic mastery changes: {topics}
+Hints used by level: {hints}
+Most repeated mistakes: {mistakes}"""
 
 PATTERN_BLOCK = """PATTERN ANALYSIS:
 Error patterns: {errors}

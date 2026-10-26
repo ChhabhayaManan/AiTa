@@ -8,15 +8,12 @@ from app.models.feedback import FeedbackType, FeedbackTone
 
 class GenerateFeedbackRequest(BaseModel):
     """
-    At least one of evaluation_id or cp_session_id must be provided.
-    The agent uses whichever sources are available and sets feedback_type
-    automatically (code_review / learning_recap / combined).
+    The report always reads the student's recent learning events; evaluation_id adds
+    one code evaluation. feedback_type is set automatically
+    (code_review / learning_recap / combined).
     """
     evaluation_id: Optional[int] = Field(
         None, description="ID from code_evaluations table (Code Eval Agent output)"
-    )
-    cp_session_id: Optional[int] = Field(
-        None, description="ID from content_player_sessions table (Content Player output)"
     )
     tone: FeedbackTone = Field(
         FeedbackTone.ENCOURAGING,

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { MessageSquareText, RefreshCw } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { feedbackAPI, gamificationAPI, profileAPI } from '../utils/api'
+import { feedbackAPI, gamificationAPI, practiceSessionAPI, profileAPI } from '../utils/api'
 import AppShell from '../components/ui/AppShell'
 import Button from '../components/ui/Button'
 import { SkeletonTile } from '../components/ui/Skeleton'
@@ -12,6 +12,7 @@ import TopicRing from '../components/dashboard/TopicRing'
 import ProgressTile from '../components/dashboard/ProgressTile'
 import ActivityTile from '../components/dashboard/ActivityTile'
 import Shortcuts from '../components/dashboard/Shortcuts'
+import LastSessionCard from '../components/dashboard/LastSessionCard'
 import ChatPanel from '../components/chat/ChatPanel'
 
 function LoadError({ onRetry }) {
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const [mastery, setMastery] = useState({ data: null, error: false })
   const [progress, setProgress] = useState(null)
   const [unread, setUnread] = useState(0)
+  const [lastSession, setLastSession] = useState(null)
 
   const loadMastery = useCallback(() => {
     setMastery({ data: null, error: false })
@@ -55,6 +57,7 @@ export default function DashboardPage() {
     loadMastery()
     gamificationAPI.me().then(({ data }) => setProgress(data)).catch(() => setProgress(null))
     feedbackAPI.unreadCount().then(({ data }) => setUnread(data.unread ?? 0)).catch(() => {})
+    practiceSessionAPI.pending().then(({ data }) => setLastSession(data)).catch(() => {})
   }, [loadMastery])
 
   useEffect(() => {
@@ -77,6 +80,12 @@ export default function DashboardPage() {
           <div className={`md:col-span-6 ${rise(0)}`}>
             <HeroTile user={user} topics={topics} loading={loading} />
           </div>
+
+          {lastSession && (
+            <div className={`md:col-span-6 ${rise(1)}`}>
+              <LastSessionCard session={lastSession} />
+            </div>
+          )}
 
           {mastery.error ? (
             <LoadError onRetry={loadMastery} />

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Bug, ChevronDown, Code2, HelpCircle, ListChecks, RefreshCw, Target } from 'lucide-react'
-import { assessmentAPI, getErrorMessage, profileAPI } from '../utils/api'
+import { ArrowRight, Bug, ChevronDown, Code2, Flag, HelpCircle, ListChecks, RefreshCw, Target } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { assessmentAPI, getErrorMessage, practiceSessionAPI, profileAPI } from '../utils/api'
 import { BAND_STYLE, ITEM_TYPE_LABELS, topicLabel } from '../components/learning/labels'
 import AppShell from '../components/ui/AppShell'
 import Button from '../components/ui/Button'
@@ -115,6 +116,8 @@ export default function PracticePage() {
   const [graded, setGraded] = useState(false)
   const [topics, setTopics] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [session, setSession] = useState(null)
+  const [finishing, setFinishing] = useState(false)
   const nextRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -125,6 +128,7 @@ export default function PracticePage() {
     try {
       const { data } = await assessmentAPI.next()
       setNext(data)
+      practiceSessionAPI.current().then(({ data }) => setSession(data)).catch(() => {})
     } catch (err) {
       if (err?.response?.status === 428) {
         navigate('/language-check', { replace: true })
@@ -140,7 +144,20 @@ export default function PracticePage() {
 
   useEffect(() => {
     profileAPI.getMastery().then(({ data }) => setTopics(data.topics)).catch(() => {})
+    practiceSessionAPI.current().then(({ data }) => setSession(data)).catch(() => {})
   }, [refreshKey])
+
+  const finish = async () => {
+    setFinishing(true)
+    try {
+      await practiceSessionAPI.finish(session.id)
+      navigate(`/practice/session/${session.id}`)
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Couldn't finish the session. Try again in a moment."))
+      setFinishing(false)
+      setRefreshKey(k => k + 1)
+    }
+  }
 
   const onGraded = () => {
     setGraded(true)
@@ -162,7 +179,15 @@ export default function PracticePage() {
             <p className="eyebrow">Practice</p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink md:text-[32px]">One question at a time</h1>
           </div>
-          <p className="max-w-[46ch] text-sm text-ink-subtle">Each answer is graded, moves your topic level, and picks what comes next.</p>
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <p className="max-w-[46ch] text-sm text-ink-subtle">Each answer is graded, moves your topic level, and picks what comes next.</p>
+            {session?.id && (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-mono text-xs text-ink-muted">{session.graded_count} answered this session</span>
+                <Button size="sm" variant="secondary" icon={Flag} busy={finishing} onClick={finish}>Finish session</Button>
+              </div>
+            )}
+          </div>
         </header>
 
         {loading && <LoadingState />}

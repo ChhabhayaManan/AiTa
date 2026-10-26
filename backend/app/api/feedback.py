@@ -6,7 +6,6 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
 from app.models.code_eval import CodeEvaluation, CodeSubmission
-from app.models.content_player import ContentPlayerSession
 from app.schemas.feedback import (
     GenerateFeedbackRequest, FeedbackReportResponse, MarkReadRequest,
     HintRequest, HintResponse,
@@ -40,7 +39,7 @@ def hint(
     "/generate",
     response_model=FeedbackReportResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="🤖 Run Feedback Agent — synthesise from Code Eval + Content Player",
+    summary="🤖 Run Feedback Agent — synthesise from Code Eval + recent learning events",
 )
 def generate(
     req: GenerateFeedbackRequest,
@@ -50,7 +49,7 @@ def generate(
     """
     Runs the full Feedback Agent pipeline:
     1. Pulls Code Evaluation result (if evaluation_id given)
-    2. Pulls Content Player session (if cp_session_id given)
+    2. Pulls recent learning events (last 14 days, at most 30, seeds excluded)
     3. Analyses error patterns + misconceptions
     4. Synthesises a personalised narrative from those findings
     5. Updates User Profile (weak_areas, error_patterns, topic_scores)
@@ -122,14 +121,12 @@ def auto_generate(
     db: Session = Depends(get_db),
 ):
     """
-    Automatically finds the user's most recent code evaluation and/or
-    content player session and generates personalised feedback.
-    No input required from the user.
+    Automatically reads the user's most recent code evaluation and recent
+    learning events and generates personalised feedback. No input required.
+    422 when there is neither.
     """
-    from fastapi import HTTPException
     from app.models.feedback import FeedbackTone
 
-    # Find latest code evaluation for this user
     latest_eval = (
         db.query(CodeEvaluation)
         .join(CodeSubmission, CodeEvaluation.submission_id == CodeSubmission.id)
@@ -138,26 +135,8 @@ def auto_generate(
         .first()
     )
 
-    # Find latest content player session for this user
-    latest_session = (
-        db.query(ContentPlayerSession)
-        .filter(
-            ContentPlayerSession.user_id == current_user.id,
-            ContentPlayerSession.is_archived == False,
-        )
-        .order_by(ContentPlayerSession.created_at.desc())
-        .first()
-    )
-
-    if not latest_eval and not latest_session:
-        raise HTTPException(
-            status_code=422,
-            detail="No activity found. Complete a code evaluation or learning session first."
-        )
-
     req = GenerateFeedbackRequest(
         evaluation_id=latest_eval.id if latest_eval else None,
-        cp_session_id=latest_session.id if latest_session else None,
         tone=FeedbackTone.ENCOURAGING,
     )
     return FeedbackService.generate(db, current_user.id, req)

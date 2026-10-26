@@ -1,19 +1,23 @@
-from typing import Dict, Optional
+from typing import Dict
 
 from sqlalchemy.orm import Session
 
 from app.agents.feedback.state import FeedbackState
 from app.core.topics import TOPIC_LABELS, normalise_topic
 from app.models.code_eval import CodeEvaluation, CodeSubmission
-from app.models.content_player import ContentPlayerSession
 from app.models.feedback import FeedbackType
 from app.models.learning import LearningEvent, TopicMastery
 from app.models.problem import ExecRole, ExecutionResult, Problem
 from app.models.user import LearningProfile, User
+from app.services.feedback.activity import activity_context, recent_events
 from app.services.hints.service import failing_case, highest_level, reference_sources
 from app.services.personalisation import style_line
 from app.services.profiling.mastery import SEED_KINDS
 from app.services.profiling.service import top_misconceptions
+
+NO_ACTIVITY = ("No activity found. Answer a few practice questions or complete a "
+               "code evaluation first.")
+EVALUATION_NOT_FOUND = "Code evaluation not found."
 
 
 def _user_context(db: Session, user_id: int) -> Dict:
@@ -70,13 +74,16 @@ def _learning_context(db: Session, user_id: int, ev: CodeEvaluation, sub) -> Dic
     }
 
 
-def _eval_context(db: Session, eval_id: int) -> Optional[Dict]:
-    ev = db.query(CodeEvaluation).filter(CodeEvaluation.id == eval_id).first()
+def _eval_context(db: Session, eval_id: int, user_id: int) -> Dict:
+    ev = (db.query(CodeEvaluation)
+          .join(CodeSubmission, CodeEvaluation.submission_id == CodeSubmission.id)
+          .filter(CodeEvaluation.id == eval_id, CodeSubmission.user_id == user_id)
+          .first())
     if not ev:
-        return None
+        raise ValueError(EVALUATION_NOT_FOUND)
     sub = db.query(CodeSubmission).filter(CodeSubmission.id == ev.submission_id).first()
     return {
-        "learning": _learning_context(db, ev.user_id, ev, sub),
+        "learning": _learning_context(db, user_id, ev, sub),
         "language": sub.language.value if sub else "unknown",
         "code": (sub.code or "")[:1500] if sub else "",
         "overall": ev.overall_score,
@@ -97,35 +104,20 @@ def _eval_context(db: Session, eval_id: int) -> Optional[Dict]:
     }
 
 
-def _cp_context(db: Session, session_id: int) -> Optional[Dict]:
-    s = (db.query(ContentPlayerSession)
-         .filter(ContentPlayerSession.id == session_id).first())
-    if not s:
-        return None
-    return {
-        "topic": s.topic or "",
-        "mode": s.mode if isinstance(s.mode, str) else s.mode.value if s.mode else "qa",
-        "concepts": s.concepts_covered or [],
-        "mastery": s.mastery_signals or [],
-        "weak": s.weak_signals or [],
-        "confusion": s.confusion_detected,
-        "messages": s.total_messages,
-    }
-
-
 def gather_context(state: FeedbackState) -> FeedbackState:
-    state.log("Collecting context from upstream agents.")
+    state.log("Collecting your latest code evaluation and recent learning activity.")
     state.user_ctx = _user_context(state.db, state.user_id)
-    state.eval_ctx = (_eval_context(state.db, state.evaluation_id)
+    state.eval_ctx = (_eval_context(state.db, state.evaluation_id, state.user_id)
                       if state.evaluation_id else None)
-    state.cp_ctx = (_cp_context(state.db, state.cp_session_id)
-                    if state.cp_session_id else None)
+    state.events = recent_events(state.db, state.user_id)
+    state.activity_ctx = (activity_context(state.db, state.user_id, state.events)
+                          if state.events else None)
 
-    if not state.eval_ctx and not state.cp_ctx:
-        raise ValueError("Provide at least one of evaluation_id or cp_session_id.")
+    if not state.eval_ctx and not state.activity_ctx:
+        raise ValueError(NO_ACTIVITY)
 
     state.feedback_type = (
-        FeedbackType.COMBINED if state.eval_ctx and state.cp_ctx else
+        FeedbackType.COMBINED if state.eval_ctx and state.activity_ctx else
         FeedbackType.CODE_REVIEW if state.eval_ctx else
         FeedbackType.LEARNING_RECAP
     )

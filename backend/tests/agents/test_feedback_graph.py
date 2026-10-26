@@ -7,8 +7,8 @@ from app.agents.feedback.graph import generate_feedback
 from app.agents.feedback.nodes.persist import HEADLINE_LIMIT
 from app.agents.feedback.schemas import FeedbackNarrative
 from app.models.code_eval import CodeEvaluation, CodeSubmission, Language
-from app.models.content_player import ContentPlayerSession
 from app.models.feedback import FeedbackReport, FeedbackTone, FeedbackType
+from app.models.learning import LearningEvent
 from app.models.user import LearningProfile, User
 
 
@@ -44,17 +44,19 @@ def make_evaluation(session, user, **overrides):
     return evaluation
 
 
-def make_cp_session(session, user, **overrides):
-    fields = dict(
-        user_id=user.id, mode="qa", topic="recursion", total_messages=6,
-        concepts_covered=["base case"], mastery_signals=["tracing"],
-        weak_signals=["recursion depth"], confusion_detected=True,
-    )
-    fields.update(overrides)
-    cp = ContentPlayerSession(**fields)
-    session.add(cp)
+def make_activity(session, user):
+    """Recursion practice: one MCQ solved with mastery rising, one debug challenge
+    failed after a level-3 hint, both tagged with the same misconception."""
+    session.add_all([
+        LearningEvent(user_id=user.id, kind="mcq", topic="recursion", score=1.0,
+                      weight=1.0, language="c", mastery_before=0.3, mastery_after=0.4,
+                      misconceptions=["missing_base_case"]),
+        LearningEvent(user_id=user.id, kind="debug", topic="recursion", score=0.0,
+                      weight=1.0, language="c", hint_level_used=3,
+                      mastery_before=0.4, mastery_after=0.35,
+                      misconceptions=["missing_base_case"]),
+    ])
     session.commit()
-    return cp
 
 
 def narrative():
@@ -114,7 +116,7 @@ def test_happy_path_persists_the_narrative(session, user):
     runnable = FakeSynthesiseRunnable()
 
     report = generate_feedback(
-        session, user.id, evaluation.id, None, FeedbackTone.ENCOURAGING,
+        session, user.id, evaluation.id, FeedbackTone.ENCOURAGING,
         synthesise_runnable=runnable,
     )
 
@@ -137,7 +139,7 @@ def test_llm_unavailable_is_labelled_not_hidden(session, user):
     evaluation = make_evaluation(session, user)
 
     report = generate_feedback(
-        session, user.id, evaluation.id, None, FeedbackTone.ENCOURAGING,
+        session, user.id, evaluation.id, FeedbackTone.ENCOURAGING,
         synthesise_runnable=unavailable(),
     )
 
@@ -163,7 +165,7 @@ def test_an_unparseable_narrative_is_labelled_like_an_outage(session, user):
     evaluation = make_evaluation(session, user)
 
     report = generate_feedback(
-        session, user.id, evaluation.id, None, FeedbackTone.ENCOURAGING,
+        session, user.id, evaluation.id, FeedbackTone.ENCOURAGING,
         synthesise_runnable=FakeSynthesiseRunnable(result=None),
     )
 
@@ -180,7 +182,7 @@ def test_an_unparseable_narrative_is_labelled_like_an_outage(session, user):
 @pytest.mark.parametrize("runnable", [FakeSynthesiseRunnable, unavailable])
 def test_feedback_never_writes_the_profile(session, user, runnable):
     evaluation = make_evaluation(session, user)
-    report = generate_feedback(session, user.id, evaluation.id, None,
+    report = generate_feedback(session, user.id, evaluation.id,
                                FeedbackTone.CONSTRUCTIVE, synthesise_runnable=runnable())
 
     profile = session.query(LearningProfile).filter(
@@ -195,7 +197,6 @@ def test_feedback_never_writes_the_profile(session, user, runnable):
 
 def _bound_evaluation(session, user):
     """A failing attempt at a bank problem, the way Code Eval leaves it on disk."""
-    from app.models.learning import LearningEvent
     from app.models.problem import (
         ExecRole,
         ExecutionResult,
@@ -245,7 +246,7 @@ def test_context_cites_the_failing_input_and_repeated_misconceptions(session, us
     evaluation = _bound_evaluation(session, user)
     runnable = FakeSynthesiseRunnable()
 
-    generate_feedback(session, user.id, evaluation.id, None, FeedbackTone.CONSTRUCTIVE,
+    generate_feedback(session, user.id, evaluation.id, FeedbackTone.CONSTRUCTIVE,
                       synthesise_runnable=runnable)
 
     system, human = (text for _, text in runnable.payloads[0])
@@ -263,7 +264,7 @@ def test_feedback_quoting_the_reference_is_regenerated_then_withheld(session, us
     leaky.summary = "Just write best = cur = values[0] and you are done."
     runnable = FakeSynthesiseRunnable(result=leaky)
 
-    report = generate_feedback(session, user.id, evaluation.id, None,
+    report = generate_feedback(session, user.id, evaluation.id,
                                FeedbackTone.CONSTRUCTIVE, synthesise_runnable=runnable)
 
     assert len(runnable.payloads) == 2
@@ -276,7 +277,7 @@ def test_clean_feedback_passes_the_guardrail(session, user):
     evaluation = _bound_evaluation(session, user)
     runnable = FakeSynthesiseRunnable()
 
-    report = generate_feedback(session, user.id, evaluation.id, None,
+    report = generate_feedback(session, user.id, evaluation.id,
                                FeedbackTone.CONSTRUCTIVE, synthesise_runnable=runnable)
 
     assert len(runnable.payloads) == 1
@@ -285,40 +286,43 @@ def test_clean_feedback_passes_the_guardrail(session, user):
 
 def test_feedback_type_is_code_review_from_an_evaluation(session, user):
     evaluation = make_evaluation(session, user)
-    report = generate_feedback(session, user.id, evaluation.id, None,
+    report = generate_feedback(session, user.id, evaluation.id,
                                FeedbackTone.ENCOURAGING,
                                synthesise_runnable=FakeSynthesiseRunnable())
     assert report.feedback_type == FeedbackType.CODE_REVIEW
 
 
-def test_feedback_type_is_learning_recap_from_a_session(session, user):
-    cp = make_cp_session(session, user)
-    report = generate_feedback(session, user.id, None, cp.id,
+def test_feedback_type_is_learning_recap_from_activity(session, user):
+    make_activity(session, user)
+    report = generate_feedback(session, user.id, None,
                                FeedbackTone.ENCOURAGING,
                                synthesise_runnable=FakeSynthesiseRunnable())
     assert report.feedback_type == FeedbackType.LEARNING_RECAP
+    assert report.cp_session_id is None
 
 
 def test_feedback_type_is_combined_from_both(session, user):
     evaluation = make_evaluation(session, user)
-    cp = make_cp_session(session, user)
-    report = generate_feedback(session, user.id, evaluation.id, cp.id,
+    make_activity(session, user)
+    report = generate_feedback(session, user.id, evaluation.id,
                                FeedbackTone.CHALLENGING,
                                synthesise_runnable=FakeSynthesiseRunnable())
     assert report.feedback_type == FeedbackType.COMBINED
     assert report.tone == FeedbackTone.CHALLENGING
 
 
-def test_session_signals_reach_the_pattern_analysis(session, user):
-    cp = make_cp_session(session, user)
+def test_activity_signals_reach_the_pattern_analysis(session, user):
+    make_activity(session, user)
     report = generate_feedback(
-        session, user.id, None, cp.id, FeedbackTone.ENCOURAGING,
+        session, user.id, None, FeedbackTone.ENCOURAGING,
         synthesise_runnable=unavailable(),
     )
 
-    assert report.errors == ["Confusion on topic: 'recursion'"]
-    assert report.strengths == ["tracing"]
-    assert report.next_topics == ["recursion depth"]
+    assert report.errors == ["Repeated mistake: missing base case (2x)",
+                             "Needed step-by-step hints (level 3 or 4) 1x"]
+    assert report.strengths == ["Solved 1 of 2 on Recursion",
+                                "Mastery of Recursion went up"]
+    assert report.next_topics == ["Recursion"]
 
 
 def test_an_overlong_headline_is_clamped_not_raised(session, user):
@@ -330,7 +334,7 @@ def test_an_overlong_headline_is_clamped_not_raised(session, user):
     verbose.headline = "y" * 500
 
     report = generate_feedback(
-        session, user.id, evaluation.id, None, FeedbackTone.ENCOURAGING,
+        session, user.id, evaluation.id, FeedbackTone.ENCOURAGING,
         synthesise_runnable=FakeSynthesiseRunnable(result=verbose),
     )
 
@@ -346,20 +350,20 @@ def test_a_headline_at_the_limit_is_untouched(session, user):
     exact.headline = "y" * HEADLINE_LIMIT
 
     report = generate_feedback(
-        session, user.id, evaluation.id, None, FeedbackTone.ENCOURAGING,
+        session, user.id, evaluation.id, FeedbackTone.ENCOURAGING,
         synthesise_runnable=FakeSynthesiseRunnable(result=exact),
     )
 
     assert report.headline == "y" * HEADLINE_LIMIT
 
 
-def test_neither_id_supplied_raises_value_error(session, user):
+def test_no_evaluation_and_no_activity_raises_value_error(session, user):
     with pytest.raises(ValueError):
-        generate_feedback(session, user.id, None, None, FeedbackTone.ENCOURAGING,
+        generate_feedback(session, user.id, None, FeedbackTone.ENCOURAGING,
                           synthesise_runnable=FakeSynthesiseRunnable())
 
 
-def test_unknown_ids_raise_value_error(session, user):
+def test_unknown_evaluation_without_activity_raises_value_error(session, user):
     with pytest.raises(ValueError):
-        generate_feedback(session, user.id, 9999, 9999, FeedbackTone.ENCOURAGING,
+        generate_feedback(session, user.id, 9999, FeedbackTone.ENCOURAGING,
                           synthesise_runnable=FakeSynthesiseRunnable())

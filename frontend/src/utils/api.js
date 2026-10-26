@@ -212,6 +212,15 @@ export const gamificationAPI = {
   me: () => api.get('/gamification/me'),
 }
 
+export const practiceSessionAPI = {
+  current:  ()          => api.get('/practice-sessions/current'),
+  pending:  ()          => api.get('/practice-sessions/pending'),
+  get:      (id)        => api.get(`/practice-sessions/${id}`),
+  finish:   (id)        => api.post(`/practice-sessions/${id}/finish`),
+  // Writes the short feedback with the LLM the first time
+  feedback: (id, retry) => api.post(`/practice-sessions/${id}/feedback`, { retry }, { timeout: EVAL_TIMEOUT }),
+}
+
 export const onboardingAPI = {
   state:       ()                          => api.get('/onboarding/state'),
   saveStep:    (step, data)                => api.put(`/onboarding/steps/${step}`, data),

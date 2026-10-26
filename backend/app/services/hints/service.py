@@ -3,7 +3,9 @@
 Ladder position is measured in evaluation ids, not wall-clock time: a hint belongs to
 the evaluation it was about, and a fully passing evaluation resets the ladder."""
 
+import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Literal
 
 from sqlalchemy import String, and_, cast, func, literal, or_
@@ -34,7 +36,10 @@ from app.services.hints.prompts import (
     TEMPLATES,
 )
 from app.services.personalisation import style_line
+from app.services.practice_session import lifecycle
 from app.services.profiling.service import top_misconceptions
+
+logger = logging.getLogger(__name__)
 
 MAX_LEVEL = 4
 _CRASH_STATUSES = ("runtime_error", "timeout", "memory_exceeded")
@@ -253,8 +258,14 @@ def request_hint(db: Session, user_id: int, problem_id: int, *, level: int | Non
         hint = _ladder_hint(db, level, problem, submission, case, user_id, evaluation.id,
                             runnable, provider)
 
-    log_hint(db, user_id=user_id, problem_id=problem_id, evaluation_id=evaluation.id,
-             level=hint.level, was_blocked=hint.was_blocked, source=source)
+    event = log_hint(db, user_id=user_id, problem_id=problem_id, evaluation_id=evaluation.id,
+                     level=hint.level, was_blocked=hint.was_blocked, source=source)
+    try:
+        lifecycle.attach_hint(db, event, datetime.now(timezone.utc))
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("practice session attach failed for hint on problem %s", problem_id)
     return hint
 
 

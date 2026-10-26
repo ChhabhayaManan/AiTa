@@ -1,4 +1,6 @@
+import logging
 from dataclasses import asdict
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -16,6 +18,10 @@ from app.schemas.assessment import (
 )
 from app.services.assessment.grading import grade_debug, grade_mcq
 from app.services.onboarding.recheck import require_no_open_check
+from app.services.practice_session import lifecycle
+from app.services.profiling.service import current_language
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assessment", tags=["Assessment Agent"])
 
@@ -30,7 +36,23 @@ def get_next(
     `/code-eval/evaluate` with their `id` as `problem_id`. A 428 means the student
     switched to a new language and must take its short check first."""
     require_no_open_check(db, current_user)
-    return asdict(next_item(db, current_user.id))
+    now = datetime.now(timezone.utc)
+    _lifecycle(db, lifecycle.close_if_idle, current_user.id, now)
+    served = next_item(db, current_user.id)
+    _lifecycle(db, lifecycle.record_served, current_user.id,
+               lifecycle.item_type_of(served.item_type), served.item["id"],
+               current_language(db, current_user.id), now)
+    return asdict(served)
+
+
+def _lifecycle(db: Session, step, *args) -> None:
+    """Session bookkeeping must never cost the student their next item."""
+    try:
+        step(db, *args)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("practice session %s failed", step.__name__)
 
 
 @router.post("/mcq/{question_id}/answer", response_model=McqAnswerResponse,

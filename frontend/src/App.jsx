@@ -17,6 +17,7 @@ const FeedbackPage       = lazy(() => import('./pages/FeedbackPage'))
 const CodeHelpPage       = lazy(() => import('./pages/CodeHelpPage'))
 const PracticePage       = lazy(() => import('./pages/PracticePage'))
 const LanguageCheckPage  = lazy(() => import('./pages/LanguageCheckPage'))
+const SessionSummaryPage = lazy(() => import('./pages/SessionSummaryPage'))
 
 function PageLoading({ label = 'Loading' }) {
   return (
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/feedback"        element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
           <Route path="/code-help"       element={<ProtectedRoute><CodeHelpPage /></ProtectedRoute>} />
           <Route path="/practice"        element={<ProtectedRoute><PracticePage /></ProtectedRoute>} />
+          <Route path="/practice/session/:id" element={<ProtectedRoute><SessionSummaryPage /></ProtectedRoute>} />
           <Route path="/language-check"  element={<ProtectedRoute><LanguageCheckPage /></ProtectedRoute>} />
           <Route path="*"                element={<Navigate to="/dashboard" replace />} />
         </Routes>

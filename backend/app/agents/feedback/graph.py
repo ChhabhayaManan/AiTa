@@ -28,12 +28,10 @@ def build_feedback_graph():
     return graph.compile()
 
 
-def generate_feedback(db, user_id: int, evaluation_id: Optional[int],
-                      cp_session_id: Optional[int], tone: FeedbackTone,
+def generate_feedback(db, user_id: int, evaluation_id: Optional[int], tone: FeedbackTone,
                       *, synthesise_runnable=None) -> FeedbackReport:
     state = FeedbackState(
-        db=db, user_id=user_id, evaluation_id=evaluation_id,
-        cp_session_id=cp_session_id, tone=tone,
+        db=db, user_id=user_id, evaluation_id=evaluation_id, tone=tone,
         synthesise_runnable=synthesise_runnable,
         started_ms=int(time.time() * 1000),
     )

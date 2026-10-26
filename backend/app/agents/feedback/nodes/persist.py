@@ -20,7 +20,6 @@ def persist(state: FeedbackState) -> FeedbackState:
     report = FeedbackReport(
         user_id=state.user_id,
         evaluation_id=state.evaluation_id,
-        cp_session_id=state.cp_session_id,
         feedback_type=state.feedback_type,
         tone=state.tone,
         # The only bounded column in the row: an over-long headline must not discard

@@ -2,6 +2,9 @@
 it; its mastery comes from that check alone, and topics it doesn't reach stay at the
 prior. Switching back to a used language is free: its mastery is still there."""
 
+import logging
+from datetime import datetime, timezone
+
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
@@ -12,7 +15,10 @@ from app.models.user import User
 from app.schemas.onboarding import AnswerIn, AnswerOut, DiagOut, RecheckOut, SwitchOut
 from app.services.onboarding import pending, profile_card, seeding
 from app.services.onboarding.service import Run, answer_in, now, serve, walk_done
-from app.services.profiling.service import record_diagnostic_seed
+from app.services.practice_session import lifecycle
+from app.services.profiling.service import current_language, record_diagnostic_seed
+
+logger = logging.getLogger(__name__)
 
 
 def _finished_record(db: Session, user: User) -> OnboardingRecord:
@@ -29,6 +35,14 @@ def _open_check(db: Session, user: User) -> LanguageCheck | None:
 
 def switch_language(db: Session, user: User, language: str) -> SwitchOut:
     record = _finished_record(db, user)
+    user_id = user.id
+    if language != current_language(db, user_id):
+        try:
+            lifecycle.close_for_language_switch(db, user_id, datetime.now(timezone.utc))
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("practice session close failed for user %s", user_id)
     user.preferred_language = language
     used = language == record.language or db.get(LanguageCheck, (user.id, language))
     if not used:

@@ -1,3 +1,6 @@
+import logging
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -12,8 +15,11 @@ from app.schemas.code_eval import (
 )
 from app.schemas.problem import ProblemSummary
 from app.services.code_eval_service import CodeEvalService
+from app.services.practice_session import lifecycle
 from app.services.problems.listing import get_bank_problem, list_bank_problems
 from app.services.problems.sample_run import run_sample
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/code-eval", tags=["Code Evaluation Agent"])
 
@@ -62,6 +68,14 @@ def run(
     db: Session = Depends(get_db),
 ):
     """Executes the code in the sandbox on the visible example only. Not scored, not saved."""
+    if req.problem_id is not None:
+        try:
+            lifecycle.touch(db, current_user.id, "coding", req.problem_id,
+                            datetime.now(timezone.utc))
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("practice session touch failed for problem %s", req.problem_id)
     return run_sample(db, req.problem_id, req.language, req.code)
 
 

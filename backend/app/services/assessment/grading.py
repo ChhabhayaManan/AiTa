@@ -3,6 +3,7 @@ the Profiling Agent. The answer key and the fixed program only leave after gradi
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -14,6 +15,7 @@ from app.models.learning import DebugAttempt, DebugChallenge, McqAttempt, McqQue
 from app.models.problem import Problem
 from app.services.execution.judge import judge
 from app.services.gamification.service import awards_for_event
+from app.services.practice_session import lifecycle
 from app.services.profiling.mastery import debug_score
 from app.services.profiling.service import EventInput
 
@@ -76,6 +78,7 @@ def grade_mcq(db: Session, user_id: int, question_id: int, chosen_index: int) ->
         source_ref=f"mcq_attempt:{attempt.id}",
         language=None if question.language == "any" else question.language,
     ))
+    _attach(db, event, "mcq")
     explanations = question.explanations or []
     return McqResult(correct, chosen_index, question.answer_index, misconception,
                      explanations[0] if explanations else None, event.mastery_after,
@@ -109,6 +112,7 @@ def grade_debug(db: Session, user_id: int, challenge_id: int, code: str,
         source_ref=f"debug_attempt:{attempt.id}",
         language=challenge.language,
     ))
+    _attach(db, event, "debug")
 
     return DebugResult(
         fixed=fixed,
@@ -121,6 +125,17 @@ def grade_debug(db: Session, user_id: int, challenge_id: int, code: str,
         mastery_after=event.mastery_after,
         awards=_awards(db, event.id),
     )
+
+
+def _attach(db: Session, event, item_type: str) -> None:
+    """The event is already committed by ingest; a session failure only loses the link."""
+    event_id = event.id
+    try:
+        lifecycle.attach_event(db, event, item_type, datetime.now(timezone.utc))
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("practice session attach failed for event %s", event_id)
 
 
 def _awards(db: Session, event_id: int) -> list[dict]:

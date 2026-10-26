@@ -91,6 +91,43 @@ def states_fix(hint: str, *, statement: str, language: str, code: str,
     return verdict is None or verdict.states_fix
 
 
+_CODE_STARTS = ("for (", "while (", "if (", "def ", "return ", "#include", "elif ", "else:",
+                "print(")
+_CODE_ENDS = (";", "{", "}")
+_LIST_ITEM = re.compile(r"^([-*•]|\d+[.)])\s")
+
+
+def _code_like(line: str) -> bool:
+    line = line.strip()
+    return bool(line) and (
+        line.endswith(_CODE_ENDS) or line.startswith(_CODE_STARTS)
+        or (line.startswith("for ") and " in " in line)
+        or (line.startswith("while ") and line.endswith(":")))
+
+
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip())
+
+
+def _opens_block(header: str, body: str) -> bool:
+    return (header.rstrip().endswith(":") and _indent(body) > _indent(header)
+            and not _LIST_ITEM.match(body.strip()))
+
+
+def check_multi_item(text: str, references: list[str]) -> GuardVerdict:
+    """Feedback across many items has no single problem to run code against, so no
+    code is allowed at all."""
+    if code_blocks(text):
+        return GuardVerdict(True, "code_block")
+    lines = [line for line in (text or "").splitlines() if line.strip()]
+    if any((_code_like(a) and _code_like(b)) or _opens_block(a, b)
+           for a, b in zip(lines, lines[1:])):
+        return GuardVerdict(True, "code_lines")
+    if quotes_reference(text, references):
+        return GuardVerdict(True, "quotes_reference")
+    return GuardVerdict(False)
+
+
 def check(text: str, level: int, language: Language, test_cases, provider=None, *,
           references=(), student_code: str = "") -> GuardVerdict:
     if quotes_reference(text, references, student_code):

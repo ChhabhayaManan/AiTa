@@ -1,10 +1,12 @@
 import logging
+from datetime import datetime, timezone
 
 from app.agents.code_eval.state import EvalState
 from app.agents.profiling.graph import ingest
 from app.models.problem import Problem
 from app.services.gamification.service import awards_for_event
 from app.services.hints.service import highest_level
+from app.services.practice_session import lifecycle
 from app.services.profiling.mastery import code_score
 from app.services.profiling.service import EventInput
 
@@ -43,4 +45,12 @@ def emit_event(state: EvalState) -> EvalState:
         # not turn a graded submission into a 500.
         state.db.rollback()
         logger.exception("profiling failed for evaluation %s", report.evaluation_id)
+        return state
+    try:
+        lifecycle.attach_event(state.db, event, "coding", datetime.now(timezone.utc))
+        state.db.commit()
+    except Exception:
+        state.db.rollback()
+        logger.exception("practice session attach failed for evaluation %s",
+                         report.evaluation_id)
     return state

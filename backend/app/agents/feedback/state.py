@@ -14,7 +14,6 @@ class FeedbackState(BaseModel):
     db: Any
     user_id: int
     evaluation_id: Optional[int] = None
-    cp_session_id: Optional[int] = None
     tone: FeedbackTone = FeedbackTone.ENCOURAGING
     started_ms: int = 0
 
@@ -24,7 +23,8 @@ class FeedbackState(BaseModel):
 
     user_ctx: dict = {}
     eval_ctx: Optional[dict] = None
-    cp_ctx: Optional[dict] = None
+    events: list[Any] = []
+    activity_ctx: Optional[dict] = None
     feedback_type: Optional[FeedbackType] = None
 
     patterns: dict = {}

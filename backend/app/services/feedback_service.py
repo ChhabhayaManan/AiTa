@@ -2,24 +2,27 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.agents.feedback.graph import generate_feedback
+from app.agents.feedback.nodes.gather_context import NO_ACTIVITY
 from app.models.feedback import FeedbackTone
 from app.schemas.feedback import GenerateFeedbackRequest
 from app.services.feedback import reports
+from app.services.feedback.activity import recent_events
 
 
 class FeedbackService:
 
     @staticmethod
-    def generate(db: Session, user_id: int, req: GenerateFeedbackRequest):
-        if not req.evaluation_id and not req.cp_session_id:
+    def generate(db: Session, user_id: int, req: GenerateFeedbackRequest, *,
+                 synthesise_runnable=None):
+        if not req.evaluation_id and not recent_events(db, user_id):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Provide at least one of evaluation_id or cp_session_id."
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=NO_ACTIVITY
             )
         try:
             tone = FeedbackTone(req.tone) if isinstance(req.tone, str) else req.tone
             return generate_feedback(
-                db, user_id, req.evaluation_id, req.cp_session_id, tone
+                db, user_id, req.evaluation_id, tone,
+                synthesise_runnable=synthesise_runnable,
             )
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

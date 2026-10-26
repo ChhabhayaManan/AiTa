@@ -49,6 +49,7 @@ def _purpose(name: str, temperature: float, *, max_tokens: int | None = None,
 PURPOSES: dict[str, Purpose] = {p.name: p for p in (
     _purpose("explain", 0.3, deadline_s=60),
     _purpose("feedback", 0.4, deadline_s=60),
+    _purpose("session_feedback", 0.4, deadline_s=60),
     _purpose("hint", 0.4, deadline_s=60),
     _purpose("hint_check", 0.0, max_tokens=512, deadline_s=30),
     _purpose("assessment_gen", 0.7, deadline_s=120),
