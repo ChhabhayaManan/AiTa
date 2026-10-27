@@ -165,9 +165,9 @@ def test_no_template_and_all_failing_raises_and_logs_error(env):
     env.factory.behaviour = lambda model, key: RATE_LIMITED
 
     with pytest.raises(LLMUnavailable):
-        invoke("ranking", "p")
+        invoke("feedback", "p")
 
-    assert env.rows() == [("ranking", "error", None, "primary")]
+    assert env.rows() == [("feedback", "error", None, "primary")]
 
 
 def test_empty_second_key_only_uses_slot_zero(env, monkeypatch):

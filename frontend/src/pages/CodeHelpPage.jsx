@@ -37,6 +37,11 @@ const GENERATE_STEPS = [
   { after: 25, text: 'Checking the problem works. Almost there…' },
   { after: 60, text: 'Taking longer than usual. Please keep this page open…' },
 ]
+const SOLUTION_STEPS = [
+  { after: 0, text: 'Getting the solution…' },
+  { after: 5, text: 'Writing it in your language and checking it against the tests…' },
+  { after: 45, text: 'Taking longer than usual. Please keep this page open…' },
+]
 const RUN_STEPS = [{ after: 0, text: 'Running your code on the example tests…' }, { after: 10, text: 'Still running…' }]
 const SUBMIT_STEPS = [
   { after: 0, text: 'Compiling your code…' },
@@ -47,27 +52,6 @@ const SUBMIT_STEPS = [
 
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem('codehelp_history') || '[]') } catch { return [] }
-}
-
-function Md({ text }) {
-  if (!text) return null
-  return (
-    <div className="space-y-1.5 text-sm leading-relaxed text-ink-muted">
-      {text.split('\n').map((line, i) => {
-        if (!line.trim()) return <div key={i} className="h-2" />
-        if (/^#{1,3} /.test(line)) return <p key={i} className="pt-2 text-[15px] font-semibold text-ink">{line.replace(/^#+\s/, '')}</p>
-        if (/^[-*] /.test(line.trim())) {
-          return (
-            <p key={i} className="flex gap-2">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-pop-aqua" aria-hidden="true" />
-              <span>{line.replace(/^[\s]*[-*] /, '')}</span>
-            </p>
-          )
-        }
-        return <p key={i}>{line}</p>
-      })}
-    </div>
-  )
 }
 
 function ScoreBreakdown({ scores }) {
@@ -109,6 +93,8 @@ export default function CodeHelpPage() {
   const [activeTab, setActiveTab] = useState('problem')
   const [gaveUp, setGaveUp] = useState(false)
   const [confirmGiveUp, setConfirmGiveUp] = useState(false)
+  const [solution, setSolution] = useState(null)
+  const [solutionLoading, setSolutionLoading] = useState(false)
   const [historyId, setHistoryId] = useState(null)
 
   const [running, setRunning] = useState(false)
@@ -129,6 +115,7 @@ export default function CodeHelpPage() {
     const starters = [...Object.values(TEMPLATES), problem?.starter_code]
     const untouched = !code.trim() || starters.includes(code)
     setLang(next)
+    setSolution(null)
     if (untouched && TEMPLATES[next]) setCode(TEMPLATES[next])
   }
 
@@ -145,6 +132,7 @@ export default function CodeHelpPage() {
       setEvalResult(null)
       setRunResults(null)
       setGaveUp(false)
+      setSolution(null)
       if (data.title) setSeenTitles(prev => [...new Set([...prev, data.title])])
       if (data.problem_id) setSeenIds(prev => [...new Set([...prev, data.problem_id])])
 
@@ -199,10 +187,27 @@ export default function CodeHelpPage() {
     }
   }
 
-  // The backend withholds both on purpose: they are the answer.
-  const hasSolution = Boolean(problem?.solution_code || problem?.explanation)
+  // The server only hands the answer over after a pass or a recorded give-up.
+  const hasSolution = Boolean(problem?.problem_id)
   const passed = Boolean(evalResult && evalResult.tests_total > 0 && evalResult.tests_passed === evalResult.tests_total)
   const solutionOpen = passed || gaveUp
+
+  const loadSolution = async (giveUp) => {
+    setSolutionLoading(true)
+    try {
+      const { data } = await problemsAPI.solution(problem.problem_id, { language, give_up: giveUp })
+      setSolution(data)
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Couldn't load the solution. Try again in a minute."))
+    } finally {
+      setSolutionLoading(false)
+    }
+  }
+
+  const openSolution = () => {
+    setActiveTab('solution')
+    if (passed && !solution && !solutionLoading) loadSolution(false)
+  }
 
   // The id lets the chat's tools run against this problem's stored tests.
   const firstExample = problem?.examples?.[0]
@@ -220,13 +225,13 @@ export default function CodeHelpPage() {
 
   if (phase === 'setup') {
     return (
-      <AppShell title="Topic practice">
+      <AppShell title="Coding problems">
         <div className="mx-auto grid max-w-[1180px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
           <section className="tile p-6 sm:p-8">
             <PageHeader
-              eyebrow="Topic practice"
+              eyebrow="Coding problems"
               title="Practise any topic you choose"
-              description="Pick a topic and a level. We write a fresh problem with test cases. Not counted toward your topic levels."
+              description="Pick a topic and a level. We write a fresh problem with test cases."
             />
 
             <div className="mt-8 space-y-7">
@@ -327,7 +332,7 @@ export default function CodeHelpPage() {
   const left = (
     <section className={`tile flex flex-col ${activeTab === 'chat' ? 'h-[calc(100dvh-4rem)] min-h-[520px]' : ''}`}>
       <div className="border-b border-line p-3">
-        <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} label="Problem panels" size="sm" />
+        <Tabs tabs={tabs} value={activeTab} onChange={v => (v === 'solution' ? openSolution() : setActiveTab(v))} label="Problem panels" size="sm" />
       </div>
 
       <div className={`${activeTab === 'chat' ? 'hidden' : ''} p-5 sm:p-6`}>
@@ -378,17 +383,23 @@ export default function CodeHelpPage() {
           solutionOpen ? (
             <div className="space-y-5">
               {passed && <Chip tone="mint">You passed every test, so the solution is open.</Chip>}
-              {problem.solution_code && (
+              <BusyNote active={solutionLoading} steps={SOLUTION_STEPS} />
+              {solution?.code && (
                 <div>
-                  <p className="eyebrow mb-2">Solution</p>
-                  <CodeEditor value={problem.solution_code} language={language} readOnly minHeight="160px" maxHeight="480px" label="Solution code" />
+                  <p className="eyebrow mb-2">Solution · {languageLabel(solution.language)}</p>
+                  {solution.language === 'python' && language !== 'python' && (
+                    <p className="mb-3 text-[13px] leading-relaxed text-ink-subtle">
+                      There is no checked {languageLabel(language)} version of this solution yet, so here is the Python one. The steps are the same.
+                    </p>
+                  )}
+                  <CodeEditor value={solution.code} language={solution.language} readOnly minHeight="160px" maxHeight="480px" label="Solution code" />
                 </div>
               )}
-              {problem.explanation && (
-                <div>
-                  <p className="eyebrow mb-2">Explanation</p>
-                  <Md text={problem.explanation} />
-                </div>
+              {solution && !solution.code && (
+                <EmptyState icon={BookOpen} title="No model answer for this problem" body="Ask aiTA to walk you through the approach instead." />
+              )}
+              {!solution && !solutionLoading && (
+                <Button size="sm" variant="secondary" icon={RotateCcw} onClick={() => loadSolution(gaveUp)}>Load the solution</Button>
               )}
             </div>
           ) : (
@@ -489,7 +500,7 @@ export default function CodeHelpPage() {
             </div>
           )}
           {passed && hasSolution && (
-            <Button size="sm" variant="secondary" icon={Eye} className="mt-4" onClick={() => setActiveTab('solution')}>Compare with the solution</Button>
+            <Button size="sm" variant="secondary" icon={Eye} className="mt-4" onClick={openSolution}>Compare with the solution</Button>
           )}
         </Verdict>
       )}
@@ -497,7 +508,7 @@ export default function CodeHelpPage() {
   )
 
   return (
-    <AppShell title="Topic practice">
+    <AppShell title="Coding problems">
       <div className="mx-auto flex max-w-[1320px] flex-col gap-5">
         <section className="tile flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="min-w-0">
@@ -505,7 +516,6 @@ export default function CodeHelpPage() {
               <Chip tone={DIFF_TONE[problem?.difficulty] || 'neutral'}>{problem?.difficulty}</Chip>
               <Chip>{topic}</Chip>
               <Chip tone="aqua">{languageLabel(language)}</Chip>
-              <span className="text-xs text-ink-subtle">Not counted toward your topic levels</span>
             </div>
             <h1 className="mt-3 truncate text-2xl font-semibold tracking-tight text-ink">{problem?.title}</h1>
           </div>
@@ -529,7 +539,7 @@ export default function CodeHelpPage() {
         tone="danger"
         onCancel={() => { setConfirmGiveUp(false); setActiveTab('hints') }}
         onClose={() => setConfirmGiveUp(false)}
-        onConfirm={() => { setConfirmGiveUp(false); setGaveUp(true) }}
+        onConfirm={() => { setConfirmGiveUp(false); setGaveUp(true); loadSolution(true) }}
       />
     </AppShell>
   )

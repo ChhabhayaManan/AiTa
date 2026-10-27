@@ -97,25 +97,9 @@ export const userAPI = {
   getPeerComparison: () => api.get('/users/peer-comparison'),
 }
 
-export const recommendationAPI = {
-  // Trigger the AI agent — long timeout since it fetches YouTube + calls the LLM
-  generate: () => api.post('/recommendations/generate', {}, { timeout: 120000 }),
-  // Get current stored recommendations
-  getAll: () => api.get('/recommendations/'),
-  // Get last agent run log with thought steps
-  getAgentLog: () => api.get('/recommendations/agent-log'),
-  // Log an interaction (view, complete, like, etc.)
-  logInteraction: (data) => api.post('/recommendations/interact', data),
-  // Dismiss a recommendation
-  dismiss: (recId) => api.patch(`/recommendations/${recId}/dismiss`),
-  // Browse content catalog
-  listContent: (skip = 0, limit = 50) => api.get(`/recommendations/content?skip=${skip}&limit=${limit}`),
-  // Seed starter content (call once)
-  seedContent: () => api.post('/recommendations/content/seed'),
-}
-
 export const problemsAPI = {
   generate: (data) => api.post('/problems/generate', data),
+  solution: (id, data) => api.post(`/problems/${id}/solution`, data, { timeout: EVAL_TIMEOUT }),
 };
 
 // ─── Code Evaluation Agent API ────────────────────────────────────────────────
@@ -219,6 +203,14 @@ export const practiceSessionAPI = {
   finish:   (id)        => api.post(`/practice-sessions/${id}/finish`),
   // Writes the short feedback with the LLM the first time
   feedback: (id, retry) => api.post(`/practice-sessions/${id}/feedback`, { retry }, { timeout: EVAL_TIMEOUT }),
+}
+
+export const topicPracticeAPI = {
+  explanation:  (topic)      => api.get(`/topic-practice/${topic}/explanation`),
+  start:        (topic)      => api.post(`/topic-practice/${topic}/start`),
+  // Can write a fresh coding problem when none of the saved ones fits
+  next:         ()           => api.get('/topic-practice/next', { timeout: EVAL_TIMEOUT }),
+  answerTheory: (id, answer) => api.post(`/topic-practice/theory/${id}/answer`, { answer }, { timeout: EVAL_TIMEOUT }),
 }
 
 export const onboardingAPI = {

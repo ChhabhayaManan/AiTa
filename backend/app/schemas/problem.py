@@ -36,5 +36,13 @@ class GenerateProblemResponse(BaseModel):
     constraints: list = []
     hints: list = []
     starter_code: str = ""
-    solution_code: str = ""   # always empty: it is the reference, not the student's
-    explanation: str = ""
+
+
+class SolutionRequest(BaseModel):
+    language: Literal["c", "cpp", "python"]
+    give_up: bool = False
+
+
+class SolutionResponse(BaseModel):
+    language: str
+    code: str   # empty when the problem has no validated reference at all

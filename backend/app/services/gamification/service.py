@@ -17,7 +17,13 @@ from app.schemas.gamification import (
     Window,
 )
 from app.services.gamification import rules
-from app.services.profiling.mastery import MASTERED_FROM, SEED_KINDS, WEAK_BELOW, band
+from app.services.profiling.mastery import (
+    GIVE_UP_REF,
+    MASTERED_FROM,
+    SEED_KINDS,
+    WEAK_BELOW,
+    band,
+)
 from app.services.profiling.service import current_language
 
 RECENT_AWARDS = 10
@@ -27,7 +33,7 @@ def snapshot(event: LearningEvent) -> rules.Ev:
     return rules.Ev(id=event.id, kind=event.kind, item_id=event.item_id, topic=event.topic,
                     score=event.score, hint_level_used=event.hint_level_used or 0,
                     mastery_after=event.mastery_after, mastery_before=event.mastery_before,
-                    language=event.language)
+                    language=event.language, gave_up=event.source_ref == GIVE_UP_REF)
 
 
 def _history(db: Session, user_id: int, before_id: int) -> list[rules.Ev]:

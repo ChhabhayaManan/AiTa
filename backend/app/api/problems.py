@@ -4,15 +4,19 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.core.exceptions import LLMUnavailable
+from app.models.problem import Problem
 from app.models.user import User
 from app.schemas.problem import (
     GenerateProblemRequest,
     GenerateProblemResponse,
     ProblemSummary,
+    SolutionRequest,
+    SolutionResponse,
 )
 from app.services.problems import generation
 from app.services.problems.listing import to_summary
 from app.services.problems.picker import pick_problem, resolve_difficulty
+from app.services.problems.solution import SolutionLocked, reveal
 
 router = APIRouter(prefix="/problems", tags=["Problems"])
 
@@ -137,3 +141,22 @@ def generate_problem(
 
     return _to_response(to_summary(result.problem), origin="generated",
                         language=body.language, title=result.title, hints=result.hints)
+
+
+@router.post("/{problem_id}/solution", response_model=SolutionResponse)
+def problem_solution(
+    problem_id: int,
+    body: SolutionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The model answer, once the student passed or gave up. `give_up` records the
+    give-up first. Plain `def`: a first C or C++ reveal ports and runs it in the sandbox."""
+    problem = db.get(Problem, problem_id)
+    if problem is None:
+        raise HTTPException(404, "Problem not found.")
+    try:
+        solution = reveal(db, current_user.id, problem, body.language, give_up=body.give_up)
+    except SolutionLocked:
+        raise HTTPException(403, "The solution opens when you pass every test or give up.")
+    return SolutionResponse(language=solution.language, code=solution.code)

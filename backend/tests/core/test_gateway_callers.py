@@ -15,12 +15,12 @@ from app.core.exceptions import LLMUnavailable
 from app.core.llm_gateway import Gateway, GatewayResult
 from app.models.code_eval import Language
 from app.services.assessment.generation import _ask
+from app.services.assessment.theory import GraderBusy, TheoryVerdict, _judge
 from app.services.hints.prompts import TEMPLATES
 from app.services.hints.service import FailingCase, _ladder_hint
 from app.services.problems.generation import _draft
 from app.services.problems.schemas import ProblemDraft
-from app.services.recommendations.ranking import rank_with_llm
-from app.services.recommendations.schemas import RankedRecommendations
+from app.services.problems.solution import PortedSolution, _default_porter
 from app.services.test_generation.generate_tests import _default_generator
 
 
@@ -42,10 +42,15 @@ def _hint(db):
                         FailingCase("1\n", "2", "3"), 7, 1, None, None)
 
 
-def _ranking(db):
-    rank_with_llm(db, {"user_id": 7,"skill_level": "beginner", "preferred_languages": [],
-                       "interested_topics": [], "weak_areas": [], "error_patterns": [],
-                       "accuracy_rate": 0.5, "time_per_topic": {}}, [], [], [])
+def _port(db):
+    _default_porter(language=Language.C, statement="s", reference="print(1)",
+                    previous=None, failure=None)
+
+
+def _theory(db):
+    question = SimpleNamespace(language="c", question="q", key_points=["a", "b"])
+    with pytest.raises(GraderBusy):
+        _judge(7, question, "an answer")
 
 
 def _problem(db):
@@ -60,7 +65,8 @@ CALLERS = [
     ("assessment_gen", lambda db: _ask(None, "p"), None, None),
     ("problem_gen", _problem, ProblemDraft, None),
     ("test_gen", lambda db: _default_generator(statement="s", count=3), GeneratedTests, None),
-    ("ranking", _ranking, RankedRecommendations, 7),
+    ("solution_port", _port, PortedSolution, None),
+    ("theory_judge", _theory, TheoryVerdict, 7),
 ]
 
 

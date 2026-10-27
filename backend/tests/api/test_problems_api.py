@@ -16,11 +16,14 @@ from app.core.database import Base, get_db
 from app.core.dependencies import get_current_active_user, get_current_user
 from app.core.exceptions import ExecutorUnavailable
 from app.core.llm_gateway import GatewayResult
+from app.models.code_eval import Language
 from app.models.problem import (
     Difficulty,
     IOMode,
     Problem,
+    ProblemReference,
     ProblemSource,
+    ReferenceStatus,
     TestCase,
     TestCaseKind,
     TestCaseOrigin,
@@ -170,9 +173,7 @@ def test_neither_path_returns_answer_material(client, monkeypatch, topic):
                                                 "difficulty": "easy"})
 
     assert response.status_code == 200
-    body = response.json()
-    assert body["solution_code"] == ""
-    assert body["explanation"] == ""
+    assert "solution_code" not in response.json()
     assert REFERENCE not in response.text
 
 
@@ -243,6 +244,24 @@ def test_executor_outage_is_a_plain_503_not_infrastructure_text(client, monkeypa
     # The row survives the outage so a later attempt reuses it.
     assert db.query(Problem).filter(
         Problem.source == ProblemSource.GENERATED).count() == 1
+
+
+def test_solution_opens_only_after_a_give_up(client):
+    test_client, db = client
+    problem = seed_curated(db)
+    db.add(ProblemReference(problem_id=problem.id, language=Language.PYTHON,
+                            source=REFERENCE, status=ReferenceStatus.VALIDATED))
+    db.commit()
+    url = f"/api/v1/problems/{problem.id}/solution"
+
+    assert test_client.post("/api/v1/problems/999/solution",
+                            json={"language": "python"}).status_code == 404
+    assert test_client.post(url, json={"language": "python"}).status_code == 403
+
+    response = test_client.post(url, json={"language": "python", "give_up": True})
+    assert response.status_code == 200
+    assert response.json() == {"language": "python", "code": REFERENCE}
+    assert test_client.post(url, json={"language": "python"}).status_code == 200
 
 
 @pytest.mark.parametrize("language, marker", [

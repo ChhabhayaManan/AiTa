@@ -51,7 +51,8 @@ def _cached_suite(problem: Problem) -> TestSuite | None:
     if not problem.test_cases:
         return None
     reference = next(
-        (r.source for r in problem.references if r.status is ReferenceStatus.VALIDATED),
+        (r.source for r in problem.references
+         if r.status is ReferenceStatus.VALIDATED and r.language is Language.PYTHON),
         None,
     )
     return TestSuite(

@@ -11,6 +11,8 @@ from app.core.topics import PREREQUISITES, TOPIC_LABELS, TOPICS, clean_misconcep
 from app.models.learning import LearningEvent, TopicMastery
 from app.models.user import LearningProfile, User
 from app.services.profiling.mastery import (
+    GIVE_UP_REF,
+    ONE_SHOT_KINDS,
     PRIOR,
     SEED_KINDS,
     WEAK_BELOW,
@@ -70,18 +72,19 @@ def record_event(db: Session, event_in: EventInput) -> LearningEvent:
 
 
 def no_new_evidence(db: Session, event: LearningEvent) -> bool:
-    """Any attempt on an item already solved, and any retry of a multiple-choice item
-    (a wrong answer reveals the key), is logged but says nothing new about the topic.
-    Counting it would let a student pump mastery by resubmitting one answer."""
+    """Any attempt on an item already solved or given up on, and any retry of a
+    multiple-choice or theory item (the first answer reveals the key), is logged but says nothing new
+    about the topic. Counting it would let a student pump mastery by resubmitting one answer."""
     if event.item_id is None:
         return False
-    earlier = (db.query(LearningEvent.score, LearningEvent.hint_level_used)
+    earlier = (db.query(LearningEvent.score, LearningEvent.hint_level_used,
+                        LearningEvent.source_ref)
                .filter(LearningEvent.user_id == event.user_id, LearningEvent.kind == event.kind,
                        LearningEvent.item_id == event.item_id, LearningEvent.id < event.id)
                .all())
-    if event.kind in ("mcq", "diagnostic"):
+    if event.kind in ONE_SHOT_KINDS:
         return bool(earlier)
-    return any(is_solved(score, hint) for score, hint in earlier)
+    return any(is_solved(score, hint) or ref == GIVE_UP_REF for score, hint, ref in earlier)
 
 
 def update_mastery(db: Session, event: LearningEvent) -> TopicMastery | None:

@@ -55,12 +55,13 @@ PURPOSES: dict[str, Purpose] = {p.name: p for p in (
     _purpose("assessment_gen", 0.7, deadline_s=120),
     _purpose("problem_gen", 0.7, deadline_s=120),
     _purpose("test_gen", 0.0, model_setting="NVIDIA_CODEGEN_MODEL", deadline_s=120),
-    _purpose("ranking", 0.3, deadline_s=60),
+    _purpose("solution_port", 0.0, model_setting="NVIDIA_CODEGEN_MODEL", deadline_s=60),
     _purpose("chat", 0.3, deadline_s=45),
     _purpose("chat_summary", 0.0, max_tokens=1024),
     _purpose("chat_plain", 0.3, deadline_s=45),
     _purpose("eval", 0.0, deadline_s=120),
     _purpose("onboarding_judge", 0.0, max_tokens=1024, deadline_s=45),
+    _purpose("theory_judge", 0.0, max_tokens=512, deadline_s=45),
 )}
 
 

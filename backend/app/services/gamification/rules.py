@@ -5,10 +5,10 @@ learning_events at any time."""
 from dataclasses import dataclass
 
 from app.core.topics import TOPIC_LABELS
-from app.services.profiling.mastery import MISS_BELOW, band, hint_multiplier
+from app.services.profiling.mastery import MISS_BELOW, ONE_SHOT_KINDS, band, hint_multiplier
 from app.services.profiling.mastery import is_solved as solved_score
 
-BASE_POINTS = {"code": 10, "debug": 8, "mcq": 5}
+BASE_POINTS = {"code": 10, "debug": 8, "mcq": 5, "theory": 5}
 BAND_RANK = {"developing": 1, "mastered": 2}
 STUCK_RUN = 3
 BUG_HUNTER_FIXES = 3
@@ -36,6 +36,7 @@ class Ev:
     mastery_after: float | None
     mastery_before: float | None = None
     language: str | None = None
+    gave_up: bool = False
 
 
 @dataclass(frozen=True)
@@ -56,10 +57,18 @@ def is_solved(ev: Ev) -> bool:
     return solved_score(ev.score, ev.hint_level_used)
 
 
+def gave_up_before(ev: Ev, history: list[Ev]) -> bool:
+    return ev.item_id is not None and any(
+        h.gave_up and h.kind == ev.kind and h.item_id == ev.item_id for h in history)
+
+
 def points(ev: Ev, history: list[Ev]) -> list[Award]:
     if ev.kind not in BASE_POINTS or ev.item_id is None or not is_solved(ev):
         return []
-    if ev.kind == "mcq" and any(h.kind == "mcq" and h.item_id == ev.item_id for h in history):
+    if ev.kind in ONE_SHOT_KINDS and any(h.kind == ev.kind and h.item_id == ev.item_id
+                                         for h in history):
+        return []
+    if gave_up_before(ev, history):
         return []
     value = int(BASE_POINTS[ev.kind] * hint_multiplier(ev.hint_level_used) + 0.5)
     code = f"{ev.kind}:{ev.item_id}"
@@ -100,9 +109,9 @@ def first_solve(ev: Ev, history: list[Ev]) -> bool:
     if ev.item_id is None:
         return True
     same = [h for h in history if h.kind == ev.kind and h.item_id == ev.item_id]
-    if ev.kind in ("mcq", "diagnostic"):
+    if ev.kind in ONE_SHOT_KINDS:
         return not same
-    return not any(is_solved(h) for h in same)
+    return not any(is_solved(h) or h.gave_up for h in same)
 
 
 def comeback(ev: Ev, history: list[Ev]) -> bool:

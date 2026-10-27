@@ -59,6 +59,33 @@ Each test case's `stdin` is ONE BLOCK ONLY, without the T line, ending in a newl
 Use real newline characters, never a backslash followed by the letter n.
 """
 
+SOLUTION_PORT_PROMPT = """Translate this correct Python 3 program into {language_name}.
+A beginner who just gave up on the problem will read your version as the model answer.
+
+PROBLEM STATEMENT (this describes ONE test case):
+{statement}
+
+CORRECT PYTHON PROGRAM:
+{reference}
+
+Rules:
+- Keep the exact input and output behaviour. The program reads an integer T on the first
+  line, then T test case blocks, and prints the answer for every block, in order.
+- {language_rules}
+- Plain, readable code a beginner can follow: clear names, no clever tricks, short
+  comments only where a step is not obvious.
+- No prompt text, no extra output, no argument parsing. It must compile and run unchanged.
+- Write real newline characters in `code`. Never write a backslash followed by the letter n
+  as a line break.
+"""
+
+SOLUTION_PORT_RETRY = """
+
+Your previous version failed: {failure}
+Previous version:
+{previous}
+"""
+
 EXPLANATION_PROMPT = """You are the Code Evaluation Agent inside aiTA, an AI teaching
 assistant for beginner programmers who have no human teaching assistant available.
 
