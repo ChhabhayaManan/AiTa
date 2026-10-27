@@ -4,6 +4,7 @@ from app.models.onboarding import DiagnosticItem
 from app.services.execution.base import ExecutionProvider
 from app.services.onboarding.graders.sandbox import (
     GRADED_BY,
+    compiler_note,
     is_blank,
     outcome_line,
     run_tests,
@@ -25,4 +26,5 @@ def grade(item: DiagnosticItem, answer: dict, provider: ExecutionProvider | None
     score = split.passed / split.total if split.total else 0.0
     return Grade(score, GRADED_BY, {"correct": score >= 0.5, "expected": expected,
                                     "passed": split.passed, "total": split.total,
-                                    "why": outcome_line(judgement)})
+                                    "why": outcome_line(judgement),
+                                    **compiler_note(judgement)})

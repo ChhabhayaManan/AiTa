@@ -5,6 +5,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Iterable
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -19,10 +20,12 @@ from app.services.profiling.service import apply_theory_adjustment
 logger = logging.getLogger(__name__)
 
 PENDING = "pending"
+SAVED = "saved"
 SKIPPED = "skipped"
 MAX_ATTEMPTS = 5
 SWEEP_INTERVAL_S = 120
 RETRY_DELAYS = (2, 4, 8)
+ABANDONED_AFTER = timedelta(hours=24)
 
 
 def responses_for(db: Session, user_id: int, language: str | None) -> list[Resp]:
@@ -106,7 +109,20 @@ def after_regrade(db: Session, user_id: int, topics: Iterable[str] | None = None
         db.commit()
 
 
+def queue_abandoned(db: Session, now: datetime | None = None) -> int:
+    """Saved answers of a check the student walked away from would otherwise never reach
+    the judge."""
+    cutoff = (now or datetime.now(timezone.utc)) - ABANDONED_AFTER
+    count = (db.query(DiagnosticResponse)
+             .filter(DiagnosticResponse.graded_by == SAVED,
+                     DiagnosticResponse.created_at < cutoff)
+             .update({DiagnosticResponse.graded_by: PENDING}, synchronize_session=False))
+    db.commit()
+    return count
+
+
 def sweep_once(db: Session) -> int:
+    queue_abandoned(db)
     user_ids = [uid for (uid,) in (_pending(db)
                                    .with_entities(DiagnosticResponse.user_id)
                                    .distinct().all())]

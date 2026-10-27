@@ -42,6 +42,11 @@ function CodeReveal({ reveal }) {
       meta={reveal.kind === 'write_code' && reveal.total > 0 ? `${reveal.passed}/${reveal.total} tests passed` : null}
     >
       {reveal.why && <p>{reveal.why}</p>}
+      {reveal.compile_output && (
+        <div className="mt-3">
+          <OutputBlock label="Compiler message" value={reveal.compile_output} tone="coral" />
+        </div>
+      )}
       {reveal.kind === 'find_bug' && reveal.bug_line != null && !bugLineInWhy && (
         <p className="mt-2">The bug is on <span className="font-mono text-pop-sun">line {reveal.bug_line}</span>.</p>
       )}

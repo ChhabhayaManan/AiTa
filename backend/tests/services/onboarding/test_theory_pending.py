@@ -2,7 +2,7 @@
 
 import asyncio
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -251,6 +251,20 @@ def test_sweep_grades_and_adjusts(session, judge):
     assert session.get(TopicMastery, (me.id, "loops", "c")).mastery == pytest.approx(0.25)
     event = session.query(LearningEvent).filter_by(kind="diagnostic_theory").one()
     assert event.topic == "loops"
+
+
+def test_sweep_grades_saved_answers_once_the_check_is_abandoned(session, judge):
+    me = make_user(session, "me")
+    stale, fresh = pending_theory(session, me, topics=("loops", "arrays"), graded_by="saved")
+    stale.created_at = datetime.now(timezone.utc) - timedelta(hours=25)
+    session.commit()
+    fake = judge()
+
+    assert pending.sweep_once(session) == 1
+
+    assert len(fake.calls) == 1
+    assert stale.graded_by == "llm"
+    assert fresh.graded_by == "saved"
 
 
 def test_sweep_groups_per_user(session, judge):

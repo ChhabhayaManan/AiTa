@@ -258,7 +258,7 @@ def test_next_payload_has_no_key(client, db, judge):
 def test_answer_for_wrong_item_409(client, db):
     make_bank(db)
     current = begin(client)["item"]
-    other =db.query(DiagnosticItem).filter(DiagnosticItem.id != current["id"]).first()
+    other = db.query(DiagnosticItem).filter(DiagnosticItem.id != current["id"]).first()
 
     assert submit(client, other.id, {"text": "x"}).status_code == 409
     assert db.query(DiagnosticResponse).count() == 0
@@ -268,7 +268,7 @@ def test_double_submit_idempotent(client, db):
     make_bank(db)
     current = begin(client)["item"]
 
-    first =submit(client, current["id"], {"text": "not the output"})
+    first = submit(client, current["id"], {"text": "not the output"})
     second = submit(client, current["id"], {"text": "a different guess"})
 
     assert first.status_code == second.status_code == 200

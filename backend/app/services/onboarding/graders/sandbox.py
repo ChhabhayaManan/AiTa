@@ -45,6 +45,15 @@ def outcome_line(judgement: Judgement) -> str:
     return f"{split.passed} of {split.total} tests passed."
 
 
+COMPILE_OUTPUT_CHARS = 1500
+
+
+def compiler_note(judgement: Judgement) -> dict:
+    if judgement.compiled or not judgement.compile_output:
+        return {}
+    return {"compile_output": judgement.compile_output.strip()[:COMPILE_OUTPUT_CHARS]}
+
+
 def skipped(expected, **extra) -> Grade:
     return Grade(None, "skipped",
                  {"correct": None, "expected": expected, **extra, "why": SKIPPED_WHY})

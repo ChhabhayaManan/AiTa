@@ -37,7 +37,7 @@ from app.services.profiling.service import record_diagnostic_seed
 HOLE_TRIES = 5
 # A theory answer inside the block, not yet sent to the judge. Only "pending" rows are
 # retried (background, sweep), so the block still goes out in one call.
-SAVED = "saved"
+SAVED = pending.SAVED
 _BANDS = {value: band for band, value in seeding.SEED_VALUES.items()}
 
 

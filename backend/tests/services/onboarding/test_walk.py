@@ -160,6 +160,15 @@ def test_skipped_retries_easy_predict_output_when_no_medium():
     assert next_step(warmup_used, bank, 60.0).ref.phase != "retry"
 
 
+def test_scored_warmup_decides_basics_when_medium_skipped():
+    bank = FULL_BANK - {("basics_io", "predict_output", "medium")}
+    failed = [resp("basics_io", 0.0, difficulty="easy", phase="warmup"),
+              resp("basics_io", None, kind="find_bug", graded_by="skipped")]
+    assert next_step(failed, bank, 60.0).ref.phase == "theory"
+    passed = [resp("basics_io", 1.0, difficulty="easy", phase="warmup"), failed[1]]
+    assert next_step(passed, bank, 60.0).ref.topic == "conditionals"
+
+
 def test_consecutive_code_items_vary_kind():
     bank = frozenset(entry for entry in FULL_BANK
                      if entry[2] != "medium" or entry[1] in ("predict_output", "find_bug",

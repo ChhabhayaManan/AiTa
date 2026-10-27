@@ -63,10 +63,10 @@ def _status(topic: str, code: list[Resp], bank: BankIndex) -> str:
         return UNTESTED
     best_medium = _best(medium)
     if best_medium is None:
-        retry = _best([r for r in _attempts(code, topic, "easy") if r.ref.phase == "retry"])
-        if retry is None:
+        easy = _best(_attempts(code, topic, "easy"))
+        if easy is None:
             return SKIPPED
-        return PASSED if retry >= PASS else NEEDS_WORK
+        return PASSED if easy >= PASS else NEEDS_WORK
     if best_medium >= PASS:
         return PASSED
     easy = _attempts(code, topic, "easy")

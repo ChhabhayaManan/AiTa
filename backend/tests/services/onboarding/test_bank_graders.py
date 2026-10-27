@@ -132,10 +132,13 @@ def test_write_code_pass_rate(session):
                                            (ExecStatus.COMPILE_ERROR, "did not compile")])
 def test_timeout_scores_zero_not_skipped(session, kind, answer, status, phrase):
     item = make(session, kind)
-    grade = GRADERS[kind](item, answer, FakeExecutionProvider([failing(status)]))
+    result = failing(status, compile_output="main.c:3: error: expected ';'")
+    grade = GRADERS[kind](item, answer, FakeExecutionProvider([result]))
     assert grade.score == (0.5 if kind == "find_bug" else 0.0)
     assert grade.graded_by == "sandbox"
     assert phrase in grade.reveal["why"]
+    compiled = status is not ExecStatus.COMPILE_ERROR
+    assert grade.reveal.get("compile_output") == (None if compiled else "main.c:3: error: expected ';'")
 
 
 @pytest.mark.parametrize("kind,answer", [("write_code", {"code": "x"}), ("fill_blank", {"text": "i++"}),
