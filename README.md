@@ -1,231 +1,229 @@
-# aiTA — AI Teaching Assistant
+# aiTA: AI Teaching Assistant
 
-A practice platform for first-year programming students in **C**, **C++** and **Python**.
-Every answer is graded by running code or by a fixed key, never by a language model's
-opinion. The grade updates a per-topic, per-language learner model, and that model picks
-the next question.
+aiTA is a practice platform for first-year programming students. Students learn in **C**,
+**C++** or **Python** across 12 topics, from basics and loops to recursion and dynamic
+programming. They answer questions, fix bugs and write code. Each answer moves their level
+on that topic, and the level decides what they get next.
 
-[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+Three ideas run through the whole system:
+
+- **Grades are verified, not guessed.** Code runs against tests in a sandbox and
+  multiple-choice answers are checked against a key. Only written theory answers go to an
+  LLM, which marks them against fixed key points and counts them at half weight.
+- **The learner model is per topic and per language.** Being strong at loops in Python
+  says nothing about loops in C, so switching language triggers a short re-check.
+- **Help never gives the answer away.** Every hint passes a guardrail that runs any code in
+  it against the problem's tests and blocks it if it passes.
+
+![aiTA framework](docs/figures/aita_framework.png)
 
 ---
 
-## What a student does
+## How it works
 
-| Page | What happens |
+The figure has four areas. Red dashed boxes call an LLM, grey boxes are plain rules, and a
+green shield marks output that passes the guardrail before the student sees it.
+
+### 1. Getting started
+
+A student registers and logs in with an emailed one-time code. **Onboarding** asks about
+their background, learning preferences and language, then runs a short adaptive check:
+predict the output, find the bug, fill the blank, write code, and three written answers.
+The results give a starting level on all 12 topics.
+
+### 2. The learning session
+
+This is the core loop, and every answer goes through it:
+
+1. The **Assessment Agent** reads the learner model, picks the weakest open topic and a
+   difficulty, and serves an item from the content bank. If no stored coding problem fits,
+   it writes a new one.
+2. The answer goes to the matching **grader**:
+   - the **MCQ Grader** checks the option against the key;
+   - the **Debug Grader** runs the student's fix against the item's tests;
+   - the **Evaluation Agent** builds a test suite for code, checks the suite against a
+     reference solution, runs the submission in the sandbox, and has an LLM explain the
+     result.
+3. The **Profiling Agent** turns the verified score into a mastery update for that topic
+   and language. A run that could not be verified, such as a compile error, adds nothing.
+4. When a student is stuck, the **Hint Agent** climbs a ladder (concept, then steps, then
+   a pointer to the line), grounded in their failing attempt. The **Guardrail** checks every
+   hint first.
+
+The **Gamification Engine** awards points, streaks and badges from verified events only,
+so it cannot be farmed by resubmitting. The **Dashboard** reads the learner model, the
+awards and recent activity.
+
+### 3. The chatbot (Content Player)
+
+A tutor that answers in chat and is grounded in course books. It is an agent with four
+tools:
+
+- searching the books (RAG over pgvector);
+- reading the student's progress;
+- checking code through the Evaluation Agent;
+- asking the Hint Agent for a hint, so the same guardrail applies.
+
+### 4. Standalone tools
+
+- **Topic practice:** pick a topic, read a short explanation, then answer 10 questions on
+  it.
+- **Practice workspace:** grade any piece of code against a problem statement.
+- **Feedback Agent:** reports on recent work, with errors, misconceptions and topics to
+  revisit.
+
+---
+
+## What students see
+
+| Page | Purpose |
 |---|---|
-| **Onboarding** (`/onboarding`) | Background questions, then a short diagnostic (MCQ, predict-the-output, fill-the-blank, find-the-bug, write-code, theory). Sets the starting level for each of the 12 topics. |
-| **Practice** (`/practice`) | One question at a time: MCQ, debug challenge or coding problem, chosen from the weakest topic. Each answer is graded, moves the topic level, and counts toward a bounded session with a summary page at the end. |
-| **Code workspace** (`/code-help`) | Generate a problem on a topic, write code, run it against hidden tests in a sandbox. A hint ladder (concept → steps → line pointer) is grounded in the failing attempt. After passing, or after **I give up**, the reference solution opens in the student's language. |
-| **Code evaluation** (`/code-eval`) | Paste any code and a problem statement; tests are generated, validated against a reference, and run. |
-| **Feedback** (`/feedback`) | Reports built from the latest evaluation and recent practice: errors, misconceptions, next topics. |
-| **Language check** (`/language-check`) | Switching language triggers a short re-check so mastery in one language is not assumed in another. |
-| **Chat** | A tutor chatbot grounded in course books (RAG), with moderation that nudges rather than blocks. |
+| **Home** | Topic levels, the last session, shortcuts, and the chat panel |
+| **Practice** | One adaptive question at a time (MCQ, debug or coding), ending in a session summary |
+| **Topic practice** | A written explanation of one topic, then 10 questions: 3 theory, 3 MCQ, 3 debug and 1 coding problem |
+| **Coding problems** | A fresh problem on any topic and level, with hints, the chatbot, and a solution that opens after passing or after "I give up" |
+| **Code workspace** | Grade your own code against a problem statement |
+| **Feedback** | Reports on recent work |
+| **Profile** | Background, preferences, language and level on every topic |
 
-Points, streaks and badges are computed from the event log and are replayable
-(`GAMIFICATION_MODE`, default `silent`).
+## Content
+
+All content exists in C, C++ and Python. Every MCQ, debug item and coding problem has been
+proven by running it.
+
+| | Count |
+|---|---|
+| Topic explanations | 36 (12 topics × 3 languages) |
+| Coding problems | 96, each with its own tests |
+| Debug challenges | 216 |
+| Multiple-choice questions | 252 |
+| Theory questions | 216, each with a model answer and key points |
+| Onboarding check items | 120 |
 
 ---
 
 ## Tech stack
 
-| Layer | Technology |
+| | |
 |---|---|
-| Frontend | React 18, Vite, Tailwind CSS, CodeMirror |
-| Backend | FastAPI, SQLAlchemy, Alembic, LangGraph |
-| Database | PostgreSQL with pgvector |
-| LLM | NVIDIA NIM (Nemotron), through one gateway (`app/core/llm_gateway.py`) with per-purpose models, deadlines and a fallback model |
-| Code execution | Self-hosted sandbox container (`backend/executor`) on an internal-only network |
-| Auth | JWT (access + refresh), bcrypt, email OTP (Gmail API or SMTP) |
+| **Frontend** | React 18, Vite, Tailwind CSS, CodeMirror 6 |
+| **Backend** | Python 3.11, FastAPI, SQLAlchemy 2, Alembic, LangGraph |
+| **Database** | PostgreSQL with pgvector |
+| **LLM** | NVIDIA NIM (Nemotron models) behind one gateway with per-task models, deadlines and a fallback |
+| **Code execution** | A self-hosted sandbox container with CPU, memory and process limits, on an internal network |
 
 ---
 
-## Repository layout
+## Running locally
 
-```
-AiTa/
-├── docker-compose.yml          # executor + backend + frontend; DB from backend/.env
-├── docker-compose.local.yml    # override: local pgvector Postgres on host port 5433
-├── backend/
-│   ├── executor/               # sandbox service that compiles and runs student code
-│   ├── scripts/                # seeding, review, demo reset, metrics
-│   ├── tests/                  # pytest (SQLite, no live LLM calls)
-│   └── app/
-│       ├── main.py             # FastAPI app, routers, startup tasks
-│       ├── core/               # config, database, security, llm_gateway
-│       ├── models/             # SQLAlchemy models
-│       ├── schemas/            # Pydantic request/response models
-│       ├── api/                # routers (one per area, below)
-│       ├── agents/             # LangGraph graphs: assessment, chat, code_eval, feedback, profiling
-│       ├── services/           # business logic: execution, test_generation, problems,
-│       │                       #   hints, profiling, gamification, onboarding, rag, ...
-│       ├── data/               # problem, diagnostic and practice banks; language guides
-│       └── alembic/            # migrations (Alembic owns the schema)
-└── frontend/
-    └── src/
-        ├── App.jsx             # routes
-        ├── pages/              # one file per route
-        ├── components/         # UI per feature, plus ui/ primitives
-        ├── hooks/
-        └── utils/api.js        # Axios client with token refresh
-```
+### Prerequisites
 
----
+- Docker with Compose
+- Node.js 18+ (only for running the frontend outside Docker)
+- `backend/.env` with at least `DATABASE_URL`, `SECRET_KEY` and `NVIDIA_API_KEY` (see
+  [Configuration](#configuration))
 
-## Running it
-
-### With Docker
-
-`backend/.env` must exist first (see [Environment variables](#environment-variables)).
+### 1. Start the stack
 
 ```bash
-# local Postgres (recommended for development)
 docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
-
-# or against the database in backend/.env
-docker compose up -d --build
 ```
 
-| Service | URL |
-|---|---|
-| Frontend | http://localhost:5173 |
-| Backend API docs | http://localhost:8000/docs |
-| Executor | no published port, by design |
+This starts a local Postgres on port 5433, the sandbox and the backend. Leave out the
+`-f docker-compose.local.yml` part to use the database in `backend/.env` instead.
 
-Apply migrations inside the backend container:
+### 2. Create the schema
 
 ```bash
 docker compose exec backend sh -c "cd /app/app && PYTHONPATH=/app alembic upgrade head"
 ```
 
-> **Keep the `exec` flag** on the executor's tmpfs mount. Docker mounts tmpfs `noexec`
-> by default, which breaks every compiled submission with "Permission denied".
+### 3. Load the content
 
-### Seeding
+```bash
+docker compose exec backend python -m scripts.ingest_problems
+docker compose exec backend python -m scripts.seed_practice
+docker compose exec backend python -m scripts.seed_theory
+docker compose exec backend python -m scripts.seed_diagnostic
+docker compose exec backend python -m scripts.ingest_books
+```
 
-Run inside the backend container (`docker compose exec backend python -m scripts.<name>`;
-add `-f docker-compose.local.yml` when using the local DB). All are safe to rerun.
+Every script is safe to rerun.
 
-| Script | Loads |
+### 4. Open it
+
+| | |
 |---|---|
-| `ingest_problems` | Problem bank with its own test cases (no API key needed) |
-| `seed_practice` | Hand-written MCQ and debug items in C, C++ and Python, each proven by execution |
-| `seed_assessments` | Verified assessment bank |
-| `seed_diagnostic` | Onboarding diagnostic bank; approve items with `review_diagnostic` |
-| `ingest_books` | Course-book chunks for the chatbot's retrieval |
-| `rebuild_awards` | Rebuilds the gamification ledger from `learning_events` |
-| `reset_demo_user` | Wipes and re-registers one demo account |
-| `report_metrics` | Hint leak rate, verified correctness, mastery trace |
+| App | http://localhost:5173 |
+| API docs | http://localhost:8000/docs |
 
-### Logging in without email
+Without email credentials, login codes are printed to the backend log:
+`docker compose logs backend | grep "\[DEV\] OTP"`. For a one-click login during
+development, set `DEV_LOGIN_EMAIL` to an existing account and keep `DEBUG=True`.
 
-With no Gmail or SMTP credentials, OTPs are printed to the backend log:
-
-```bash
-docker compose logs backend | grep "\[DEV\] OTP"
-```
-
-Set `DEV_LOGIN_EMAIL` to an existing user's email and keep `DEBUG=True` to get a
-**Dev login** button. With either missing, `POST /auth/dev-login` returns 404.
-
-### Without Docker
-
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-
-cd app
-PYTHONPATH=.. alembic upgrade head
-cd ..
-uvicorn app.main:app --reload --port 8000
-```
-
-`alembic.ini` lives in `backend/app` with a relative `script_location`, so run Alembic
-from there. Startup does not create tables; migrating is the only way the schema changes.
-
-Code execution still needs the sandbox. Publish it yourself and point the backend at it:
-
-```bash
-docker compose run -d --service-ports -p 8080:8080 executor
-# backend/.env: EXECUTOR_URL=http://localhost:8080
-```
-
-Frontend:
+### Frontend with hot reload
 
 ```bash
 cd frontend
 npm install
-npm run dev        # http://localhost:3000, proxies /api to :8000
+npm run dev   # http://localhost:3000, proxies /api to the backend on :8000
 ```
 
 ---
 
-## Tests and checks
+## Development
+
+### Tests
 
 ```bash
-# backend
-cd backend
-.venv\Scripts\python -m pytest -q
-.venv\Scripts\python -m ruff check app tests
-
-# frontend
-cd frontend
-npm run lint
-npm test
-npm run build
+cd backend && python -m pytest -q          # SQLite, fake sandbox, no LLM calls
+cd frontend && npm run lint && npm test && npm run build
 ```
 
-Backend tests run on SQLite with a fake execution provider and stubbed LLM calls, so
-they need neither Docker nor an API key.
+### Project structure
 
----
+```
+backend/
+  app/
+    agents/       LangGraph agents: assessment, code evaluation, profiling, feedback, chat
+    services/     grading, hints and guardrail, onboarding, topic practice, gamification, RAG
+    api/          one FastAPI router per area, all under /api/v1
+    data/         content banks and topic explanations
+    alembic/      database migrations
+  executor/       the code sandbox
+  scripts/        seeding and maintenance
+  tests/
+frontend/src/
+  pages/          one file per route
+  components/     UI per feature
+docs/figures/     diagrams
+```
 
-## Environment variables
+### Configuration
 
-Defined in `backend/app/core/config.py`. Unknown keys in `.env` are ignored.
+Settings are read from `backend/.env` (see `backend/app/core/config.py` for all of them).
 
-| Variable | Required | Notes |
-|---|---|---|
-| `DATABASE_URL` | yes | PostgreSQL with pgvector |
-| `SECRET_KEY` | yes | JWT signing secret |
-| `NVIDIA_API_KEY` | for LLM features | Without it, LLM features degrade (e.g. pattern-only feedback, Python fallback solutions) |
-| `NVIDIA_MODEL`, `NVIDIA_CODEGEN_MODEL`, `NVIDIA_FALLBACK_MODEL` | no | Model per purpose; see comments in `config.py` |
-| `NVIDIA_RPM`, `LLM_QUEUE_DEADLINE_S`, `REDIS_URL` | no | Rate limiting and queueing |
-| `EXECUTOR_URL` | no | Default `http://executor:8080` |
-| `EXEC_*` | no | Sandbox limits: wall time, CPU, memory, processes, output, compile time |
-| `GAMIFICATION_MODE` | no | `silent` (default) records awards without showing them |
-| `DEV_LOGIN_EMAIL` | no | Enables the dev login button when `DEBUG=True` |
-| `ALLOWED_ORIGINS` | no | CORS origins, comma-separated |
-| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL` | no | OTP email via Gmail API |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | no | OTP email via SMTP |
-| `SKIP_EMBED_WARMUP`, `SKIP_ONBOARDING_SWEEP` | no | Skip startup background tasks |
-
----
-
-## API
-
-All routes are under `/api/v1`. Full interactive docs: `http://localhost:8000/docs`.
-
-| Prefix | Purpose |
+| Variable | Purpose |
 |---|---|
-| `/auth` | Register, 2-step login with OTP, refresh, forgot/reset password, dev login |
-| `/users` | Profile, consent, peer comparison, password change |
-| `/onboarding` | Steps, diagnostic, finish, language switch and re-check |
-| `/assessment` | Next practice item, MCQ answers, debug submissions |
-| `/practice-sessions` | Current session, finish, summary, session feedback |
-| `/problems` | Generate a problem; open its solution after a pass or a give-up |
-| `/code-eval` | Submit code, run tests, history and stats |
-| `/feedback` | Hint ladder, feedback reports |
-| `/profile` | Mastery for every topic |
-| `/gamification` | Points, streaks, badges |
-| `/chat` | Tutor chat threads and messages |
+| `DATABASE_URL` | PostgreSQL with pgvector (required) |
+| `SECRET_KEY` | Signs login tokens (required) |
+| `NVIDIA_API_KEY`, `NVIDIA_API_KEY_2` | LLM access; the second key serves the fallback model |
+| `EXECUTOR_URL` | The sandbox, `http://executor:8080` by default |
+| `GAMIFICATION_MODE` | `off`, `silent` (default: recorded, shown only on request) or `live` |
+| `GMAIL_*` or `SMTP_*` | Sending login codes by email |
+| `DEV_LOGIN_EMAIL` | One-click development login (needs `DEBUG=True`) |
+
+### Notes
+
+- Alembic owns the schema, and the app never creates tables on startup. Run Alembic from
+  `backend/app`, where `alembic.ini` lives.
+- The theory bank files are append-only. A question's id comes from its position, and
+  `seed_theory` refuses to change a question that students have already answered.
+- Keep the `exec` flag on the sandbox's tmpfs mount. Without it, every compiled submission
+  fails with "Permission denied".
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
