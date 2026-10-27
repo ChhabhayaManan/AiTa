@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutGrid, Target, Shapes, SquareTerminal, MessageSquareText, UserRound, LogOut, Menu, X,
+  LayoutGrid, Target, Shapes, Code2, SquareTerminal, MessageSquareText, UserRound, LogOut, Menu, X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
@@ -12,7 +12,8 @@ import LogoMark, { Wordmark } from './LogoMark'
 const NAV = [
   { to: '/dashboard', label: 'Home', icon: LayoutGrid },
   { to: '/practice', label: 'Practice', icon: Target, primary: true },
-  { to: '/code-help', label: 'Topic practice', icon: Shapes },
+  { to: '/topics', label: 'Topic practice', icon: Shapes },
+  { to: '/code-help', label: 'Coding problems', icon: Code2 },
   { to: '/code-eval', label: 'Code workspace', icon: SquareTerminal },
   { to: '/feedback', label: 'Feedback', icon: MessageSquareText, badge: 'feedback' },
   { to: '/profile', label: 'Profile', icon: UserRound },

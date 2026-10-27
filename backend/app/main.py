@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.models import code_eval as code_eval_models, problem as problem_models  # noqa: F401
 from app.api import auth, users, problems, code_eval, feedback, profile, assessment, chat, gamification
-from app.api import onboarding, practice_sessions
+from app.api import onboarding, practice_sessions, topic_practice
 from app.services.onboarding import pending
 from app.services.rag import embedder
 
@@ -70,6 +70,7 @@ app.include_router(chat.router, prefix="/api/v1")
 app.include_router(gamification.router, prefix="/api/v1")
 app.include_router(onboarding.router, prefix="/api/v1")
 app.include_router(practice_sessions.router, prefix="/api/v1")
+app.include_router(topic_practice.router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Health"])

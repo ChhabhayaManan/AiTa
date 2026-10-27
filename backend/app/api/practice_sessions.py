@@ -41,7 +41,8 @@ def _wrap_up(db: Session, s: PracticeSession) -> WrapUpOut:
     facts = session_facts(db, s)
     return WrapUpOut(
         id=s.id, language=facts.language, started_at=facts.started_at,
-        ended_at=facts.ended_at, end_reason=s.end_reason, duration_s=facts.duration_s,
+        ended_at=facts.ended_at, end_reason=s.end_reason, topic=s.topic,
+        duration_s=facts.duration_s,
         by_type={t: TypeCountOut(tried=c.tried, solved=c.solved)
                  for t, c in facts.by_type.items()},
         topics=[TopicChangeOut(topic=t.topic, before=t.before, after=t.after,

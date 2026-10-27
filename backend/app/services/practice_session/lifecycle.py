@@ -12,8 +12,9 @@ from app.services.profiling.mastery import is_solved
 
 IDLE_MINUTES = 30
 CARRIED_TYPES = ("coding", "debug")
-WRAP_UP_WAITS = ("idle", "language_switch")
-_ITEM_TYPES = {"mcq": "mcq", "diagnostic": "mcq", "debug": "debug", "coding": "coding"}
+WRAP_UP_WAITS = ("idle", "language_switch", "mode_switch")
+_ITEM_TYPES = {"mcq": "mcq", "diagnostic": "mcq", "debug": "debug", "coding": "coding",
+               "theory": "theory"}
 
 
 def item_type_of(assessment_type: str) -> str:
@@ -89,6 +90,9 @@ def record_served(db: Session, user_id: int, item_type: str, item_id: int, langu
     if s is not None and s.language != language:
         _close(db, s, "language_switch", now)
         s = None
+    if s is not None and s.topic is not None:
+        _close(db, s, "mode_switch", now)
+        s = None
     if s is None:
         s = PracticeSession(user_id=user_id, language=language, started_at=now,
                             last_activity_at=now, graded_count=0,
@@ -132,7 +136,7 @@ def attach_event(db: Session, event: LearningEvent, item_type: str,
     solved = is_solved(event.score, event.hint_level_used or 0)
     event.session_id = s.id
     s.graded_count = (s.graded_count or 0) + 1
-    s.served = [{**_settled(e), "solved": e["solved"] or solved}
+    s.served = [{**_settled(e), "solved": e["solved"] or solved, "graded": True}
                 if _is(e, item_type, event.item_id) else dict(e) for e in s.served]
     s.last_activity_at = now
     db.flush()
@@ -156,6 +160,40 @@ def finish(db: Session, user_id: int, session_id: int, now: datetime) -> Practic
     if s is None or s.user_id != user_id or s.ended_at is not None or not s.graded_count:
         raise SessionNotFound("No open practice session with that id.")
     return _close(db, s, "finished", _utc(s.last_activity_at) if _idle(s, now) else now)
+
+
+def open_run(db: Session, user_id: int, now: datetime) -> PracticeSession | None:
+    s = open_session(db, user_id, now)
+    return s if s is not None and s.topic is not None else None
+
+
+def start_run(db: Session, user_id: int, topic: str, language: str, plan: list[str],
+              now: datetime) -> PracticeSession:
+    """Resumes an unfinished run on the same topic; anything else open is closed first.
+    A run starts empty: nothing carries into a set the student chose."""
+    s = open_session(db, user_id, now)
+    if s is not None and s.topic == topic and s.language == language and not run_done(s):
+        return s
+    if s is not None:
+        _close(db, s, "mode_switch", now)
+    s = PracticeSession(user_id=user_id, language=language, started_at=now,
+                        last_activity_at=now, graded_count=0, served=[], topic=topic,
+                        plan=plan)
+    db.add(s)
+    db.flush()
+    return s
+
+
+def run_done(s: PracticeSession) -> bool:
+    return len(s.served) >= len(s.plan or []) and all(e.get("graded") for e in s.served)
+
+
+def serve_in_run(db: Session, s: PracticeSession, item_type: str, item_id: int,
+                 now: datetime) -> None:
+    s.served = [*(dict(e) for e in s.served),
+                {"type": item_type, "id": item_id, "solved": False}]
+    s.last_activity_at = now
+    db.flush()
 
 
 def close_for_language_switch(db: Session, user_id: int, now: datetime) -> None:

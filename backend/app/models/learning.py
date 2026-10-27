@@ -138,3 +138,34 @@ class DebugAttempt(Base):
     tests_total    = Column(Integer, nullable=False, default=0)
     fixed          = Column(Boolean, nullable=False, default=False)
     created_at     = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class TheoryQuestion(Base):
+    __tablename__ = "theory_questions"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    external_id  = Column(String(60), unique=True, nullable=False)
+    topic        = Column(String(40), nullable=False, index=True)
+    difficulty   = Column(String(10), nullable=False)
+    language     = Column(String(10), nullable=False)
+    question     = Column(Text, nullable=False)
+    # Never serialised before the student has answered.
+    model_answer = Column(Text, nullable=False)
+    key_points   = Column(JSON, nullable=False)
+    reviewed     = Column(Boolean, nullable=False, default=False)
+    created_at   = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class TheoryAttempt(Base):
+    __tablename__ = "theory_attempts"
+
+    id             = Column(Integer, primary_key=True, index=True)
+    user_id        = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
+                            nullable=False, index=True)
+    question_id    = Column(Integer, ForeignKey("theory_questions.id", ondelete="CASCADE"),
+                            nullable=False)
+    answer         = Column(Text, nullable=False)
+    points_present = Column(JSON, nullable=False)
+    score          = Column(Float, nullable=False)
+    feedback       = Column(Text, nullable=True)
+    created_at     = Column(DateTime(timezone=True), server_default=func.now())

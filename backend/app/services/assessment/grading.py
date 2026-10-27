@@ -78,11 +78,11 @@ def grade_mcq(db: Session, user_id: int, question_id: int, chosen_index: int) ->
         source_ref=f"mcq_attempt:{attempt.id}",
         language=None if question.language == "any" else question.language,
     ))
-    _attach(db, event, "mcq")
+    attach_to_session(db, event, "mcq")
     explanations = question.explanations or []
     return McqResult(correct, chosen_index, question.answer_index, misconception,
                      explanations[0] if explanations else None, event.mastery_after,
-                     _awards(db, event.id))
+                     awards_of(db, event.id))
 
 
 def grade_debug(db: Session, user_id: int, challenge_id: int, code: str,
@@ -112,7 +112,7 @@ def grade_debug(db: Session, user_id: int, challenge_id: int, code: str,
         source_ref=f"debug_attempt:{attempt.id}",
         language=challenge.language,
     ))
-    _attach(db, event, "debug")
+    attach_to_session(db, event, "debug")
 
     return DebugResult(
         fixed=fixed,
@@ -123,11 +123,11 @@ def grade_debug(db: Session, user_id: int, challenge_id: int, code: str,
         failing_expected=failing.expected_stdout if failing else None,
         failing_actual=failing.actual_stdout if failing else None,
         mastery_after=event.mastery_after,
-        awards=_awards(db, event.id),
+        awards=awards_of(db, event.id),
     )
 
 
-def _attach(db: Session, event, item_type: str) -> None:
+def attach_to_session(db: Session, event, item_type: str) -> None:
     """The event is already committed by ingest; a session failure only loses the link."""
     event_id = event.id
     try:
@@ -138,7 +138,7 @@ def _attach(db: Session, event, item_type: str) -> None:
         logger.exception("practice session attach failed for event %s", event_id)
 
 
-def _awards(db: Session, event_id: int) -> list[dict]:
+def awards_of(db: Session, event_id: int) -> list[dict]:
     """The answer is already graded and committed; a toast must never turn it into a 500."""
     try:
         return [a.model_dump() for a in awards_for_event(db, event_id)]

@@ -84,7 +84,7 @@ export default function CodingView({ item, onGraded }) {
       setRunResult(null)
       setHints(data.hint ? [data.hint] : [])
       toastAwards(data)
-      onGraded()
+      if (data.verification_status === 'verified' && data.tests_total > 0) onGraded()
     } catch (err) {
       toast.error(getErrorMessage(err, "Couldn't grade your code. Try again in a minute."))
     } finally {
@@ -97,7 +97,7 @@ export default function CodingView({ item, onGraded }) {
     try {
       const { data } = await feedbackAPI.hint(item.id)
       setHints(prev => [...prev, data])
-      onGraded()
+      if (report?.verification_status === 'verified') onGraded()
     } catch (err) {
       toast.error(getErrorMessage(err, 'No hint is available right now.'))
     } finally {

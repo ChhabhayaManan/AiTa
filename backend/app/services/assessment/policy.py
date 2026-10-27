@@ -137,7 +137,7 @@ def choose_difficulty(mastery: float) -> str:
     return "hard"
 
 
-def _steps(difficulty: str) -> list[str]:
+def difficulty_steps(difficulty: str) -> list[str]:
     """The requested level, then one step easier, then anything."""
     index = DIFFICULTY_ORDER.index(difficulty)
     ordered = [difficulty]
@@ -147,18 +147,18 @@ def _steps(difficulty: str) -> list[str]:
     return ordered
 
 
-def _mcq_payload(q: McqQuestion) -> dict:
+def mcq_payload(q: McqQuestion) -> dict:
     return {"id": q.id, "stem": q.stem, "options": [o["text"] for o in q.options],
             "topic": q.topic, "difficulty": q.difficulty, "language": q.language,
             "is_diagnostic": q.is_diagnostic}
 
 
-def _debug_payload(c: DebugChallenge) -> dict:
+def debug_payload(c: DebugChallenge) -> dict:
     return {"id": c.id, "statement": c.statement, "language": c.language,
             "buggy_code": c.buggy_code, "topic": c.topic, "difficulty": c.difficulty}
 
 
-def _coding_payload(problem: Problem) -> dict:
+def coding_payload(problem: Problem) -> dict:
     return to_summary(problem).model_dump()
 
 
@@ -167,7 +167,7 @@ def _pick_mcq(db, user_id, topic, difficulty, language):
               .filter(McqAttempt.user_id == user_id, McqAttempt.correct.is_(True))}
     tried = {qid for (qid,) in db.query(McqAttempt.question_id)
              .filter(McqAttempt.user_id == user_id)}
-    for level in _steps(difficulty):
+    for level in difficulty_steps(difficulty):
         pool = [q for q in db.query(McqQuestion)
                 .filter(McqQuestion.topic == topic, McqQuestion.difficulty == level,
                         McqQuestion.language.in_((language, CONCEPT)),
@@ -183,7 +183,7 @@ def _pick_mcq(db, user_id, topic, difficulty, language):
 def _pick_debug(db, user_id, topic, difficulty, language):
     fixed = {cid for (cid,) in db.query(DebugAttempt.challenge_id)
              .filter(DebugAttempt.user_id == user_id, DebugAttempt.fixed.is_(True))}
-    for level in _steps(difficulty):
+    for level in difficulty_steps(difficulty):
         pool = [c for c in db.query(DebugChallenge)
                 .filter(DebugChallenge.topic == topic, DebugChallenge.difficulty == level,
                         DebugChallenge.language == language,
@@ -203,9 +203,9 @@ def _passed_problem_ids(db, user_id) -> set[int]:
     return {pid for (pid,) in rows if pid is not None}
 
 
-def _pick_coding(db, user_id, topic, difficulty):
+def pick_coding(db, user_id, topic, difficulty):
     passed = _passed_problem_ids(db, user_id)
-    for level in _steps(difficulty)[:2]:
+    for level in difficulty_steps(difficulty)[:2]:
         problem = (db.query(Problem)
                    .filter(Problem.source.in_(CURATED_SOURCES), Problem.topic == topic,
                            Problem.difficulty == Difficulty(level), Problem.test_cases.any(),
@@ -216,7 +216,7 @@ def _pick_coding(db, user_id, topic, difficulty):
     return None, None
 
 
-def _generate_coding(db, topic, difficulty):
+def generate_coding(db, topic, difficulty):
     try:
         generated = generate_problem(db, TOPIC_LABELS[topic], difficulty)
     except LLMUnavailable:
@@ -236,18 +236,18 @@ def pick_item(db: Session, plan: Plan) -> NextItem | None:
         if item_type == "mcq":
             found, level = _pick_mcq(db, plan.user_id, plan.topic, plan.difficulty,
                                      plan.language)
-            payload = _mcq_payload if found else None
+            payload = mcq_payload if found else None
         elif item_type == "debug":
             found, level = _pick_debug(db, plan.user_id, plan.topic, plan.difficulty,
                                        plan.language)
-            payload = _debug_payload if found else None
+            payload = debug_payload if found else None
         else:
-            found, level = _pick_coding(db, plan.user_id, plan.topic, plan.difficulty)
+            found, level = pick_coding(db, plan.user_id, plan.topic, plan.difficulty)
             if found is None:
-                found, level = _generate_coding(db, plan.topic, plan.difficulty)
+                found, level = generate_coding(db, plan.topic, plan.difficulty)
                 if found is not None:
                     plan.notes.append("none of the saved problems fitted, so a new one was generated")
-            payload = _coding_payload if found else None
+            payload = coding_payload if found else None
         if found is None:
             continue
         if item_type != plan.item_type:

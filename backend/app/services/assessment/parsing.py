@@ -113,6 +113,30 @@ def parse_authored(text: str, topic: str) -> dict:
     return {"problems": _problems(text, topic), "mcqs": mcqs, "debug": debug}
 
 
+_THEORY = re.compile(r"=== THEORY ===(.*?)=== END ===", re.DOTALL)
+
+
+def parse_theory(text: str, topic: str) -> list[dict]:
+    """THEORY blocks: LANGUAGE, DIFFICULTY, QUESTION, MODEL ANSWER, and KEY POINTS as a
+    `- ` list. External ids follow the order of the blocks within each language."""
+    items, numbers = [], {}
+    for block in _THEORY.findall(text or ""):
+        language = _section(block, "LANGUAGE", ("DIFFICULTY",)).lower()
+        numbers[language] = numbers.get(language, 0) + 1
+        points = _section(block, "KEY POINTS", ())
+        items.append({
+            "external_id": f"theory-{language}-{topic}-{numbers[language]}",
+            "topic": topic,
+            "language": language,
+            "difficulty": _section(block, "DIFFICULTY", ("QUESTION",)).lower(),
+            "question": _section(block, "QUESTION", ("MODEL ANSWER",)),
+            "model_answer": _section(block, "MODEL ANSWER", ("KEY POINTS",)),
+            "key_points": [line.strip()[2:].strip() for line in points.split("\n")
+                           if line.strip().startswith("- ")],
+        })
+    return items
+
+
 def parse_debug(text: str) -> tuple[str, str] | None:
     """(correct, buggy) programs, or None when the reply is not in the expected shape."""
     correct = re.search(r"CORRECT:\s*```[^\n]*\n(.*?)```", text or "", re.DOTALL)

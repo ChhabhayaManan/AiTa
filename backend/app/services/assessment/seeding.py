@@ -2,7 +2,7 @@ from collections import Counter
 
 from sqlalchemy.orm import Session
 
-from app.models.learning import DebugChallenge, McqQuestion
+from app.models.learning import DebugChallenge, McqQuestion, TheoryAttempt, TheoryQuestion
 from app.models.problem import Problem
 from app.services.assessment.sanitize import strip_bug_annotations
 from app.services.assessment.verify import verify_debug, verify_mcq
@@ -61,5 +61,52 @@ def seed(db: Session, bank: dict, provider=None) -> Counter:
         report["debug created" if _upsert(db, DebugChallenge, item["external_id"], values)
                else "debug updated"] += 1
 
+    db.commit()
+    return report
+
+
+_THEORY_FIELDS = ("topic", "difficulty", "language", "question", "model_answer", "key_points")
+LANGUAGES = ("c", "cpp", "python")
+DIFFICULTIES = ("easy", "medium", "hard")
+MIN_POINTS, MAX_POINTS = 2, 4
+
+
+def theory_problem(item: dict) -> str | None:
+    """Why a written theory item cannot be served, or None when it can."""
+    if item["language"] not in LANGUAGES:
+        return f"unknown language {item['language']!r}"
+    if item["difficulty"] not in DIFFICULTIES:
+        return f"unknown difficulty {item['difficulty']!r}"
+    if not item["question"] or not item["model_answer"]:
+        return "question or model answer is empty"
+    if not MIN_POINTS <= len(item["key_points"]) <= MAX_POINTS:
+        return f"{len(item['key_points'])} key points, expected {MIN_POINTS}-{MAX_POINTS}"
+    return None
+
+
+def _rewrites_answered(db: Session, item: dict) -> bool:
+    row = (db.query(TheoryQuestion)
+           .filter(TheoryQuestion.external_id == item["external_id"]).first())
+    return (row is not None and row.question != item["question"]
+            and db.query(TheoryAttempt).filter(TheoryAttempt.question_id == row.id).first()
+            is not None)
+
+
+def seed_theory(db: Session, items: list[dict]) -> Counter:
+    """Ids follow block order, so the bank files are append-only. A block whose id now
+    holds a different, already-answered question is refused rather than rewriting what
+    those answers were to."""
+    report: Counter = Counter()
+    for item in items:
+        if theory_problem(item):
+            report["theory rejected"] += 1
+            continue
+        if _rewrites_answered(db, item):
+            report["theory refused: id holds an answered question"] += 1
+            continue
+        values = {k: item[k] for k in _THEORY_FIELDS}
+        values["reviewed"] = True
+        report["theory created" if _upsert(db, TheoryQuestion, item["external_id"], values)
+               else "theory updated"] += 1
     db.commit()
     return report

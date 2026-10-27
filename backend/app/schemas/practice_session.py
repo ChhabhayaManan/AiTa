@@ -51,6 +51,8 @@ class WrapUpOut(BaseModel):
     started_at: datetime
     ended_at: datetime
     end_reason: str
+    # Set for a topic run: the one topic the student chose.
+    topic: Optional[str] = None
     duration_s: int
     by_type: Dict[str, TypeCountOut]
     topics: List[TopicChangeOut]

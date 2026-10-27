@@ -79,7 +79,7 @@ export default function HeroTile({ user, topics, loading }) {
           <Button size="lg" iconRight={ArrowRight} onClick={() => navigate('/practice')}>
             Continue practice
           </Button>
-          <Button size="lg" variant="ghost" icon={Shapes} onClick={() => navigate('/code-help')}>
+          <Button size="lg" variant="ghost" icon={Shapes} onClick={() => navigate('/topics')}>
             Pick a topic
           </Button>
         </div>

@@ -232,7 +232,7 @@ def test_payloads_never_carry_answers(session, user):
                              "is_diagnostic"}
     assert mcq.item["options"] == ["1", "2"]
 
-    debug = policy._debug_payload(session.query(DebugChallenge).one())
+    debug = policy.debug_payload(session.query(DebugChallenge).one())
     assert "SECRET_FIX" not in str(debug)
     assert "bug_type" not in debug and "fixed_code" not in debug
 

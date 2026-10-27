@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowRight, Award, Bug, Code2, HelpCircle, Home, RefreshCw, SearchX, Target, TrendingUp } from 'lucide-react'
+import { ArrowRight, Award, BookOpenText, Bug, Code2, HelpCircle, Home, RefreshCw, SearchX, Target, TrendingUp } from 'lucide-react'
 import { getErrorMessage, practiceSessionAPI } from '../utils/api'
 import { BAND_STYLE, ITEM_TYPE_LABELS, languageLabel, misconceptionLabel, topicLabel } from '../components/learning/labels'
 import AppShell from '../components/ui/AppShell'
@@ -14,6 +14,7 @@ import { SkeletonTile } from '../components/ui/Skeleton'
 
 const TYPES = [
   { key: 'mcq', icon: HelpCircle, tone: 'aqua' },
+  { key: 'theory', icon: BookOpenText, tone: 'sun' },
   { key: 'debug', icon: Bug, tone: 'pink' },
   { key: 'coding', icon: Code2, tone: 'mint' },
 ]
@@ -26,6 +27,7 @@ const WRITING_STEPS = [
 const END_NOTE = {
   idle: 'This session closed on its own after 30 minutes with no activity.',
   language_switch: 'This session closed when you switched language.',
+  mode_switch: 'This session closed when you started a different kind of practice.',
 }
 
 const pct = v => Math.round(v * 100)
@@ -47,6 +49,7 @@ function headerLine(wrap) {
 
 function ByType({ byType }) {
   const counts = TYPES.map(t => ({ ...t, ...(byType[t.key] || { tried: 0, solved: 0 }) }))
+    .filter(c => c.key !== 'theory' || c.tried > 0)
   const tried = counts.reduce((n, c) => n + c.tried, 0)
   const solved = counts.reduce((n, c) => n + c.solved, 0)
   return (
@@ -55,7 +58,7 @@ function ByType({ byType }) {
         <p className="eyebrow">What you did</p>
         <span className="font-mono text-xs text-ink-muted">{solved} of {plural(tried, 'item')} solved</span>
       </div>
-      <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <ul className={`mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 ${counts.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
         {counts.map(({ key, icon, tone, tried: t, solved: s }) => (
           <li key={key} className={`rounded-2xl border border-line bg-tile-2 p-4 ${t === 0 ? 'opacity-60' : ''}`}>
             <Chip tone={tone} icon={icon}>{ITEM_TYPE_LABELS[key]}</Chip>
@@ -286,8 +289,8 @@ export default function SessionSummaryPage() {
     <AppShell title="Session summary">
       <div className="mx-auto flex max-w-[1180px] flex-col gap-5">
         <PageHeader
-          eyebrow="Practice"
-          title="Session summary"
+          eyebrow={wrap?.topic ? 'Topic practice' : 'Practice'}
+          title={wrap?.topic ? `${topicLabel(wrap.topic)} summary` : 'Session summary'}
           description={wrap ? headerLine(wrap) : undefined}
         />
 

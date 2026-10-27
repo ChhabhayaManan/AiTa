@@ -43,6 +43,7 @@ export const ITEM_TYPE_LABELS = {
   mcq: 'Multiple choice',
   coding: 'Coding problem',
   debug: 'Debug challenge',
+  theory: 'Theory',
 }
 
 export const EVENT_KIND_LABELS = {

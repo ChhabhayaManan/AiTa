@@ -15,8 +15,9 @@ from app.services.assessment.policy import STUCK_AFTER
 from app.services.gamification.service import awards_for_event
 from app.services.profiling.mastery import MISS_BELOW, band, is_solved
 
-ITEM_TYPES = ("mcq", "debug", "coding")
-EVENT_TYPES = {"mcq": "mcq", "diagnostic": "mcq", "debug": "debug", "code": "coding"}
+ITEM_TYPES = ("mcq", "theory", "debug", "coding")
+EVENT_TYPES = {"mcq": "mcq", "diagnostic": "mcq", "theory": "theory", "debug": "debug",
+               "code": "coding"}
 HINT_LEVELS = (1, 2, 3, 4)
 TOP_MISTAKES = 3
 

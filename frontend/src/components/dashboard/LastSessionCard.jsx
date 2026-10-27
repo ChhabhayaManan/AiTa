@@ -5,6 +5,10 @@ import Button from '../ui/Button'
 import Chip from '../ui/Chip'
 
 const SHOWN_TOPICS = 4
+const END_NOTE = {
+  language_switch: ended => `It ended when you switched language on ${ended}.`,
+  mode_switch: ended => `It ended when you started a different kind of practice on ${ended}.`,
+}
 
 export default function LastSessionCard({ session }) {
   const navigate = useNavigate()
@@ -20,7 +24,7 @@ export default function LastSessionCard({ session }) {
           {solved > 0 ? `You solved ${solved} ${solved === 1 ? 'item' : 'items'}.` : 'Your summary is ready.'}
         </h2>
         <p className="mt-1 text-[13px] leading-relaxed text-ink-subtle">
-          {session.end_reason === 'language_switch' ? `It ended when you switched language on ${ended}.` : `It closed on its own on ${ended}.`} See how your topic levels moved.
+          {END_NOTE[session.end_reason] ? END_NOTE[session.end_reason](ended) : `It closed on its own on ${ended}.`} See how your topic levels moved.
         </p>
         {topics.length > 0 && (
           <ul className="mt-3 flex flex-wrap gap-2">

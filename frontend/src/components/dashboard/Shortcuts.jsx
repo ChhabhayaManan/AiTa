@@ -3,8 +3,8 @@ import { ArrowUpRight, MessageSquareText, Shapes, SquareTerminal } from 'lucide-
 
 const ITEMS = [
   {
-    to: '/code-help', icon: Shapes, title: 'Topic practice',
-    text: 'Choose a topic and get a fresh problem to solve.',
+    to: '/topics', icon: Shapes, title: 'Topic practice',
+    text: 'Read about one topic, then answer 10 questions on it.',
     tile: 'border-pop-aqua/20 bg-pop-aqua/[0.07] hover:bg-pop-aqua/[0.12]', chip: 'bg-pop-aqua',
   },
   {
