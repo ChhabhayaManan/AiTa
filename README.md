@@ -1,690 +1,231 @@
 # aiTA — AI Teaching Assistant
 
-An AI-powered personalized learning platform for programming students. aiTA combines four specialized AI agents into a continuous feedback loop — it watches how you learn, evaluates your code, synthesizes feedback, and recommends what to study next.
+A practice platform for first-year programming students in **C**, **C++** and **Python**.
+Every answer is graded by running code or by a fixed key, never by a language model's
+opinion. The grade updates a per-topic, per-language learner model, and that model picks
+the next question.
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## 🌟 Features
+## What a student does
 
-### 🤖 AI Agents
-- **Content Player Agent** — Interactive AI tutor with 5 modes: Walkthrough, Q&A, Quiz, Code Help, Brainstorm. Adaptive difficulty adjusts automatically based on comfort signals.
-- **Code Evaluation Agent** — Multi-dimensional code analysis: correctness, efficiency, security, style, documentation, and corrected code with explanations.
-- **Feedback Agent** — Synthesizes findings from code evaluations and learning sessions into personalized narrative feedback. Updates your learning profile in real time.
-- **Content Recommendation Agent** — Hybrid CF + CBF + RL + Groq LLM pipeline. Fetches real YouTube videos and ranks them with personalized explanations.
+| Page | What happens |
+|---|---|
+| **Onboarding** (`/onboarding`) | Background questions, then a short diagnostic (MCQ, predict-the-output, fill-the-blank, find-the-bug, write-code, theory). Sets the starting level for each of the 12 topics. |
+| **Practice** (`/practice`) | One question at a time: MCQ, debug challenge or coding problem, chosen from the weakest topic. Each answer is graded, moves the topic level, and counts toward a bounded session with a summary page at the end. |
+| **Code workspace** (`/code-help`) | Generate a problem on a topic, write code, run it against hidden tests in a sandbox. A hint ladder (concept → steps → line pointer) is grounded in the failing attempt. After passing, or after **I give up**, the reference solution opens in the student's language. |
+| **Code evaluation** (`/code-eval`) | Paste any code and a problem statement; tests are generated, validated against a reference, and run. |
+| **Feedback** (`/feedback`) | Reports built from the latest evaluation and recent practice: errors, misconceptions, next topics. |
+| **Language check** (`/language-check`) | Switching language triggers a short re-check so mastery in one language is not assumed in another. |
+| **Chat** | A tutor chatbot grounded in course books (RAG), with moderation that nudges rather than blocks. |
 
-### 🔐 Security & Authentication
-- **2-Step Login (OTP)** — Password check → bcrypt-hashed OTP sent via Gmail API → JWT tokens issued after OTP verification
-- **Gmail API OAuth2** — Secure email delivery using Google's infrastructure (works on all platforms including Render)
-- **Forgot Password** — Email OTP → verify → set new password. OTP bcrypt-hashed, single-use, 10-minute expiry
-- **JWT Authentication** — Access + refresh tokens with automatic token refresh
-
-### 📊 Personalization & Privacy
-- **Peer Comparison** — Anonymized rank, percentile ring, and metric benchmarks vs all consenting users
-- **Data Privacy Controls** — ChatGPT-style data consent toggle. Choose exactly what data is shared
-- **Dynamic Learner Profile** — Every agent reads from and writes to your profile for better personalization
-- **Gamification** — Points, levels, badges, and progress tracking
+Points, streaks and badges are computed from the event log and are replayable
+(`GAMIFICATION_MODE`, default `silent`).
 
 ---
 
-## 🛠️ Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React 18 + Vite + Tailwind CSS |
-| **Backend** | FastAPI (Python 3.10+) |
-| **Database** | PostgreSQL + SQLAlchemy ORM |
-| **LLM** | Groq API (`llama-3.3-70b-versatile`, fallback `llama3-8b-8192`) |
-| **Video** | YouTube Data API v3 |
-| **Auth** | JWT (access + refresh) + bcrypt + OTP |
-| **Email** | Gmail API OAuth2 (HTTPS - works on Render) |
-| **HTTP Client** | Axios (frontend), httpx (backend) |
-| **Deployment** | Render (backend), Netlify (frontend) |
+| Frontend | React 18, Vite, Tailwind CSS, CodeMirror |
+| Backend | FastAPI, SQLAlchemy, Alembic, LangGraph |
+| Database | PostgreSQL with pgvector |
+| LLM | NVIDIA NIM (Nemotron), through one gateway (`app/core/llm_gateway.py`) with per-purpose models, deadlines and a fallback model |
+| Code execution | Self-hosted sandbox container (`backend/executor`) on an internal-only network |
+| Auth | JWT (access + refresh), bcrypt, email OTP (Gmail API or SMTP) |
 
 ---
 
-## 📁 Project Structure
+## Repository layout
 
 ```
-aiTA/
+AiTa/
+├── docker-compose.yml          # executor + backend + frontend; DB from backend/.env
+├── docker-compose.local.yml    # override: local pgvector Postgres on host port 5433
 ├── backend/
-│   ├── .env                        # Environment variables
+│   ├── executor/               # sandbox service that compiles and runs student code
+│   ├── scripts/                # seeding, review, demo reset, metrics
+│   ├── tests/                  # pytest (SQLite, no live LLM calls)
 │   └── app/
-│       ├── main.py                 # FastAPI app entry point
-│       ├── core/
-│       │   ├── config.py           # Settings (DB, JWT, Gmail API, API keys)
-│       │   ├── database.py         # SQLAlchemy engine + session
-│       │   ├── security.py         # JWT, bcrypt, OTP generate/hash/verify
-│       │   └── dependencies.py     # Auth dependencies + role checks
-│       ├── models/                 # SQLAlchemy ORM models
-│       │   ├── user.py             # User, LearningProfile, OTPRecord, UserSession
-│       │   ├── content_player.py
-│       │   ├── code_eval.py
-│       │   ├── feedback.py
-│       │   └── recommendation.py
-│       ├── schemas/                # Pydantic request/response schemas
-│       ├── api/                    # FastAPI routers
-│       │   ├── auth.py             # login, verify-otp, forgot-password, reset-password
-│       │   ├── users.py            # profile, consent, peer-comparison
-│       │   ├── content_player.py
-│       │   ├── code_eval.py
-│       │   ├── feedback.py
-│       │   └── recommendations.py
-│       ├── services/               # Business logic layer
-│       │   ├── auth_service.py     # Gmail API OAuth2 + SMTP fallback
-│       │   └── ...
-│       └── agents/                 # AI agent logic
-│           ├── code_eval_agent.py   # v1 pipeline, kept behind EVAL_PIPELINE
-│           ├── content_player/      # Content player agent (LangGraph package)
-│           ├── code_eval/           # Code evaluation agent (LangGraph package)
-│           ├── feedback/            # Feedback agent (LangGraph package)
-│           │   ├── graph.py
-│           │   ├── state.py
-│           │   ├── schemas.py
-│           │   ├── prompts.py
-│           │   └── nodes/
-│           │       ├── gather_context.py
-│           │       ├── analyse_patterns.py
-│           │       ├── synthesise.py
-│           │       └── persist.py
-│           └── recommendation_agent.py
+│       ├── main.py             # FastAPI app, routers, startup tasks
+│       ├── core/               # config, database, security, llm_gateway
+│       ├── models/             # SQLAlchemy models
+│       ├── schemas/            # Pydantic request/response models
+│       ├── api/                # routers (one per area, below)
+│       ├── agents/             # LangGraph graphs: assessment, chat, code_eval, feedback, profiling
+│       ├── services/           # business logic: execution, test_generation, problems,
+│       │                       #   hints, profiling, gamification, onboarding, rag, ...
+│       ├── data/               # problem, diagnostic and practice banks; language guides
+│       └── alembic/            # migrations (Alembic owns the schema)
 └── frontend/
-    ├── index.html
     └── src/
-        ├── App.jsx
-        ├── pages/                  # Route-level pages
-        │   ├── LoginPage.jsx       # 2-step login + forgot password
-        │   ├── RegisterPage.jsx    # 2-step registration with topic selection
-        │   ├── DashboardPage.jsx   # Stats, agents, peer comparison
-        │   ├── ProfilePage.jsx     # Profile, Learning, Security, Privacy tabs
-        │   ├── ContentPlayerPage.jsx
-        │   ├── CodeEvalPage.jsx
-        │   ├── FeedbackPage.jsx
-        │   └── RecommendationPage.jsx
-        ├── components/             # UI components per feature
-        ├── hooks/                  # Custom React hooks
-        └── utils/api.js            # Axios API client with auto token refresh
+        ├── App.jsx             # routes
+        ├── pages/              # one file per route
+        ├── components/         # UI per feature, plus ui/ primitives
+        ├── hooks/
+        └── utils/api.js        # Axios client with token refresh
 ```
 
 ---
 
-## 🚀 Getting Started
+## Running it
 
-### Prerequisites
+### With Docker
 
-- **Python 3.10+**
-- **Node.js 18+**
-- **PostgreSQL 14+**
-- **Groq API key** — [Get it here](https://console.groq.com)
-- **YouTube Data API v3 key** *(optional)* — [Get it here](https://console.cloud.google.com)
-- **Gmail API OAuth2** *(recommended for production)* — See [Gmail API Setup Guide](GMAIL_OAUTH_SETUP.md)
-
----
-
-### 1️⃣ Clone the Repository
+`backend/.env` must exist first (see [Environment variables](#environment-variables)).
 
 ```bash
-git clone https://github.com/your-username/aiTA.git
-cd aiTA
-```
+# local Postgres (recommended for development)
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
----
-
-## 🐳 Running with Docker (recommended)
-
-Three containers: `backend`, `frontend`, and `executor` — the sandbox the Code
-Evaluation Agent runs student code inside. **The executor is required**: without it
-every submission fails, because nothing else compiles or runs the code.
-
-```bash
-# backend/.env must exist first — see "Configure Environment Variables" below
+# or against the database in backend/.env
 docker compose up -d --build
 ```
 
-| Service | URL | Notes |
-|---|---|---|
-| Frontend | http://localhost:5173 | |
-| Backend | http://localhost:8000/docs | |
-| Executor | *(no published port)* | internal network only, by design |
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend API docs | http://localhost:8000/docs |
+| Executor | no published port, by design |
+
+Apply migrations inside the backend container:
 
 ```bash
-docker compose ps                    # what is running
-docker compose logs -f backend       # follow backend logs
-docker compose down                  # stop everything
-docker compose build backend         # rebuild after changing requirements.txt
+docker compose exec backend sh -c "cd /app/app && PYTHONPATH=/app alembic upgrade head"
 ```
 
-**The database is not in compose.** `DATABASE_URL` comes from `backend/.env`, so all
-three of the containers, your local venv, and Alembic point at the same database. If
-you want a Postgres running on your own machine instead, migrate it first, then add
-the override back to the `backend` service in `docker-compose.yml`:
+> **Keep the `exec` flag** on the executor's tmpfs mount. Docker mounts tmpfs `noexec`
+> by default, which breaks every compiled submission with "Permission denied".
 
-```yaml
-environment:
-  - DATABASE_URL=postgresql://postgres@host.docker.internal:5432/aita_db
-```
+### Seeding
 
-#### Seeding the problem bank
+Run inside the backend container (`docker compose exec backend python -m scripts.<name>`;
+add `-f docker-compose.local.yml` when using the local DB). All are safe to rerun.
 
-The bank ships 25 problems with their own test cases, so this needs no API key:
+| Script | Loads |
+|---|---|
+| `ingest_problems` | Problem bank with its own test cases (no API key needed) |
+| `seed_practice` | Hand-written MCQ and debug items in C, C++ and Python, each proven by execution |
+| `seed_assessments` | Verified assessment bank |
+| `seed_diagnostic` | Onboarding diagnostic bank; approve items with `review_diagnostic` |
+| `ingest_books` | Course-book chunks for the chatbot's retrieval |
+| `rebuild_awards` | Rebuilds the gamification ledger from `learning_events` |
+| `reset_demo_user` | Wipes and re-registers one demo account |
+| `report_metrics` | Hint leak rate, verified correctness, mastery trace |
 
-```bash
-docker compose exec backend python -m scripts.ingest_problems
-```
+### Logging in without email
 
-It is resumable — problems that already have cases are skipped, so rerunning is safe.
-
-#### Logging in without an email server
-
-OTPs are printed to the backend log whenever no SMTP or Gmail credentials are set:
+With no Gmail or SMTP credentials, OTPs are printed to the backend log:
 
 ```bash
 docker compose logs backend | grep "\[DEV\] OTP"
 ```
 
-To skip the OTP entirely, set `DEV_LOGIN_EMAIL` in `backend/.env` to an existing
-user's email. A **Dev login** button then appears on the login page, and
-`POST /auth/dev-login` returns tokens directly. Both require `DEBUG=True`; with
-either missing the endpoint 404s, so a production deploy cannot expose it.
+Set `DEV_LOGIN_EMAIL` to an existing user's email and keep `DEBUG=True` to get a
+**Dev login** button. With either missing, `POST /auth/dev-login` returns 404.
 
-> **Do not remove the `exec` flag** on the executor's tmpfs mount in
-> `docker-compose.yml`. Docker mounts tmpfs `noexec` by default, which silently
-> breaks every compiled submission with "Permission denied".
-
----
-
-### 2️⃣ Backend Setup (manual, without Docker)
-
-#### Install Dependencies
+### Without Docker
 
 ```bash
 cd backend
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS/Linux
-source venv/bin/activate
-
+python -m venv .venv
+.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-```
 
-#### Configure Environment Variables
-
-Create `backend/.env`:
-
-```env
-# PostgreSQL Database
-DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/aita_db
-
-# JWT Configuration
-SECRET_KEY=your_random_secret_key_here_use_long_string
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-REFRESH_TOKEN_EXPIRE_DAYS=7
-
-# Groq LLM API
-GROQ_API_KEY=gsk_your_groq_key_here
-
-# YouTube Data API (optional)
-YOUTUBE_API_KEY=your_youtube_api_key
-
-# Gmail API OAuth2 (recommended for production)
-# See GMAIL_OAUTH_SETUP.md for detailed setup instructions
-GMAIL_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GMAIL_CLIENT_SECRET=GOCSPX-your-client-secret
-GMAIL_REFRESH_TOKEN=1//your-refresh-token
-GMAIL_FROM_EMAIL=youremail@gmail.com
-
-# SMTP Fallback (for local development)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_gmail_app_password
-
-# App Configuration
-APP_NAME=aiTA - AI Teaching Assistant
-APP_VERSION=1.0.0
-DEBUG=True
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-```
-
-#### Create Database
-
-```sql
--- In psql or pgAdmin
-CREATE DATABASE aita_db;
-```
-
-#### Run Migrations
-
-Alembic owns the schema. The `.sql` files under `backend/app/` are the old v1 setup
-and are kept for history only — do not run them.
-
-`alembic.ini` lives in `backend/app` and uses a relative `script_location`, so it
-must be run from that directory with `backend` on the import path:
-
-```bash
-cd backend/app
-PYTHONPATH=.. alembic upgrade head        # Windows: set PYTHONPATH=..
-```
-
-> Startup no longer calls `create_all()`. It created **missing tables but never
-> missing columns**, so a database behind a migration started cleanly on a stale
-> schema and failed later on the first write. Migrating is now the only way the
-> schema is created or updated — run it before starting the server.
-
-#### Start Backend Server
-
-```bash
-cd backend
+cd app
+PYTHONPATH=.. alembic upgrade head
+cd ..
 uvicorn app.main:app --reload --port 8000
 ```
 
-Code evaluation still needs the sandbox, which is not part of the venv. The executor
-publishes no port — it sits on an internal network so only the backend container can
-reach it — so to drive it from a local venv you have to publish one yourself:
+`alembic.ini` lives in `backend/app` with a relative `script_location`, so run Alembic
+from there. Startup does not create tables; migrating is the only way the schema changes.
+
+Code execution still needs the sandbox. Publish it yourself and point the backend at it:
 
 ```bash
 docker compose run -d --service-ports -p 8080:8080 executor
-# then, in backend/.env:  EXECUTOR_URL=http://localhost:8080
+# backend/.env: EXECUTOR_URL=http://localhost:8080
 ```
 
-Running everything in Docker avoids this entirely.
-
-✅ API docs available at: `http://localhost:8000/docs`
-
----
-
-### 3️⃣ Frontend Setup
-
-#### Install Dependencies
+Frontend:
 
 ```bash
 cd frontend
 npm install
+npm run dev        # http://localhost:3000, proxies /api to :8000
 ```
 
-#### Start Development Server
+---
+
+## Tests and checks
 
 ```bash
-npm run dev
+# backend
+cd backend
+.venv\Scripts\python -m pytest -q
+.venv\Scripts\python -m ruff check app tests
+
+# frontend
+cd frontend
+npm run lint
+npm test
+npm run build
 ```
 
-✅ App runs at: `http://localhost:5173`
+Backend tests run on SQLite with a fake execution provider and stubbed LLM calls, so
+they need neither Docker nor an API key.
 
 ---
 
-## 📧 Email Configuration
+## Environment variables
 
-### Option 1: Gmail API OAuth2 (Recommended for Production)
+Defined in `backend/app/core/config.py`. Unknown keys in `.env` are ignored.
 
-**Benefits:**
-- ✅ Works on Render (uses HTTPS, not SMTP ports)
-- ✅ Completely FREE - no limits
-- ✅ No domain required
-- ✅ Most reliable
-
-**Setup Time:** ~20 minutes
-
-**See detailed guide:** [GMAIL_OAUTH_SETUP.md](GMAIL_OAUTH_SETUP.md)
-
-**Quick Reference:** [GMAIL_QUICK_REFERENCE.md](GMAIL_QUICK_REFERENCE.md)
-
-### Option 2: SMTP (For Local Development)
-
-**Benefits:**
-- ✅ Quick setup (2 minutes)
-- ✅ Works locally
-
-**Limitations:**
-- ⚠️ May not work on Render (port 587 blocked)
-
-**Setup:** Just add SMTP credentials to `.env`
-
-### Development Mode (No Email)
-
-If neither Gmail API nor SMTP is configured, OTPs will print to console:
-
-```
-[DEV] OTP for user@example.com: 123456
-```
-
----
-
-## 🔑 Environment Variables Reference
-
-| Variable | Required | Description |
+| Variable | Required | Notes |
 |---|---|---|
-| **Database** | | |
-| `DATABASE_URL` | ✅ Yes | PostgreSQL connection string |
-| **JWT** | | |
-| `SECRET_KEY` | ✅ Yes | JWT signing secret (use a long random string) |
-| `ALGORITHM` | ✅ Yes | JWT algorithm (HS256) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | ✅ Yes | Access token expiry (default: 60) |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | ✅ Yes | Refresh token expiry (default: 7) |
-| **AI Services** | | |
-| `GROQ_API_KEY` | ✅ Yes | Groq API key for all LLM agents |
-| `YOUTUBE_API_KEY` | ⚠️ Optional | YouTube Data API v3 key for video recommendations |
-| **Email (Gmail API - Recommended)** | | |
-| `GMAIL_CLIENT_ID` | ⚠️ Optional | OAuth2 Client ID from Google Cloud Console |
-| `GMAIL_CLIENT_SECRET` | ⚠️ Optional | OAuth2 Client Secret |
-| `GMAIL_REFRESH_TOKEN` | ⚠️ Optional | OAuth2 Refresh Token from OAuth Playground |
-| `GMAIL_FROM_EMAIL` | ⚠️ Optional | Your Gmail address (sender) |
-| **Email (SMTP Fallback)** | | |
-| `SMTP_HOST` | ⚠️ Optional | SMTP server (default: smtp.gmail.com) |
-| `SMTP_PORT` | ⚠️ Optional | SMTP port (default: 587) |
-| `SMTP_USER` | ⚠️ Optional | Gmail address for OTP emails |
-| `SMTP_PASSWORD` | ⚠️ Optional | Gmail App Password |
-| **App** | | |
-| `APP_NAME` | ✅ Yes | Application name |
-| `DEBUG` | ✅ Yes | Debug mode (True/False) |
-| `ALLOWED_ORIGINS` | ✅ Yes | Comma-separated frontend origins for CORS |
+| `DATABASE_URL` | yes | PostgreSQL with pgvector |
+| `SECRET_KEY` | yes | JWT signing secret |
+| `NVIDIA_API_KEY` | for LLM features | Without it, LLM features degrade (e.g. pattern-only feedback, Python fallback solutions) |
+| `NVIDIA_MODEL`, `NVIDIA_CODEGEN_MODEL`, `NVIDIA_FALLBACK_MODEL` | no | Model per purpose; see comments in `config.py` |
+| `NVIDIA_RPM`, `LLM_QUEUE_DEADLINE_S`, `REDIS_URL` | no | Rate limiting and queueing |
+| `EXECUTOR_URL` | no | Default `http://executor:8080` |
+| `EXEC_*` | no | Sandbox limits: wall time, CPU, memory, processes, output, compile time |
+| `GAMIFICATION_MODE` | no | `silent` (default) records awards without showing them |
+| `DEV_LOGIN_EMAIL` | no | Enables the dev login button when `DEBUG=True` |
+| `ALLOWED_ORIGINS` | no | CORS origins, comma-separated |
+| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL` | no | OTP email via Gmail API |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | no | OTP email via SMTP |
+| `SKIP_EMBED_WARMUP`, `SKIP_ONBOARDING_SWEEP` | no | Skip startup background tasks |
 
 ---
 
-## 📡 API Overview
+## API
 
-### Authentication Endpoints
+All routes are under `/api/v1`. Full interactive docs: `http://localhost:8000/docs`.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/auth/register` | Register new user |
-| `POST` | `/api/v1/auth/login` | Step 1: Verify password, send OTP |
-| `POST` | `/api/v1/auth/verify-otp` | Step 2: Verify OTP, get JWT tokens |
-| `POST` | `/api/v1/auth/forgot-password` | Request password reset OTP |
-| `POST` | `/api/v1/auth/reset-password` | Reset password with OTP |
-| `POST` | `/api/v1/auth/refresh` | Refresh access token |
-| `POST` | `/api/v1/auth/logout` | Logout and invalidate session |
-
-### User Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/users/profile` | Get user profile |
-| `PATCH` | `/api/v1/users/profile` | Update user profile |
-| `PATCH` | `/api/v1/users/consent` | Update data sharing consent |
-| `GET` | `/api/v1/users/peer-comparison` | Get peer comparison stats |
-| `POST` | `/api/v1/users/change-password` | Change password |
-
-### AI Agent Endpoints
-
-| Agent | Base Path | Key Endpoints |
-|---|---|---|
-| **Content Player** | `/api/v1/content-player` | Sessions, chat, problem generation |
-| **Code Evaluation** | `/api/v1/code-eval` | Submit code, get evaluation, history |
-| **Feedback** | `/api/v1/feedback` | Generate feedback, list, mark read |
-| **Recommendations** | `/api/v1/recommendations` | Get recommendations, log interactions |
-
-**Full interactive API docs:** `http://localhost:8000/docs`
+| Prefix | Purpose |
+|---|---|
+| `/auth` | Register, 2-step login with OTP, refresh, forgot/reset password, dev login |
+| `/users` | Profile, consent, peer comparison, password change |
+| `/onboarding` | Steps, diagnostic, finish, language switch and re-check |
+| `/assessment` | Next practice item, MCQ answers, debug submissions |
+| `/practice-sessions` | Current session, finish, summary, session feedback |
+| `/problems` | Generate a problem; open its solution after a pass or a give-up |
+| `/code-eval` | Submit code, run tests, history and stats |
+| `/feedback` | Hint ladder, feedback reports |
+| `/profile` | Mastery for every topic |
+| `/gamification` | Points, streaks, badges |
+| `/chat` | Tutor chat threads and messages |
 
 ---
 
-## 🔐 Authentication Flow
+## License
 
-### 2-Step Login with OTP
-
-```
-1. POST /auth/login { email, password }
-   ↓
-   ✓ Verify password
-   ✓ Generate 6-digit OTP
-   ✓ Bcrypt-hash OTP (raw OTP never stored)
-   ✓ Send OTP via Gmail API or SMTP
-   ↓
-   ← Return otp_token (10-min JWT)
-
-2. POST /auth/verify-otp { otp_token, otp }
-   ↓
-   ✓ Decode otp_token → get user_id
-   ✓ Verify OTP against bcrypt hash
-   ✓ Mark OTP as used (single-use)
-   ↓
-   ← Return access_token + refresh_token
-```
-
-### Forgot Password Flow
-
-```
-1. POST /auth/forgot-password { email }
-   ↓
-   ✓ Always returns 200 (never reveals if email exists)
-   ✓ If email found: generate OTP → hash → send
-   ↓
-   ← Return otp_token
-
-2. POST /auth/reset-password { otp_token, otp, new_password }
-   ↓
-   ✓ Verify OTP hash
-   ✓ Mark OTP as used
-   ✓ Hash new password → save
-   ↓
-   ← Return success
-```
-
----
-
-## 🤖 AI Agent Pipeline
-
-```
-User Activity
-     │
-     ▼
-┌─────────────────────────┐
-│ Content Player Agent    │ → Learns topics, detects mastery/confusion
-│ (Interactive Tutor)     │    Adaptive difficulty
-└─────────────────────────┘
-     │
-     ▼
-┌─────────────────────────┐
-│ Code Evaluation Agent   │ → Problem + code → 6-dimension analysis
-│ (Code Analyzer)         │    Correctness, efficiency, security, style
-└─────────────────────────┘
-     │
-     ▼
-┌─────────────────────────┐
-│ Feedback Agent          │ → Synthesizes eval + session data
-│ (Profile Updater)       │    Updates LearningProfile
-└─────────────────────────┘
-     │
-     ▼
-┌─────────────────────────┐
-│ Recommendation Agent    │ → YouTube + CF/CBF/RL + Groq ranking
-│ (Content Recommender)   │    Personalized video recommendations
-└─────────────────────────┘
-```
-
-Each agent writes signals back to the shared `LearningProfile`, making every subsequent agent smarter.
-
----
-
-## 📊 Peer Comparison & Privacy
-
-Users can opt in to anonymous data sharing from **Profile → Privacy tab**.
-
-### What's Shared (When Enabled):
-- ✅ Points, sessions, code scores, accuracy
-- ✅ Aggregated statistics only
-
-### What's NEVER Shared:
-- ❌ Name, email
-- ❌ Code submissions
-- ❌ Chat messages
-- ❌ Personal information
-
-### Features:
-- Percentile ring visualization
-- Anonymous rank among peers
-- Metric benchmarks vs platform average
-- Toggle on/off anytime
-
-```http
-PATCH /users/consent?consent=true   # Enable data sharing
-GET   /users/peer-comparison         # Get comparison stats
-```
-
----
-
-## 🗄️ Database Schema
-
-### Core Tables
-
-- **users** — User accounts, profiles, preferences
-- **learning_profiles** — Topic scores, strengths, weaknesses, recommendations
-- **user_sessions** — Active JWT sessions
-- **otp_records** — Bcrypt-hashed OTPs for 2FA
-
-### Agent Tables
-
-- **content_player_sessions** — Learning session metadata
-- **content_player_messages** — Chat history
-- **code_submissions** — User code submissions
-- **code_evaluations** — Multi-dimensional code analysis results
-- **feedback_reports** — Personalized feedback narratives
-- **content_catalog** — YouTube videos and metadata
-- **recommendations** — Personalized content recommendations
-
----
-
-## 🚀 Deployment
-
-### Backend (Render)
-
-1. **Create Web Service** on Render
-2. **Connect GitHub repository**
-3. **Configure:**
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. **Add Environment Variables** (all from `.env`)
-5. **Deploy!**
-
-**Important:** Use Gmail API OAuth2 for email (SMTP ports may be blocked)
-
-### Frontend (Netlify)
-
-1. **Connect GitHub repository**
-2. **Configure:**
-   - Build Command: `npm run build`
-   - Publish Directory: `dist`
-3. **Add Environment Variables:**
-   - `VITE_API_URL=https://your-backend.onrender.com`
-4. **Deploy!**
-
----
-
-## 📚 Documentation
-
-### Setup Guides
-- [Gmail API OAuth2 Setup](GMAIL_OAUTH_SETUP.md) - Detailed step-by-step guide
-- [Gmail Quick Reference](GMAIL_QUICK_REFERENCE.md) - 20-minute quick setup
-- [Setup Checklist](SETUP_CHECKLIST.md) - Track your progress
-- [Email Setup Summary](EMAIL_SETUP_SUMMARY.md) - Overview of email options
-
-### Additional Docs
-- [SMTP Setup](SMTP_SETUP.md) - Alternative SMTP configuration
-- [API Documentation](http://localhost:8000/docs) - Interactive API docs
-
----
-
-## 🛠️ Development Notes
-
-### OTP in Development
-OTPs print to console if email is not configured:
-```
-[DEV] OTP for user@example.com: 123456
-```
-
-### YouTube API Fallback
-Recommendations work without YouTube API key; videos will have `url: null`
-
-### Groq LLM Fallback
-Primary model → `llama3-8b-8192` fallback → score-based ranking if both fail
-
-### Profile Topics
-Set topics in **Profile → Learning tab** before running Recommendation Agent
-
-### Peer Comparison
-Requires at least one other user with data sharing enabled
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how:
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-4. **Push to the branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. **Open a Pull Request**
-
-### Contribution Guidelines
-- Follow existing code style
-- Add tests for new features
-- Update documentation
-- Keep commits atomic and well-described
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👥 Authors
-
-- **Your Name** - *Initial work* - [GitHub](https://github.com/your-username)
-
----
-
-## 🙏 Acknowledgments
-
-- **Groq** - For providing fast LLM inference
-- **YouTube Data API** - For video content
-- **FastAPI** - For the amazing Python web framework
-- **React** - For the powerful frontend library
-- **Google Cloud** - For Gmail API OAuth2
-
----
-
-## 📞 Support
-
-- **Documentation:** See guides in the repository
-- **Issues:** [GitHub Issues](https://github.com/your-username/aiTA/issues)
-- **Email:** your-email@example.com
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Mobile app (React Native)
-- [ ] More programming languages support
-- [ ] Real-time collaboration features
-- [ ] Advanced analytics dashboard
-- [ ] Integration with more video platforms
-- [ ] Offline mode support
-
----
-
-<div align="center">
-
-**Made with ❤️ by the aiTA Team**
-
-[⭐ Star us on GitHub](https://github.com/your-username/aiTA) | [🐛 Report Bug](https://github.com/your-username/aiTA/issues) | [✨ Request Feature](https://github.com/your-username/aiTA/issues)
-
-</div>
+MIT — see [LICENSE](LICENSE).
