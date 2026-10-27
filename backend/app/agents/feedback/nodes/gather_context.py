@@ -27,7 +27,6 @@ def _user_context(db: Session, user_id: int) -> Dict:
         "username": u.username if u else "student",
         "skill": u.skill_level.value if u and u.skill_level else "beginner",
         "languages": u.preferred_languages or [],
-        "goals": u.learning_goals or [],
         "weak_areas": p.weak_areas or [] if p else [],
         "error_patterns": p.error_patterns or [] if p else [],
         "accuracy": p.accuracy_rate or 0.0 if p else 0.0,

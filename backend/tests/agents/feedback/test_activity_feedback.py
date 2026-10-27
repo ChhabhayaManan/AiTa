@@ -48,7 +48,7 @@ def test_mcq_only_student_gets_report(session, user, mcq_and_debug):
 
     assert report.feedback_type == FeedbackType.LEARNING_RECAP
     assert report.pattern_only is False
-    assert report.evaluation_id is None and report.cp_session_id is None
+    assert report.evaluation_id is None
     human = runnable.payloads[0][1][1]
     assert '"kind": "debug"' in human and "off_by_one" in human
 

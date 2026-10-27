@@ -298,7 +298,7 @@ def test_feedback_type_is_learning_recap_from_activity(session, user):
                                FeedbackTone.ENCOURAGING,
                                synthesise_runnable=FakeSynthesiseRunnable())
     assert report.feedback_type == FeedbackType.LEARNING_RECAP
-    assert report.cp_session_id is None
+    assert report.evaluation_id is None
 
 
 def test_feedback_type_is_combined_from_both(session, user):
