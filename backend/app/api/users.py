@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from typing import List
 from datetime import datetime, timezone
 
@@ -12,7 +11,7 @@ from app.schemas.user import (
 )
 from app.services.user_service import UserService
 from app.models.user import User, UserRole, LearningProfile
-from app.models.code_eval import CodeSubmission, CodeEvaluation
+from app.models.code_eval import CodeEvaluation
 
 router = APIRouter(prefix="/users", tags=["User Profile"])
 

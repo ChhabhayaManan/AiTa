@@ -8,8 +8,7 @@ def test_execution_defaults():
     assert settings.EXEC_OUTPUT_KB == 64
 
 
-def test_pipeline_and_generation_defaults():
-    assert settings.EVAL_PIPELINE in ("v1", "v2")
+def test_generation_defaults():
     assert settings.TEST_CASES_MIN == 3
     assert settings.TEST_CASES_TARGET == 8
     assert settings.REFERENCE_MAX_ATTEMPTS == 3

@@ -67,7 +67,6 @@ def find_issues(code: str, language: Language, metrics: StaticMetrics) -> list[I
     execution now, and v1's regex security rules produced false positives on beginner
     code without ever affecting the score.
     """
-    spec = spec_for(language)
     lines = code.splitlines()
     issues: list[Issue] = []
 

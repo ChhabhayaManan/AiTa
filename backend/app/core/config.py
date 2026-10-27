@@ -37,26 +37,21 @@ class Settings(BaseSettings):
     DEV_LOGIN_EMAIL: str = ""
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 
-    # ── Groq API Key for LLM agent reasoning ─────────────────────────────
-    GROQ_API_KEY: str = Field(default="", repr=False)
-    YOUTUBE_API_KEY: str = Field(default="", repr=False)
-
     # ── LLM (NVIDIA NIM) ──────────────────────────────────────────────────
     NVIDIA_API_KEY: str = Field(default="", repr=False)
     # One provider. Most of the catalogue is already end of life and available_models
     # still lists the dead ones, so ping before switching any model below.
-    NVIDIA_MODEL: str = "nvidia/nemotron-3-super-120b-a12b"
-    # Code. The dedicated codegen model retired 2026-09-13 and nothing else on this
-    # key writes code, so this is the chat model until a replacement exists. Only
-    # bank-miss generation depends on it; seeded problems ship their own cases.
-    NVIDIA_CODEGEN_MODEL: str = "nvidia/nemotron-3-super-120b-a12b"
+    # 3-super went 404 for this account on 2026-10-26. Ultra strips the line breaks
+    # out of code inside structured output, so it handles prose only.
+    NVIDIA_MODEL: str = "nvidia/nemotron-3-ultra-550b-a55b"
+    # Code: keeps real newlines in structured output (checked 2026-10-26).
+    NVIDIA_CODEGEN_MODEL: str = "nvidia/nemotron-3.5-lightning-30b-a3b"
     LLM_MAX_OUTPUT_TOKENS: int = 8192
     LLM_MAX_ATTEMPTS: int = 3
     NVIDIA_API_KEY_2: str = Field(default="", repr=False)
-    # Chosen in the 2026-10-12 spike: the only fast candidate passing tool calls,
-    # real newlines in structured code and a 26k-token context. A different family
-    # from the primary, so one outage does not take out both.
-    NVIDIA_FALLBACK_MODEL: str = "openai/gpt-oss-20b"
+    # gpt-oss-20b stopped answering on 2026-10-26. Lightning passes tool calls and
+    # real newlines in structured code, and runs on a separate NVIDIA function.
+    NVIDIA_FALLBACK_MODEL: str = "nvidia/nemotron-3.5-lightning-30b-a3b"
     NVIDIA_RPM: int = 35
     LLM_QUEUE_DEADLINE_S: float = 20
     REDIS_URL: str = Field(default="", repr=False)
@@ -72,7 +67,6 @@ class Settings(BaseSettings):
     EXEC_COMPILE_SECONDS: int = 10
 
     # ── Evaluation pipeline ───────────────────────────────────────────────
-    EVAL_PIPELINE: str = "v2"
     TEST_CASES_MIN: int = 3
     TEST_CASES_TARGET: int = 8
     REFERENCE_MAX_ATTEMPTS: int = 3

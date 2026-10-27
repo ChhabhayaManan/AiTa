@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator, validator
-from typing import Optional, List, Dict, Any, Literal
+from typing import Optional, List, Dict, Literal
 from datetime import datetime
 from app.models.user import UserRole, SkillLevel
 
@@ -155,11 +155,6 @@ class ChangePasswordRequest(BaseModel):
 class MessageResponse(BaseModel):
     message: str
     success: bool = True
-
-
-class ErrorResponse(BaseModel):
-    detail: str
-    error_code: Optional[str] = None
 
 
 # ─── 2FA / OTP Schemas ────────────────────────────────────────────────────────

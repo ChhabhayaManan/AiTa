@@ -73,11 +73,6 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    content_player_sessions = relationship(
-        "ContentPlayerSession",
-        back_populates="user",
-        foreign_keys="ContentPlayerSession.user_id",
-    )
     learning_profile = relationship("LearningProfile", back_populates="user", uselist=False)
     sessions = relationship("UserSession", back_populates="user")
     otp_records = relationship("OTPRecord", back_populates="user", cascade="all, delete-orphan")

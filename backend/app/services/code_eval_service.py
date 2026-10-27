@@ -1,12 +1,10 @@
 import re
 
-import httpx
 from sqlalchemy.orm import Session
 
 from app.agents.code_eval.graph import evaluate_submission
 from app.agents.code_eval.multi_test import display_statement
 from app.agents.code_eval.schemas import EvalReport
-from app.core.config import settings
 from app.core.exceptions import SubmissionNotFound
 from app.models.code_eval import CodeSubmission
 from app.models.problem import Problem
@@ -67,9 +65,6 @@ class CodeEvalService:
 
     @staticmethod
     def evaluate(db: Session, submission_id: int, user_id: int) -> EvalReport:
-        if settings.EVAL_PIPELINE == "v1":
-            from app.agents.code_eval_agent import CodeEvaluationAgent
-            return CodeEvaluationAgent(db).evaluate(submission_id, user_id)
         return evaluate_submission(db, submission_id, user_id)
 
     @staticmethod

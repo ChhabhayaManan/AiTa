@@ -23,7 +23,7 @@ from app.services.profiling.service import current_language
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/assessment", tags=["Assessment Agent"])
+router = APIRouter(prefix="/assessment", tags=["Practice"])
 
 
 @router.get("/next", response_model=NextItemResponse, summary="What to practise next, and why")

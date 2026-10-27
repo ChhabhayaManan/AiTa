@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.database import Base
 from app.models import (  # noqa: F401  -- registers every table on Base.metadata
-    code_eval, content_player, feedback, gamification, problem, recommendation, user,
+    code_eval, feedback, gamification, problem, user,
 )
 from app.services.execution.base import (
     ExecLimits, ExecResult, ExecStatus, ExecutionProvider,

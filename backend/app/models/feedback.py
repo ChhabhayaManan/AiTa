@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Text,
-    Float, Enum, JSON, ForeignKey
+    Enum, JSON, ForeignKey
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -23,20 +23,18 @@ class FeedbackTone(str, enum.Enum):
 
 class FeedbackReport(Base):
     """
-    One Feedback Agent report synthesised from Code Eval and/or Content Player.
+    One feedback report synthesised from a code evaluation and/or recent practice.
     Persisted per user so they can review their full feedback history.
 
     ForeignKey strategy:
       - user_id         CASCADE  — delete user → delete all their feedback
       - evaluation_id   SET NULL — delete a code eval → keep feedback, lose the link
-      - cp_session_id   SET NULL — delete a session  → keep feedback, lose the link
     """
     __tablename__ = "feedback_reports"
 
     id            = Column(Integer, primary_key=True, index=True)
-    user_id       = Column(Integer, ForeignKey("users.id",                   ondelete="CASCADE"),  nullable=False)
-    evaluation_id = Column(Integer, ForeignKey("code_evaluations.id",        ondelete="SET NULL"), nullable=True)
-    cp_session_id = Column(Integer, ForeignKey("content_player_sessions.id", ondelete="SET NULL"), nullable=True)
+    user_id       = Column(Integer, ForeignKey("users.id",            ondelete="CASCADE"),  nullable=False)
+    evaluation_id = Column(Integer, ForeignKey("code_evaluations.id", ondelete="SET NULL"), nullable=True)
 
     # values_callable ensures SQLAlchemy writes lowercase values ("code_review")
     # not the Python member name ("CODE_REVIEW") — prevents the ENUM mismatch bug

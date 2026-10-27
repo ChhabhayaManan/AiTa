@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.models import code_eval as code_eval_models, problem as problem_models  # noqa: F401
-from app.api import auth, users, recommendations, problems, code_eval, feedback, profile, assessment, chat, gamification
+from app.api import auth, users, problems, code_eval, feedback, profile, assessment, chat, gamification
 from app.api import onboarding, practice_sessions
 from app.services.onboarding import pending
 from app.services.rag import embedder
@@ -39,9 +39,7 @@ app = FastAPI(
     description="""
 ## aiTA — AI-Powered Teaching Assistant Backend
 
-### Agents
-- 👤 **User Profiling Agent** — Builds dynamic learner models
-- 🤖 **Content Recommendation Agent** — CF + CBF + LLM re-ranking
+Practice, graded code, hints, feedback and a learner model per topic and language.
 
 ### Authentication
 Use `/auth/login` to get a Bearer token, then click **Authorize**.
@@ -63,7 +61,6 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
-app.include_router(recommendations.router, prefix="/api/v1")   
 app.include_router(problems.router, prefix="/api/v1")
 app.include_router(code_eval.router,prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")

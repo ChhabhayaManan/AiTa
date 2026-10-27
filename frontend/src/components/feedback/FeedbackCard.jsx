@@ -87,12 +87,9 @@ export default function FeedbackCard({ report }) {
           </div>
         )}
 
-        {(report.evaluation_id || report.cp_session_id) && (
+        {report.evaluation_id && (
           <p className="mt-5 border-t border-line pt-3 text-xs text-ink-subtle">
-            Based on
-            {report.evaluation_id && <> Code workspace attempt <span className="font-mono text-ink-muted">#{report.evaluation_id}</span></>}
-            {report.evaluation_id && report.cp_session_id && ' and'}
-            {report.cp_session_id && <> practice session <span className="font-mono text-ink-muted">#{report.cp_session_id}</span></>}
+            Based on Code workspace attempt <span className="font-mono text-ink-muted">#{report.evaluation_id}</span>
           </p>
         )}
       </section>

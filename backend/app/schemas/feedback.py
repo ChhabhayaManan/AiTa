@@ -30,7 +30,6 @@ class FeedbackReportResponse(BaseModel):
     id:             int
     user_id:        int
     evaluation_id:  Optional[int]         = None
-    cp_session_id:  Optional[int]         = None
     feedback_type:  FeedbackType
     tone:           FeedbackTone
     headline:       Optional[str]         = None
@@ -52,10 +51,6 @@ class FeedbackReportResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class MarkReadRequest(BaseModel):
-    is_read: bool = True
 
 
 class HintRequest(BaseModel):

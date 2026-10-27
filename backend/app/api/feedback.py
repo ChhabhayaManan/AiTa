@@ -7,13 +7,13 @@ from app.core.dependencies import get_current_active_user
 from app.models.user import User
 from app.models.code_eval import CodeEvaluation, CodeSubmission
 from app.schemas.feedback import (
-    GenerateFeedbackRequest, FeedbackReportResponse, MarkReadRequest,
+    GenerateFeedbackRequest, FeedbackReportResponse,
     HintRequest, HintResponse,
 )
 from app.services.feedback_service import FeedbackService
 from app.services.hints.service import request_hint
 
-router = APIRouter(prefix="/feedback", tags=["Feedback Agent"])
+router = APIRouter(prefix="/feedback", tags=["Feedback and hints"])
 
 
 @router.post(
@@ -39,7 +39,7 @@ def hint(
     "/generate",
     response_model=FeedbackReportResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="🤖 Run Feedback Agent — synthesise from Code Eval + recent learning events",
+    summary="Write a feedback report from a code evaluation and recent practice",
 )
 def generate(
     req: GenerateFeedbackRequest,
@@ -47,7 +47,7 @@ def generate(
     db: Session = Depends(get_db),
 ):
     """
-    Runs the full Feedback Agent pipeline:
+    Steps:
     1. Pulls Code Evaluation result (if evaluation_id given)
     2. Pulls recent learning events (last 14 days, at most 30, seeds excluded)
     3. Analyses error patterns + misconceptions

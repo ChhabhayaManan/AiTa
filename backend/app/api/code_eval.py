@@ -21,7 +21,7 @@ from app.services.problems.sample_run import run_sample
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/code-eval", tags=["Code Evaluation Agent"])
+router = APIRouter(prefix="/code-eval", tags=["Code evaluation"])
 
 
 # ─── Problem bank ─────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ def submit_code(
 @router.post(
     "/submit/{submission_id}/evaluate",
     response_model=EvaluationResult,
-    summary="🤖 Run Code Evaluation Agent",
+    summary="Grade code against the problem's tests and explain the result",
 )
 def evaluate(
     submission_id: int,

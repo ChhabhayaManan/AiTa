@@ -7,7 +7,7 @@ from app.models.user import User
 from app.schemas.profile import MasteryResponse
 from app.services.profiling.service import mastery_snapshot
 
-router = APIRouter(prefix="/profile", tags=["User Profiling Agent"])
+router = APIRouter(prefix="/profile", tags=["Learner profile"])
 
 
 @router.get(

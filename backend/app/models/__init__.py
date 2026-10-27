@@ -8,7 +8,6 @@ from app.models import (  # noqa: F401
     book,
     chat,
     code_eval,
-    content_player,
     feedback,
     gamification,
     learning,
@@ -16,6 +15,5 @@ from app.models import (  # noqa: F401
     onboarding,
     practice_session,
     problem,
-    recommendation,
     user,
 )
