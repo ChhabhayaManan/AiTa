@@ -209,7 +209,7 @@ Settings are read from `backend/.env` (see `backend/app/core/config.py` for all 
 | `SECRET_KEY` | Signs login tokens (required) |
 | `NVIDIA_API_KEY`, `NVIDIA_API_KEY_2` | LLM access; the second key serves the fallback model |
 | `EXECUTOR_URL` | The sandbox, `http://executor:8080` by default |
-| `GAMIFICATION_MODE` | `off`, `silent` (default: recorded, shown only on request) or `live` |
+| `GAMIFICATION_MODE` | `live` (default: shown on Home and toasted after each graded answer), `silent` (recorded, shown only on request) or `off` |
 | `GMAIL_*` or `SMTP_*` | Sending login codes by email |
 | `DEV_LOGIN_EMAIL` | One-click development login (needs `DEBUG=True`) |
 

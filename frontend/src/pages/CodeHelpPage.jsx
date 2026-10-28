@@ -5,7 +5,7 @@ import {
   ArrowLeft, BookOpen, Eye, Flag, Lightbulb, Lock, MessageSquareText, Play, RefreshCw, RotateCcw, Send, Shapes, Sparkles,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { problemsAPI, codeEvalAPI, getErrorMessage } from '../utils/api'
+import { problemsAPI, codeEvalAPI, feedbackAPI, getErrorMessage } from '../utils/api'
 import { LANGUAGES, TEMPLATES } from '../components/code/templates'
 import { TOPIC_LABELS, languageLabel } from '../components/learning/labels'
 import ChatPanel from '../components/chat/ChatPanel'
@@ -20,8 +20,10 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import { TextField } from '../components/ui/Field'
 import CaseBlock, { OutputBlock } from '../components/ui/CaseBlock'
+import HintLadder from '../components/ui/HintLadder'
 import Verdict, { toneFor } from '../components/ui/Verdict'
 import Workbench, { EditorTile, LanguagePicker } from '../components/practice/Workbench'
+import { toastAwards } from '../components/practice/shared'
 
 const DIFFICULTIES = [
   { value: 'easy', label: 'Easy', tone: 'mint' },
@@ -101,6 +103,8 @@ export default function CodeHelpPage() {
   const [runResults, setRunResults] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [evalResult, setEvalResult] = useState(null)
+  const [hints, setHints] = useState([])
+  const [hinting, setHinting] = useState(false)
   const [history, setHistory] = useState(loadHistory)
 
   const saveHistory = list => {
@@ -131,6 +135,7 @@ export default function CodeHelpPage() {
       setActiveTab('problem')
       setEvalResult(null)
       setRunResults(null)
+      setHints([])
       setGaveUp(false)
       setSolution(null)
       if (data.title) setSeenTitles(prev => [...new Set([...prev, data.title])])
@@ -178,6 +183,8 @@ export default function CodeHelpPage() {
       })
       setEvalResult(data)
       setRunResults(null)
+      setHints(data.hint ? [data.hint] : [])
+      toastAwards(data)
       const score = Math.round(data.scores?.overall || 0)
       saveHistory(history.map(h => (h.id === historyId ? { ...h, score, solvedAt: new Date().toISOString() } : h)))
     } catch (err) {
@@ -187,10 +194,24 @@ export default function CodeHelpPage() {
     }
   }
 
+  const moreHelp = async () => {
+    setHinting(true)
+    try {
+      const { data } = await feedbackAPI.hint(problem.problem_id)
+      setHints(prev => [...prev, data])
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'No hint is available right now.'))
+    } finally {
+      setHinting(false)
+    }
+  }
+
   // The server only hands the answer over after a pass or a recorded give-up.
   const hasSolution = Boolean(problem?.problem_id)
   const passed = Boolean(evalResult && evalResult.tests_total > 0 && evalResult.tests_passed === evalResult.tests_total)
   const solutionOpen = passed || gaveUp
+  const topLevel = hints.length ? hints[hints.length - 1].level : 0
+  const canHint = Boolean(evalResult && !passed && problem?.problem_id && topLevel < 4)
 
   const loadSolution = async (giveUp) => {
     setSolutionLoading(true)
@@ -444,9 +465,15 @@ export default function CodeHelpPage() {
         }
         footer={
           <>
-            <Button variant="secondary" icon={Play} onClick={runCode} busy={running} disabled={submitting || !code.trim()}>Run</Button>
-            <Button icon={Send} onClick={submitCode} busy={submitting} disabled={running || !code.trim()}>Submit</Button>
-            <span className="text-xs text-ink-subtle sm:ml-auto">Run checks the examples. Submit runs every test and scores your code.</span>
+            <Button variant="secondary" icon={Play} onClick={runCode} busy={running} disabled={submitting || hinting || !code.trim()}>Run</Button>
+            <Button icon={Send} onClick={submitCode} busy={submitting} disabled={running || hinting || !code.trim()}>Submit</Button>
+            {canHint ? (
+              <Button variant="hint" icon={Lightbulb} onClick={moreHelp} busy={hinting} disabled={running || submitting} className="sm:ml-auto">
+                {topLevel === 0 ? 'Get a hint' : 'Stronger hint'}
+              </Button>
+            ) : (
+              <span className="text-xs text-ink-subtle sm:ml-auto">Run checks the examples. Submit runs every test and scores your code.</span>
+            )}
           </>
         }
       >
@@ -504,6 +531,8 @@ export default function CodeHelpPage() {
           )}
         </Verdict>
       )}
+
+      {hints.length > 0 && !passed && <HintLadder hints={hints} />}
     </>
   )
 

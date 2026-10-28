@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     # ── Gamification ──────────────────────────────────────────────────────
     # off: nothing computed · silent: computed, shown only behind the Dashboard
     # reveal (the study setting) · live: also toasted on each graded answer.
-    GAMIFICATION_MODE: str = "silent"
+    GAMIFICATION_MODE: str = "live"
 
     # ── Email (SMTP) for OTP delivery ─────────────────────────────────────
     SMTP_HOST: str = "smtp.gmail.com"

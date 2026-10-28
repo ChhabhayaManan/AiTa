@@ -17,6 +17,7 @@ def client(monkeypatch, tmp_path):
     (tmp_path / "c").mkdir()
     (tmp_path / "c" / "loops.md").write_text("# Loops\n\nA loop repeats.", "utf-8")
     monkeypatch.setattr(runs, "EXPLANATIONS", tmp_path)
+    monkeypatch.setattr(runs, "generate_coding", lambda *a: (None, None))
     runs._read.cache_clear()
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False},
                            poolclass=StaticPool)

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MessageSquareText, Play, RefreshCw, SquareTerminal, TrendingUp } from 'lucide-react'
+import { Lightbulb, MessageSquareText, Play, RefreshCw, SquareTerminal, TrendingUp } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAuth } from '../hooks/useAuth'
 import { useCodeEval } from '../hooks/useCodeEval'
+import { feedbackAPI, getErrorMessage } from '../utils/api'
 import CodeEditor, { TEMPLATES } from '../components/code_eval/CodeEditor'
 import ScoreRadar from '../components/code_eval/ScoreRadar'
 import IssuesList from '../components/code_eval/IssuesList'
@@ -18,6 +20,7 @@ import Button from '../components/ui/Button'
 import Tabs from '../components/ui/Tabs'
 import EmptyState from '../components/ui/EmptyState'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import HintLadder from '../components/ui/HintLadder'
 import Verdict from '../components/ui/Verdict'
 import { TextArea } from '../components/ui/Field'
 
@@ -64,6 +67,8 @@ export default function CodeEvalPage() {
   const [picked, setPicked] = useState(null)
   const [activeTab, setActiveTab] = useState('scores')
   const [toDelete, setToDelete] = useState(null)
+  const [moreHints, setMoreHints] = useState({ evaluationId: null, list: [] })
+  const [hinting, setHinting] = useState(false)
   const resultRef = useRef(null)
 
   useEffect(() => {
@@ -104,6 +109,30 @@ export default function CodeEvalPage() {
     await reEvaluate(id)
   }
 
+  const evaluationId = activeResult?.evaluation_id
+  const hints = activeResult ? [
+    ...(activeResult.hint ? [activeResult.hint] : []),
+    ...(moreHints.evaluationId === evaluationId ? moreHints.list : []),
+  ] : []
+  const passed = Boolean(activeResult && activeResult.tests_total > 0 && activeResult.tests_passed === activeResult.tests_total)
+  const topLevel = hints.length ? hints[hints.length - 1].level : 0
+  const canHint = Boolean(activeResult?.problem_id && activeResult.verification_status === 'verified' && !passed && topLevel < 4)
+
+  const moreHelp = async () => {
+    setHinting(true)
+    try {
+      const { data } = await feedbackAPI.hint(activeResult.problem_id)
+      setMoreHints(prev => ({
+        evaluationId,
+        list: [...(prev.evaluationId === evaluationId ? prev.list : []), data],
+      }))
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'No hint is available right now.'))
+    } finally {
+      setHinting(false)
+    }
+  }
+
   const results = (
     <section ref={resultRef} className="tile scroll-mt-6 p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -137,6 +166,12 @@ export default function CodeEvalPage() {
           {activeTab === 'tests' && <TestResults result={activeResult} />}
           {activeTab === 'issues' && <IssuesList issues={activeResult.issues} />}
           {activeTab === 'feedback' && <FeedbackPanel evaluation={{ ...activeResult, complexity: activeResult.metrics || {} }} />}
+          {hints.length > 0 && !passed && <HintLadder hints={hints} />}
+          {canHint && (
+            <Button variant="hint" size="sm" icon={Lightbulb} onClick={moreHelp} busy={hinting}>
+              {topLevel === 0 ? 'Get a hint' : 'Stronger hint'}
+            </Button>
+          )}
           <AgentSteps steps={activeResult.agent_steps || []} />
           <div className="flex flex-col gap-3 rounded-[20px] border border-pop-pink/20 bg-pop-pink/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-ink-muted">Want a written report on this attempt and your recent work?</p>
@@ -159,7 +194,7 @@ export default function CodeEvalPage() {
         <PageHeader
           eyebrow="Code workspace"
           title="Test any code you write"
-          description="Bring a problem and your code. We run it against tests and review it. Not counted toward your topic levels."
+          description="Bring a problem and your code. We run it against tests and review it."
           actions={stats && stats.total_evaluations > 0 && (
             <div className="flex items-center gap-3 rounded-full border border-line-strong px-4 py-2 font-mono text-xs text-ink-subtle">
               <span>Average <span className="text-ink">{stats.avg_overall_score.toFixed(0)}</span></span>

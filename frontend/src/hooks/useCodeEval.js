@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { codeEvalAPI, getErrorMessage } from '../utils/api'
 import toast from 'react-hot-toast'
+import { toastAwards } from '../components/practice/shared'
 
 function resultToast(data) {
   const score = `${(data.scores?.overall ?? 0).toFixed(1)}/100`
@@ -66,6 +67,7 @@ export function useCodeEval() {
       })
       setActiveResult(data)
       toast.success(resultToast(data))
+      toastAwards(data)
       // Refresh submissions list
       const { data: subs } = await codeEvalAPI.getSubmissions()
       setSubmissions(subs)
